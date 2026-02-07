@@ -34,6 +34,27 @@ interface AppSidebarProps {
 
 const isDev = import.meta.env.DEV;
 
+const routes = [
+  {
+    to: '/convert',
+    label: 'Convert Media (old)',
+    icon: FilmStrip,
+    tooltip: 'Convert media files for Pixel compatibility',
+  },
+  {
+    to: '/transfer',
+    label: 'Pixel Transfer',
+    icon: DeviceMobile,
+    tooltip: 'Push and pull files to/from your Pixel',
+  },
+  {
+    to: '/roadmap',
+    label: 'Roadmap',
+    icon: RoadHorizon,
+    tooltip: 'View planned and upcoming features',
+  },
+] as const;
+
 const AppSidebar: React.FC<AppSidebarProps> = ({
   isPixelConnected,
   onCheckConnection,
@@ -50,10 +71,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       .then(setVersion)
       .catch(() => setVersion('dev'));
   }, []);
-
-  const isConvertActive = !!matchRoute({ to: '/convert', fuzzy: true });
-  const isTransferActive = !!matchRoute({ to: '/transfer', fuzzy: true });
-  const isRoadmapActive = !!matchRoute({ to: '/roadmap', fuzzy: true });
 
   return (
     <Sidebar variant="floating">
@@ -75,55 +92,33 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={isConvertActive}
-                  tooltip="Convert media files for Pixel compatibility"
-                  onClick={() => navigate({ to: '/convert' })}
-                >
-                  <FilmStrip
-                    weight={isConvertActive ? 'duotone' : 'regular'}
-                    className={cn(isConvertActive && 'text-primary')}
-                  />
-                  <span>Convert Media</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={isTransferActive}
-                  tooltip="Push and pull files to/from your Pixel"
-                  onClick={() => navigate({ to: '/transfer' })}
-                >
-                  <DeviceMobile
-                    weight={isTransferActive ? 'duotone' : 'regular'}
-                    className={cn(
-                      isTransferActive
-                        ? 'text-primary'
-                        : isPixelConnected
-                          ? 'text-green-500'
-                          : 'text-muted-foreground',
-                    )}
-                  />
-                  <span>Pixel Transfer</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {isDev && (
-                <>
-                  <SidebarMenuItem>
+              {routes.map((route) => {
+                if (route.to === '/roadmap' && !isDev) return null;
+                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
+
+                return (
+                  <SidebarMenuItem key={route.to}>
                     <SidebarMenuButton
-                      isActive={isRoadmapActive}
-                      tooltip="View planned and upcoming features"
-                      onClick={() => navigate({ to: '/roadmap' })}
+                      isActive={isActive}
+                      tooltip={route.tooltip}
+                      onClick={() => navigate({ to: route.to })}
                     >
-                      <RoadHorizon
-                        weight={isRoadmapActive ? 'duotone' : 'regular'}
-                        className={cn(isRoadmapActive && 'text-primary')}
+                      <route.icon
+                        weight={isActive ? 'duotone' : 'regular'}
+                        className={cn(
+                          isActive && 'text-primary',
+                          !isActive &&
+                            route.to === '/transfer' &&
+                            (isPixelConnected
+                              ? 'text-green-500'
+                              : 'text-muted-foreground'),
+                        )}
                       />
-                      <span>Roadmap</span>
+                      <span>{route.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                </>
-              )}
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
