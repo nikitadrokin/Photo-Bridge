@@ -42,6 +42,12 @@ const routes = [
     tooltip: 'Convert media files for Pixel compatibility',
   },
   {
+    to: '/convert-new',
+    label: 'Convert Media (new)',
+    icon: FilmStrip,
+    tooltip: 'Convert media files for Pixel compatibility',
+  },
+  {
     to: '/transfer',
     label: 'Pixel Transfer',
     icon: DeviceMobile,
