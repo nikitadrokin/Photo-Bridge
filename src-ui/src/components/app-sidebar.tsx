@@ -37,13 +37,7 @@ const isDev = import.meta.env.DEV;
 const routes = [
   {
     to: '/convert',
-    label: 'Convert Media (old)',
-    icon: FilmStrip,
-    tooltip: 'Convert media files for Pixel compatibility',
-  },
-  {
-    to: '/convert-new',
-    label: 'Convert Media (new)',
+    label: 'Convert Media',
     icon: FilmStrip,
     tooltip: 'Convert media files for Pixel compatibility',
   },
@@ -185,12 +179,13 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                aria-label="View source on GitHub"
               >
                 <GithubLogo size={14} />
               </a>
-              {version && (
+              {version ? (
                 <span className="text-muted-foreground">v{version}</span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

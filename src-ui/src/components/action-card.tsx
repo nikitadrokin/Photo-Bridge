@@ -1,12 +1,13 @@
-import React, { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
-import { Card, CardContent } from '@/components/ui/card'
+import type React from 'react';
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface ActionCardProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: ReactNode
-  title: string
-  description: string
-  variant?: 'default' | 'primary' | 'destructive'
+  icon: ReactNode;
+  title: string;
+  description: string;
+  variant?: 'default' | 'primary' | 'destructive';
 }
 
 export function ActionCard({
@@ -21,13 +22,13 @@ export function ActionCard({
   return (
     <button
       className={cn(
-        'group relative flex w-full cursor-pointer flex-col items-start text-left transition-all duration-50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+        'group relative flex w-full cursor-pointer flex-col items-start text-left transition-colors duration-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       disabled={disabled}
       {...props}
     >
-      <Card className="h-full w-full p-4 overflow-hidden border-border/50 bg-background/50 backdrop-blur-sm transition-all duration-150 hover:border-primary/50 hover:bg-accent/40 hover:shadow-sm">
+      <Card className="h-full w-full p-4 overflow-hidden border-border/50 bg-background/50 backdrop-blur-sm transition-colors duration-150 hover:border-primary/50 hover:bg-accent/40 hover:shadow-sm">
         <CardContent className="flex flex-col gap-2 p-0">
           <div
             className={cn(
@@ -57,5 +58,5 @@ export function ActionCard({
       {/* Decorative gradient blob behind the card (optional, adds premium feel) */}
       <div className="absolute -inset-px -z-10 rounded-xl bg-linear-to-br from-primary/20 to-transparent opacity-0 blur-lg transition-opacity duration-300 group-hover:opacity-50" />
     </button>
-  )
+  );
 }

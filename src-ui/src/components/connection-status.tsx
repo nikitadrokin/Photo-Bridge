@@ -2,14 +2,14 @@ import {
   ArrowsClockwise,
   CheckCircle,
   WarningCircle,
-} from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+} from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface ConnectionStatusProps {
-  isConnected: boolean
-  isRunning: boolean
-  onRefresh: () => void
+  isConnected: boolean;
+  isRunning: boolean;
+  onRefresh: () => void;
 }
 
 export function ConnectionStatus({
@@ -81,5 +81,5 @@ export function ConnectionStatus({
         </Button>
       </div>
     </div>
-  )
+  );
 }

@@ -16,15 +16,15 @@ const truncatePath = (path: string, segments: number = 2): string => {
   const filename = parts[lastIdx];
 
   if (filename.length > 16) {
-    parts[lastIdx] = `${filename.slice(0, 7)}...${filename.slice(-7)}`;
+    parts[lastIdx] = `${filename.slice(0, 7)}…${filename.slice(-7)}`;
   }
 
   if (parts.length <= segments) return parts.join('/');
-  return '.../' + parts.slice(-segments).join('/');
+  return '…/' + parts.slice(-segments).join('/');
 };
 
 const LogViewer: React.FC<LogViewerProps> = ({
-  emptyMessage = 'Logs will appear here...',
+  emptyMessage = 'Logs will appear here…',
 }) => {
   const {
     logs,
@@ -36,9 +36,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
   } = usePixel();
 
   return (
-    <Card className="w-full grow max-w-3xl p-0 relative overflow-hidden rounded-lg shadow-xs gap-0 max-h-[calc(100vh-10.175rem)]">
-      {/* Sticky header, z-11 is intentional */}
-      <div className="sticky top-0 z-11 bg-card border-b flex items-center justify-between px-4 py-2 min-h-[40px]">
+    <Card className="w-full grow max-w-3xl p-0 relative overflow-hidden rounded-lg shadow-xs gap-0 flex flex-col min-h-0">
+      {/* Sticky toolbar */}
+      <header className="sticky top-0 z-10 bg-card border-b flex items-center justify-between px-4 py-2 min-h-[40px]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {transferPaths ? (
             <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground min-w-0">
@@ -64,7 +64,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {terminalName && (
+          {terminalName ? (
             <Button
               variant="ghost"
               size="sm"
@@ -74,25 +74,25 @@ const LogViewer: React.FC<LogViewerProps> = ({
               <Terminal size={12} />
               {terminalName}
             </Button>
-          )}
+          ) : null}
 
-          {logs.length > 0 && (
+          {logs.length > 0 ? (
             <Button
               variant="ghost"
               size="sm"
               onClick={clearLogs}
-              className="h-6 text-xs text-muted-foreground hover:text-destructive"
+              className="h-6 text-xs text-muted-foreground hover:text-destructive transition-colors duration-200"
             >
               <Trash size={12} />
               Clear
             </Button>
-          )}
+          ) : null}
         </div>
-      </div>
+      </header>
       <ScrollArea className="grow p-4 font-mono text-sm before:top-10">
-        {logs.length === 0 && (
+        {logs.length === 0 ? (
           <span className="text-muted-foreground">{emptyMessage}</span>
-        )}
+        ) : null}
         {logs.map((log, i) => (
           <div
             key={i}
