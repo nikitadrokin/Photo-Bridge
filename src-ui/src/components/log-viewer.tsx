@@ -35,7 +35,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   } = usePixel();
 
   return (
-    <div className="flex flex-col grow min-h-0 rounded-xl border bg-[oklch(0.13_0_0)] dark:bg-[oklch(0.10_0_0)] overflow-hidden">
+    <div className="flex flex-col grow min-h-0 max-h-80 rounded-xl border bg-[oklch(0.13_0_0)] dark:bg-[oklch(0.10_0_0)] overflow-hidden">
       {/* Toolbar */}
       <header className="flex items-center justify-between px-4 py-2.5 border-b border-white/6 bg-[oklch(0.16_0_0)] dark:bg-[oklch(0.12_0_0)]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
