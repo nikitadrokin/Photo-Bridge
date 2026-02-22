@@ -18,7 +18,7 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
   return (
     <header
       className={cn(
-        'shrink-0 px-6 pt-6 pb-4 transition-[padding] duration-200 ease-in-out',
+        'sticky top-0 z-10 shrink-0 border-b border-border bg-background/80 backdrop-blur-lg px-6 py-3 transition-[padding] duration-200 ease-in-out',
         !isFullscreen && (!sidebarOpen || isMobile) && 'pl-26',
       )}
     >

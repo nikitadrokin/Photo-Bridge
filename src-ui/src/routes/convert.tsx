@@ -77,12 +77,9 @@ function ConvertPage() {
     <>
       <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
 
-      <PageHeader
-        title="Convert Media"
-        description="Convert photos and videos for Pixel compatibility"
-      />
+      <PageHeader title="Convert Media" />
 
-      <main className="flex-1 overflow-auto px-6 pb-6">
+      <main className="flex-1 overflow-auto px-6 py-6">
         <div className="mx-auto flex flex-col max-w-3xl h-full gap-6">
           {/* Empty state / File selection */}
           {!hasSelection ? (
