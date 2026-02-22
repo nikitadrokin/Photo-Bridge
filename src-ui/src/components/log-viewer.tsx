@@ -1,5 +1,4 @@
 import { ArrowRight, Terminal, Trash } from '@phosphor-icons/react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ScrollArea from '@/components/ui/scroll-area';
@@ -36,19 +35,22 @@ const LogViewer: React.FC<LogViewerProps> = ({
   } = usePixel();
 
   return (
-    <Card className="w-full grow max-w-3xl p-0 relative overflow-hidden rounded-lg shadow-xs gap-0 flex flex-col min-h-0">
-      {/* Sticky toolbar */}
-      <header className="sticky top-0 z-10 bg-card border-b flex items-center justify-between px-4 py-2 min-h-[40px]">
+    <div className="flex flex-col grow min-h-0 rounded-xl border bg-[oklch(0.13_0_0)] dark:bg-[oklch(0.10_0_0)] overflow-hidden">
+      {/* Toolbar */}
+      <header className="flex items-center justify-between px-4 py-2.5 border-b border-white/6 bg-[oklch(0.16_0_0)] dark:bg-[oklch(0.12_0_0)]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Traffic light dots */}
+          <div className="flex items-center gap-1.5 mr-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+          </div>
           {transferPaths ? (
-            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground min-w-0">
+            <div className="flex items-center gap-2 text-xs font-mono text-white/40 min-w-0">
               <span className="truncate min-w-0" title={transferPaths.source}>
                 {truncatePath(transferPaths.source)}
               </span>
-              <ArrowRight
-                size={12}
-                className="shrink-0 text-muted-foreground/50"
-              />
+              <ArrowRight size={10} className="shrink-0 text-white/20" />
               <span
                 className="truncate min-w-0"
                 title={transferPaths.destination}
@@ -57,9 +59,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Terminal size={16} className="text-muted-foreground" />
-              <span>Terminal Output</span>
+            <div className="flex items-center gap-2 text-xs font-medium text-white/50">
+              <Terminal size={14} />
+              <span>Output</span>
             </div>
           )}
         </div>
@@ -69,7 +71,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
               variant="ghost"
               size="sm"
               onClick={openActiveInTerminal}
-              className="h-6 text-xs text-muted-foreground"
+              className="h-6 text-xs text-white/40 hover:text-white/70 hover:bg-white/5"
             >
               <Terminal size={12} />
               {terminalName}
@@ -81,7 +83,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
               variant="ghost"
               size="sm"
               onClick={clearLogs}
-              className="h-6 text-xs text-muted-foreground hover:text-destructive transition-colors duration-200"
+              className="h-6 text-xs text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors duration-200"
             >
               <Trash size={12} />
               Clear
@@ -89,20 +91,26 @@ const LogViewer: React.FC<LogViewerProps> = ({
           ) : null}
         </div>
       </header>
-      <ScrollArea className="grow p-4 font-mono text-sm before:top-10">
+
+      {/* Log content */}
+      <ScrollArea
+        className="grow p-4 font-mono text-[13px] leading-relaxed"
+        gradientHeightTop="0"
+        gradientHeightBottom="0"
+      >
         {logs.length === 0 ? (
-          <span className="text-muted-foreground">{emptyMessage}</span>
+          <span className="text-white/25">{emptyMessage}</span>
         ) : null}
         {logs.map((log, i) => (
           <div
             key={i}
             className={cn(
-              'mb-1',
-              log.type === 'info' && 'text-blue-500',
-              log.type === 'success' && 'text-emerald-500',
-              log.type === 'error' && 'text-red-500',
-              log.type === 'warn' && 'text-yellow-500',
-              log.type === 'log' && 'text-muted-foreground',
+              'mb-0.5',
+              log.type === 'info' && 'text-blue-400',
+              log.type === 'success' && 'text-emerald-400',
+              log.type === 'error' && 'text-red-400',
+              log.type === 'warn' && 'text-yellow-400',
+              log.type === 'log' && 'text-white/50',
             )}
           >
             {log.message}
@@ -110,7 +118,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
         ))}
         <div ref={logsEndRef} />
       </ScrollArea>
-    </Card>
+    </div>
   );
 };
 

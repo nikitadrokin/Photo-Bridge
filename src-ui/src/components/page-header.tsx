@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
   title: string;
+  description?: string;
   children?: ReactNode;
 }
 
-export function PageHeader({ title, children }: PageHeaderProps) {
+export function PageHeader({ title, description, children }: PageHeaderProps) {
   const { open: sidebarOpen } = useSidebar();
   const isMobile = useIsMobile();
   const isFullscreen = useIsFullscreen();
@@ -17,15 +18,24 @@ export function PageHeader({ title, children }: PageHeaderProps) {
   return (
     <header
       className={cn(
-        'flex h-14 shrink-0 items-center gap-2 px-4 sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/40 transition-[padding] duration-200 ease-in-out',
+        'shrink-0 px-6 pt-6 pb-4 transition-[padding] duration-200 ease-in-out',
         !isFullscreen && (!sidebarOpen || isMobile) && 'pl-26',
       )}
     >
-      <SidebarTrigger className="-ml-1" />
-      <h1 className="flex-1 text-lg font-semibold">{title}</h1>
-      {children ? (
-        <div className="flex items-center gap-2">{children}</div>
-      ) : null}
+      <div className="flex items-start gap-3">
+        <SidebarTrigger className="-ml-2 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            {children ? (
+              <div className="flex items-center gap-2 shrink-0">{children}</div>
+            ) : null}
+          </div>
+          {description ? (
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+      </div>
     </header>
   );
 }

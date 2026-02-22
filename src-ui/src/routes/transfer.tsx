@@ -1,55 +1,40 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react'
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
-import LogViewer from '@/components/log-viewer'
-import { usePixel } from '@/contexts/pixel-context'
-import { useIsMobile } from '@/hooks/use-mobile'
-import { cn } from '@/lib/utils'
-import useIsFullscreen from '@/hooks/use-is-fullscreen'
-import { ConnectionStatus } from '@/components/connection-status'
-import { ActionCard } from '@/components/action-card'
+import { createFileRoute } from '@tanstack/react-router';
+import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
+import LogViewer from '@/components/log-viewer';
+import { usePixel } from '@/contexts/pixel-context';
+import { ConnectionStatus } from '@/components/connection-status';
+import { ActionCard } from '@/components/action-card';
+import { PageHeader } from '@/components/page-header';
 
-export const Route = createFileRoute('/transfer')({ component: TransferPage })
+export const Route = createFileRoute('/transfer')({ component: TransferPage });
 
 function TransferPage() {
-  const pixel = usePixel()
-  const { open: sidebarOpen } = useSidebar()
-  const isMobile = useIsMobile()
-  const isFullscreen = useIsFullscreen()
+  const pixel = usePixel();
 
-  const isDisabled = pixel.isRunning || !pixel.isConnected
+  const isDisabled = pixel.isRunning || !pixel.isConnected;
 
   return (
     <>
-      {/* Header with sidebar trigger */}
-      <header
-        className={cn(
-          'flex h-14 shrink-0 items-center gap-2 px-4 transition-[margin,padding] ease-in-out sticky top-0 z-11 bg-background/80 backdrop-blur-md border-b border-border/40',
-          isFullscreen ? '' : !sidebarOpen || isMobile ? 'pl-26' : '',
-        )}
-      >
-        <SidebarTrigger className="-ml-1" />
-        <div className="flex-1">
-          <h1 className="text-lg font-semibold">Pixel Transfer</h1>
-        </div>
-      </header>
+      <PageHeader
+        title="Pixel Transfer"
+        description="Push and pull files to your Pixel device via ADB"
+      />
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto flex flex-col max-w-5xl space-y-8 pb-10">
-          {/* Connection Status Hero */}
+      <main className="flex-1 overflow-auto px-6 pb-6">
+        <div className="mx-auto flex flex-col max-w-5xl gap-8 pb-6">
+          {/* Connection Status */}
           <ConnectionStatus
             isConnected={pixel.isConnected}
             isRunning={pixel.isRunning}
             onRefresh={pixel.checkConnection}
           />
 
-          {/* Quick Actions Grid */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight px-1">
-              Quick Actions
+          {/* Quick Actions */}
+          <section>
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+              Actions
             </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <ActionCard
                 icon={<Folder size={24} weight="duotone" />}
                 title="Push Folder"
@@ -79,17 +64,17 @@ function TransferPage() {
                 disabled={isDisabled}
               />
             </div>
-          </div>
+          </section>
 
-          {/* Log Viewer */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight px-1">
+          {/* Transfer Logs */}
+          {/* <section className="flex flex-col min-h-0">
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
               Transfer Logs
             </h2>
             <LogViewer emptyMessage="Connect your Pixel to get started" />
-          </div>
+          </section> */}
         </div>
       </main>
     </>
-  )
+  );
 }
