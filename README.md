@@ -69,3 +69,14 @@ To run the app in development mode with hot-reloading:
 ```bash
 bun run tauri dev
 ```
+
+## Spatial Audio Pipeline
+
+Spatial-audio-aware migration guidance, limitations, and copyable ffmpeg/ffprobe commands are documented in `docs/README.spatial.md`.
+
+For Pixel upload automation, use:
+
+```bash
+itp push-to-pixel /path/to/output_pixel_compat.mp4
+```
+

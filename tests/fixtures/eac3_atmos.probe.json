@@ -1,0 +1,21 @@
+{
+  "format": {
+    "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+    "tags": {
+      "creation_time": "2024-05-06T07:08:09.000000Z",
+      "make": "Apple",
+      "model": "iPhone 17 Pro"
+    }
+  },
+  "streams": [
+    {"index": 0, "codec_name": "hevc", "codec_type": "video"},
+    {
+      "index": 1,
+      "codec_name": "eac3",
+      "codec_type": "audio",
+      "channels": 6,
+      "channel_layout": "5.1(side)",
+      "tags": {"title": "Dolby Atmos JOC"}
+    }
+  ]
+}

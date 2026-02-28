@@ -1,0 +1,21 @@
+{
+  "format": {
+    "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+    "tags": {
+      "creation_time": "2024-01-02T03:04:05.000000Z",
+      "make": "Apple",
+      "model": "iPhone 15 Pro"
+    }
+  },
+  "streams": [
+    {"index": 0, "codec_name": "hevc", "codec_type": "video"},
+    {
+      "index": 1,
+      "codec_name": "apac",
+      "codec_type": "audio",
+      "channels": 6,
+      "channel_layout": "5.1",
+      "tags": {"handler_name": "Apple APAC spatial ASAF"}
+    }
+  ]
+}

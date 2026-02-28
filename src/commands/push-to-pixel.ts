@@ -1,11 +1,11 @@
 import { Command } from 'commander';
-import { execa } from 'execa';
 import { logger } from '../utils/logger.js';
+import { pushToPixelCamera } from '../pipeline/pixel_push.js';
 
 export const pushToPixel = new Command()
   .name('push-to-pixel')
   .alias('push')
-  .description('Push files to Pixel Camera folder')
+  .description('Push files to Pixel Camera folder and trigger media scanner')
   .argument('<paths...>', 'files to push')
   .option('--jsonl', 'enable JSON output for UI integration')
   .action(async (paths: string[], opts) => {
@@ -15,27 +15,10 @@ export const pushToPixel = new Command()
 
     for (const p of paths) {
       logger.info(`Pushing: ${p}`);
-      try {
-        const adb = execa('adb', ['push', p, '/sdcard/DCIM/Camera']);
-
-        // Stream adb output through logger
-        adb.stdout?.on('data', (data: Buffer) => {
-          const lines = data.toString().split('\n').filter(Boolean);
-          for (const line of lines) {
-            logger.log(line.trim());
-          }
-        });
-
-        adb.stderr?.on('data', (data: Buffer) => {
-          const lines = data.toString().split('\n').filter(Boolean);
-          for (const line of lines) {
-            logger.error(line.trim());
-          }
-        });
-
-        await adb;
+      const result = await pushToPixelCamera(p);
+      if (result.ok) {
         logger.success(`Pushed: ${p}`);
-      } catch (error) {
+      } else {
         logger.error(`Failed to push: ${p}`);
       }
     }

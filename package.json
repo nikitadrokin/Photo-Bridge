@@ -17,7 +17,8 @@
     "build": "tsup",
     "build:sidecar": "bun build ./src/index.ts --compile --outfile src-tauri/binaries/itp-aarch64-apple-darwin",
     "start": "bun run dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "BUN_TEST_TIMEOUT=30000 bun test"
   },
   "keywords": [
     "ios",
