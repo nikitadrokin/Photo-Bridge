@@ -92,7 +92,7 @@ export function useTerminal(): UseTerminalResult {
           // Per docs: -e flag passes command directly, auto-sets quit-after-last-window-closed=true
           const cmd = Command.create('exec-sh', [
             '-c',
-            `/Applications/Ghostty.app/Contents/MacOS/ghostty -e adb shell -t "cd /sdcard/DCIM/Camera; echo 'You are in the photo library path of your device.'; echo ''; echo '  ls      - View your media'; echo '  exit    - Close the session'; echo ''; /system/bin/sh"`,
+            `/Applications/Ghostty.app/Contents/MacOS/ghostty -e /opt/homebrew/bin/adb shell -t "cd /sdcard/DCIM/Camera; echo 'You are in the photo library path of your device.'; echo ''; echo '  ls      - View your media'; echo '  exit    - Close the session'; echo ''; /system/bin/sh"`,
           ]);
           await cmd.execute();
         } else if (terminalType === 'iterm') {
