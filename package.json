@@ -30,7 +30,6 @@
   "author": "dna",
   "license": "MIT",
   "bin": {
-    "iphone-to-pixel": "./dist/index.js",
     "itp": "./dist/index.js"
   },
   "dependencies": {
