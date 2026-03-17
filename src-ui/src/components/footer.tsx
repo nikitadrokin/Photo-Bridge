@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
-import { getVersion } from '@tauri-apps/api/app'
-import { GithubLogo } from '@phosphor-icons/react'
+import { useEffect, useState } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
+import { GithubLogo } from '@phosphor-icons/react';
 
 const Footer: React.FC = () => {
-  const [version, setVersion] = useState<string>('')
+  const [version, setVersion] = useState<string>('');
 
   useEffect(() => {
     getVersion()
       .then(setVersion)
-      .catch(() => setVersion('dev'))
-  }, [])
+      .catch(() => setVersion('dev'));
+  }, []);
 
   return (
     <footer className="w-full max-w-2xl mt-auto pt-8 pb-4 text-center text-sm text-muted-foreground">
@@ -43,7 +43,7 @@ const Footer: React.FC = () => {
         )}
       </div>
     </footer>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;

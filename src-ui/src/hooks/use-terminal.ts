@@ -1,20 +1,24 @@
-import { useState, useCallback, useEffect } from 'react'
-import { Command } from '@tauri-apps/plugin-shell'
+import { useCallback, useEffect, useState } from 'react';
+import { Command } from '@tauri-apps/plugin-shell';
 
-type TerminalType = 'ghostty' | 'iterm' | 'terminal' | null
+type TerminalType = 'ghostty' | 'iterm' | 'terminal' | null;
 
 interface UseTerminalResult {
   /** Detected terminal app name */
-  terminalName: string | null
+  terminalName: string | null;
   /** Whether detection is complete */
-  isReady: boolean
+  isReady: boolean;
   /** Open native terminal with a command */
-  openInTerminal: (command: string, args: string[]) => Promise<void>
+  openInTerminal: (command: string, args: Array<string>) => Promise<void>;
   /** Get the full CLI command string for display */
-  getCommandString: (command: string, args: string[]) => string
+  getCommandString: (command: string, args: Array<string>) => string;
 }
 
-const TERMINAL_CHECKS: { type: TerminalType; path: string; name: string }[] = [
+const TERMINAL_CHECKS: Array<{
+  type: TerminalType;
+  path: string;
+  name: string;
+}> = [
   { type: 'ghostty', path: '/Applications/Ghostty.app', name: 'Ghostty' },
   { type: 'iterm', path: '/Applications/iTerm.app', name: 'iTerm' },
   {
@@ -22,15 +26,15 @@ const TERMINAL_CHECKS: { type: TerminalType; path: string; name: string }[] = [
     path: '/System/Applications/Utilities/Terminal.app',
     name: 'Terminal',
   },
-]
+];
 
 /**
  * Hook for detecting and launching the user's native terminal with commands.
  */
 export function useTerminal(): UseTerminalResult {
-  const [terminalType, setTerminalType] = useState<TerminalType>(null)
-  const [terminalName, setTerminalName] = useState<string | null>(null)
-  const [isReady, setIsReady] = useState(false)
+  const [terminalType, setTerminalType] = useState<TerminalType>(null);
+  const [terminalName, setTerminalName] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   // Detect installed terminal on mount
   useEffect(() => {
@@ -41,46 +45,46 @@ export function useTerminal(): UseTerminalResult {
           const cmd = Command.create('exec-sh', [
             '-c',
             `test -d "${terminal.path}"`,
-          ])
-          const result = await cmd.execute()
+          ]);
+          const result = await cmd.execute();
           if (result.code === 0) {
-            setTerminalType(terminal.type)
-            setTerminalName(terminal.name)
-            setIsReady(true)
-            return
+            setTerminalType(terminal.type);
+            setTerminalName(terminal.name);
+            setIsReady(true);
+            return;
           }
         } catch {
           // Continue to next terminal
         }
       }
       // No terminal found (shouldn't happen, Terminal.app is always there)
-      setIsReady(true)
+      setIsReady(true);
     }
-    detectTerminal()
-  }, [])
+    detectTerminal();
+  }, []);
 
   const getCommandString = useCallback(
-    (command: string, args: string[]): string => {
+    (command: string, args: Array<string>): string => {
       const escapedArgs = args.map((arg) => {
         // Escape spaces and special characters in paths
         if (arg.includes(' ') || arg.includes("'") || arg.includes('"')) {
-          return `'${arg.replace(/'/g, "'\\''")}'`
+          return `'${arg.replace(/'/g, "'\\''")}'`;
         }
-        return arg
-      })
-      return `${command} ${escapedArgs.join(' ')}`
+        return arg;
+      });
+      return `${command} ${escapedArgs.join(' ')}`;
     },
     [],
-  )
+  );
 
   const openInTerminal = useCallback(
-    async (command: string, args: string[]) => {
+    async (command: string, args: Array<string>) => {
       if (!terminalType) {
-        console.error('No terminal detected')
-        return
+        console.error('No terminal detected');
+        return;
       }
 
-      const fullCommand = getCommandString(command, args)
+      const fullCommand = getCommandString(command, args);
 
       try {
         if (terminalType === 'ghostty') {
@@ -88,9 +92,9 @@ export function useTerminal(): UseTerminalResult {
           // Per docs: -e flag passes command directly, auto-sets quit-after-last-window-closed=true
           const cmd = Command.create('exec-sh', [
             '-c',
-            `/Applications/Ghostty.app/Contents/MacOS/ghostty -e adb shell -t "cd /sdcard/DCIM/Camera; echo 'You are in the photo library path of your device.'; echo ''; echo '  ls      - View your media'; echo '  exit    - Close the session'; echo ''; /system/bin/sh"`,
-          ])
-          await cmd.execute()
+            `/Applications/Ghostty.app/Contents/MacOS/ghostty -e /opt/homebrew/bin/adb shell -t "cd /sdcard/DCIM/Camera; echo 'You are in the photo library path of your device.'; echo ''; echo '  ls      - View your media'; echo '  exit    - Close the session'; echo ''; /system/bin/sh"`,
+          ]);
+          await cmd.execute();
         } else if (terminalType === 'iterm') {
           // iTerm2: use AppleScript
           const script = `
@@ -98,12 +102,12 @@ export function useTerminal(): UseTerminalResult {
                         activate
                         create window with default profile command "${fullCommand.replace(/"/g, '\\"')}"
                     end tell
-                `
+                `;
           const cmd = Command.create('exec-sh', [
             '-c',
             `osascript -e '${script.replace(/'/g, "'\\''")}'`,
-          ])
-          await cmd.execute()
+          ]);
+          await cmd.execute();
         } else {
           // Terminal.app: use AppleScript
           const script = `
@@ -111,24 +115,24 @@ export function useTerminal(): UseTerminalResult {
                         activate
                         do script "${fullCommand.replace(/"/g, '\\"')}"
                     end tell
-                `
+                `;
           const cmd = Command.create('exec-sh', [
             '-c',
             `osascript -e '${script.replace(/'/g, "'\\''")}'`,
-          ])
-          await cmd.execute()
+          ]);
+          await cmd.execute();
         }
       } catch (error) {
-        console.error('Failed to open terminal:', error)
+        console.error('Failed to open terminal:', error);
       }
     },
     [terminalType, getCommandString],
-  )
+  );
 
   return {
     terminalName,
     isReady,
     openInTerminal,
     getCommandString,
-  }
+  };
 }

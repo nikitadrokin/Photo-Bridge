@@ -121,3 +121,35 @@ export async function hasValidPhotoDate(filePath: string): Promise<boolean> {
   ]);
   return !!stdout.trim() && !stdout.includes('0000:00:00');
 }
+
+/**
+ * Fix dates on a file using a specific Unix timestamp (from JSON sidecar).
+ * Writes the timestamp to all relevant date tags.
+ */
+export async function fixDatesFromTimestamp(
+  filePath: string,
+  timestamp: number,
+): Promise<void> {
+  // Convert Unix seconds to exiftool datetime format: "YYYY:MM:DD HH:MM:SS"
+  const date = new Date(timestamp * 1000);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  const exifDate = `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`;
+
+  await execa('exiftool', [
+    '-overwrite_original',
+    '-api',
+    'QuickTimeUTC',
+    `-AllDates=${exifDate}`,
+    `-DateTimeOriginal=${exifDate}`,
+    `-CreateDate=${exifDate}`,
+    `-ModifyDate=${exifDate}`,
+    `-FileCreateDate=${exifDate}`,
+    `-FileModifyDate=${exifDate}`,
+    filePath,
+  ]);
+}

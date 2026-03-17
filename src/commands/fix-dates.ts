@@ -7,9 +7,11 @@ import { validateTools } from '../utils/validation.js';
 import {
   fixDatesInPlace,
   fixDatesOnPhoto,
+  fixDatesFromTimestamp,
   hasValidCreateDate,
   hasValidPhotoDate,
 } from '../utils/dates.js';
+import { findJsonSidecar, readPhotoTakenTime } from '../utils/json-sidecar.js';
 
 const optionsSchema = z.object({
   cwd: z.string(),
@@ -18,6 +20,35 @@ const optionsSchema = z.object({
 
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v', 'mpg', 'mpeg'];
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng'];
+
+/**
+ * Recursively collect all media files from a directory
+ */
+async function collectMediaFilesRecursive(
+  dirPath: string,
+  videoFiles: string[],
+  imageFiles: string[],
+): Promise<void> {
+  const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+
+    const fullPath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      // Recurse into subdirectory
+      await collectMediaFilesRecursive(fullPath, videoFiles, imageFiles);
+    } else if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase().slice(1);
+      if (VIDEO_EXTENSIONS.includes(ext)) {
+        videoFiles.push(fullPath);
+      } else if (IMAGE_EXTENSIONS.includes(ext)) {
+        imageFiles.push(fullPath);
+      }
+    }
+  }
+}
 
 export const fixDates = new Command()
   .name('fix-dates')
@@ -70,19 +101,9 @@ export const fixDates = new Command()
       let videoFiles: string[] = [];
       let imageFiles: string[] = [];
 
-      // collect media files from directories
+      // Recursively collect media files from directories
       for (const dir of directories) {
-        const dirFiles = await fs.readdir(dir.path, { withFileTypes: true });
-        for (const f of dirFiles) {
-          if (!f.isFile() || f.name.startsWith('.')) continue;
-          const ext = path.extname(f.name).toLowerCase().slice(1);
-          const filePath = path.join(dir.path, f.name);
-          if (VIDEO_EXTENSIONS.includes(ext)) {
-            videoFiles.push(filePath);
-          } else if (IMAGE_EXTENSIONS.includes(ext)) {
-            imageFiles.push(filePath);
-          }
-        }
+        await collectMediaFilesRecursive(dir.path, videoFiles, imageFiles);
       }
 
       // collect media files if files were passed instead of directories
@@ -119,24 +140,56 @@ export const fixDates = new Command()
       for (const file of videoFiles) {
         const baseName = path.basename(file);
 
-        // Check if already has valid date
-        if (await hasValidCreateDate(file)) {
-          logger.log(`${baseName}`);
-          alreadyOkCount++;
-          continue;
-        }
+        try {
+          // Check if already has valid date
+          if (await hasValidCreateDate(file)) {
+            logger.log(`${baseName}`);
+            alreadyOkCount++;
+            continue;
+          }
 
-        // Try to fix
-        await fixDatesInPlace(file);
+          // Priority 1: Try JSON sidecar (Google Takeout)
+          const jsonPath = await findJsonSidecar(file);
+          if (jsonPath) {
+            const timestamp = await readPhotoTakenTime(jsonPath);
+            if (timestamp) {
+              try {
+                await fixDatesFromTimestamp(file, timestamp);
+                if (await hasValidCreateDate(file)) {
+                  logger.success(`Fixed (from JSON): ${baseName}`);
+                  fixedCount++;
+                  continue;
+                }
+              } catch {
+                // Writing not supported for this format, try next method
+              }
+            }
+          }
 
-        // Verify if it worked
-        if (await hasValidCreateDate(file)) {
-          logger.success(`Fixed: ${baseName}`);
-          fixedCount++;
-        } else {
-          logger.warn(
-            `Could not recover date: ${baseName} - no valid source date found`,
-          );
+          // Priority 2: Try EXIF metadata
+          try {
+            await fixDatesInPlace(file);
+          } catch {
+            // Writing not supported for this format
+          }
+
+          // Verify if it worked
+          if (await hasValidCreateDate(file)) {
+            logger.success(`Fixed: ${baseName}`);
+            fixedCount++;
+          } else {
+            logger.warn(
+              `Could not recover date: ${baseName} - no valid source date found`,
+            );
+            failedCount++;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('not yet supported')) {
+            logger.warn(`Skipped (format not writable): ${baseName}`);
+          } else {
+            logger.warn(`Error processing: ${baseName} - ${msg}`);
+          }
           failedCount++;
         }
       }
@@ -145,24 +198,56 @@ export const fixDates = new Command()
       for (const file of imageFiles) {
         const baseName = path.basename(file);
 
-        // Check if already has valid date
-        if (await hasValidPhotoDate(file)) {
-          logger.log(`${baseName}`);
-          alreadyOkCount++;
-          continue;
-        }
+        try {
+          // Check if already has valid date
+          if (await hasValidPhotoDate(file)) {
+            logger.log(`${baseName}`);
+            alreadyOkCount++;
+            continue;
+          }
 
-        // Try to fix
-        await fixDatesOnPhoto(file);
+          // Priority 1: Try JSON sidecar (Google Takeout)
+          const jsonPath = await findJsonSidecar(file);
+          if (jsonPath) {
+            const timestamp = await readPhotoTakenTime(jsonPath);
+            if (timestamp) {
+              try {
+                await fixDatesFromTimestamp(file, timestamp);
+                if (await hasValidPhotoDate(file)) {
+                  logger.success(`Fixed (from JSON): ${baseName}`);
+                  fixedCount++;
+                  continue;
+                }
+              } catch {
+                // Writing not supported for this format, try next method
+              }
+            }
+          }
 
-        // Verify if it worked
-        if (await hasValidPhotoDate(file)) {
-          logger.success(`Fixed: ${baseName}`);
-          fixedCount++;
-        } else {
-          logger.warn(
-            `Could not recover date: ${baseName} - no valid source date found`,
-          );
+          // Priority 2: Try EXIF metadata
+          try {
+            await fixDatesOnPhoto(file);
+          } catch {
+            // Writing not supported for this format
+          }
+
+          // Verify if it worked
+          if (await hasValidPhotoDate(file)) {
+            logger.success(`Fixed: ${baseName}`);
+            fixedCount++;
+          } else {
+            logger.warn(
+              `Could not recover date: ${baseName} - no valid source date found`,
+            );
+            failedCount++;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('not yet supported')) {
+            logger.warn(`Skipped (format not writable): ${baseName}`);
+          } else {
+            logger.warn(`Error processing: ${baseName} - ${msg}`);
+          }
           failedCount++;
         }
       }

@@ -1,16 +1,16 @@
 import {
+  DownloadSimple,
+  Export,
   File,
   Folder,
-  Export,
   Terminal,
-  DownloadSimple,
-} from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
-import ActionItem from '@/components/action-item'
-import { usePixel } from '@/contexts/pixel-context'
+} from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import ActionItem from '@/components/action-item';
+import { usePixel } from '@/contexts/pixel-context';
 
 const PixelActionItems: React.FC = () => {
-  const pixel = usePixel()
+  const pixel = usePixel();
 
   return (
     <>
@@ -92,7 +92,7 @@ const PixelActionItems: React.FC = () => {
         </Button>
       </ActionItem>
     </>
-  )
-}
+  );
+};
 
-export default PixelActionItems
+export default PixelActionItems;

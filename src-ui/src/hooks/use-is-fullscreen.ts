@@ -1,5 +1,5 @@
-import { Window } from '@tauri-apps/api/window'
-import { useEffect, useState } from 'react'
+import { Window } from '@tauri-apps/api/window';
+import { useEffect, useState } from 'react';
 
 /**
  * Hook to detect and track the fullscreen state of the Tauri window.
@@ -8,34 +8,34 @@ import { useEffect, useState } from 'react'
 const useIsFullscreen = (): boolean | undefined => {
   const [isFullscreen, setIsFullscreen] = useState<boolean | undefined>(
     undefined,
-  )
+  );
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined
+    let unlisten: (() => void) | undefined;
 
     const setupListener = async () => {
-      const appWindow = Window.getCurrent()
+      const appWindow = Window.getCurrent();
 
       // Initial check
-      const fullscreenState = await appWindow.isFullscreen()
-      setIsFullscreen(fullscreenState)
+      const fullscreenState = await appWindow.isFullscreen();
+      setIsFullscreen(fullscreenState);
 
       // Listen for resize events (Tauri emits this on fullscreen toggle)
       unlisten = await appWindow.onResized(async () => {
-        const isFS = await appWindow.isFullscreen()
-        setIsFullscreen(isFS)
-      })
-    }
+        const isFS = await appWindow.isFullscreen();
+        setIsFullscreen(isFS);
+      });
+    };
 
-    setupListener()
+    setupListener();
 
     // Cleanup the listener on unmount
     return () => {
-      if (unlisten) unlisten()
-    }
-  }, [])
+      if (unlisten) unlisten();
+    };
+  }, []);
 
-  return isFullscreen
-}
+  return isFullscreen;
+};
 
-export default useIsFullscreen
+export default useIsFullscreen;

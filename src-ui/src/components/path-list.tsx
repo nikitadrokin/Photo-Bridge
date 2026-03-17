@@ -1,10 +1,10 @@
-import { X } from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
+import { X } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
 
 interface PathListProps {
-  paths: string[]
-  maxVisible?: number
-  onClear?: () => void
+  paths: Array<string>;
+  maxVisible?: number;
+  onClear?: () => void;
 }
 
 const PathList: React.FC<PathListProps> = ({
@@ -12,7 +12,7 @@ const PathList: React.FC<PathListProps> = ({
   maxVisible = 5,
   onClear,
 }) => {
-  if (paths.length === 0) return null
+  if (paths.length === 0) return null;
 
   return (
     <div className="text-sm text-muted-foreground">
@@ -46,7 +46,7 @@ const PathList: React.FC<PathListProps> = ({
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default PathList
+export default PathList;

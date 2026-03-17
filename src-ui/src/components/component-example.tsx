@@ -1,8 +1,38 @@
-'use client'
+'use client';
 
-import * as React from 'react'
+import * as React from 'react';
 
-import { Example, ExampleWrapper } from '@/components/example'
+import {
+  BellIcon,
+  BluetoothIcon,
+  CodeIcon,
+  CreditCardIcon,
+  DotsThreeOutlineIcon,
+  DotsThreeVerticalIcon,
+  DownloadIcon,
+  EnvelopeIcon,
+  EyeIcon,
+  FileIcon,
+  FileTextIcon,
+  FloppyDiskIcon,
+  FolderIcon,
+  FolderOpenIcon,
+  GearIcon,
+  KeyboardIcon,
+  LayoutIcon,
+  MagnifyingGlassIcon,
+  MonitorIcon,
+  MoonIcon,
+  PaletteIcon,
+  PlusIcon,
+  QuestionIcon,
+  ShieldIcon,
+  SignOutIcon,
+  SunIcon,
+  TranslateIcon,
+  UserIcon,
+} from '@phosphor-icons/react';
+import { Example, ExampleWrapper } from '@/components/example';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,9 +44,9 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardAction,
@@ -25,7 +55,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/components/ui/card';
 import {
   Combobox,
   ComboboxContent,
@@ -33,7 +63,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from '@/components/ui/combobox'
+} from '@/components/ui/combobox';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -50,9 +80,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
+} from '@/components/ui/dropdown-menu';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -60,38 +90,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  PlusIcon,
-  BluetoothIcon,
-  DotsThreeVerticalIcon,
-  FileIcon,
-  FolderIcon,
-  FolderOpenIcon,
-  CodeIcon,
-  DotsThreeOutlineIcon,
-  MagnifyingGlassIcon,
-  FloppyDiskIcon,
-  DownloadIcon,
-  EyeIcon,
-  LayoutIcon,
-  PaletteIcon,
-  SunIcon,
-  MoonIcon,
-  MonitorIcon,
-  UserIcon,
-  CreditCardIcon,
-  GearIcon,
-  KeyboardIcon,
-  TranslateIcon,
-  BellIcon,
-  EnvelopeIcon,
-  ShieldIcon,
-  QuestionIcon,
-  FileTextIcon,
-  SignOutIcon,
-} from '@phosphor-icons/react'
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 const ComponentExample: React.FC = () => {
   return (
@@ -99,10 +99,10 @@ const ComponentExample: React.FC = () => {
       <CardExample />
       <FormExample />
     </ExampleWrapper>
-  )
-}
+  );
+};
 
-export default ComponentExample
+export default ComponentExample;
 
 function CardExample() {
   return (
@@ -152,7 +152,7 @@ function CardExample() {
         </CardFooter>
       </Card>
     </Example>
-  )
+  );
 }
 
 const frameworks = [
@@ -161,22 +161,22 @@ const frameworks = [
   'Nuxt.js',
   'Remix',
   'Astro',
-] as const
+] as const;
 
 const roleItems = [
   { label: 'Developer', value: 'developer' },
   { label: 'Designer', value: 'designer' },
   { label: 'Manager', value: 'manager' },
   { label: 'Other', value: 'other' },
-]
+];
 
 function FormExample() {
   const [notifications, setNotifications] = React.useState({
     email: true,
     sms: false,
     push: true,
-  })
-  const [theme, setTheme] = React.useState('light')
+  });
+  const [theme, setTheme] = React.useState('light');
 
   return (
     <Example title="Form">
@@ -494,5 +494,5 @@ function FormExample() {
         </CardContent>
       </Card>
     </Example>
-  )
+  );
 }

@@ -1,21 +1,21 @@
-import { ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
+import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Item,
-  ItemMedia,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
   ItemActions,
-} from '@/components/ui/item'
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item';
 
 interface ActionItemProps {
-  icon: ReactNode
-  iconClass?: string
-  title: string
-  description: string
-  disabled?: boolean
-  children: ReactNode
+  icon: ReactNode;
+  iconClass?: string;
+  title: string;
+  description: string;
+  disabled?: boolean;
+  children: ReactNode;
 }
 
 const ActionItem: React.FC<ActionItemProps> = ({
@@ -35,10 +35,10 @@ const ActionItem: React.FC<ActionItemProps> = ({
       </ItemContent>
       <ItemActions>{children}</ItemActions>
     </Item>
-  )
-}
+  );
+};
 
-export default ActionItem
+export default ActionItem;
 
 // Re-export Button for convenience
-export { Button }
+export { Button };
