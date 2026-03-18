@@ -1,15 +1,24 @@
 import { execa } from 'execa';
 import { logger } from './logger.js';
 
-const REQUIRED_TOOLS = ['ffmpeg', 'ffprobe', 'exiftool'] as const;
+export type RequiredTool = 'ffmpeg' | 'ffprobe' | 'exiftool';
+
+const DEFAULT_REQUIRED_TOOLS: readonly RequiredTool[] = [
+  'ffmpeg',
+  'ffprobe',
+  'exiftool',
+] as const;
 
 /**
- * Validate that all required tools are installed
+ * Validate that the requested tools are installed.
  */
-export async function validateTools(): Promise<void> {
-  const missing: string[] = [];
+export async function validateTools(
+  requiredTools: readonly RequiredTool[] = DEFAULT_REQUIRED_TOOLS,
+): Promise<void> {
+  const missing: RequiredTool[] = [];
+  const uniqueTools = [...new Set(requiredTools)];
 
-  for (const tool of REQUIRED_TOOLS) {
+  for (const tool of uniqueTools) {
     try {
       await execa('command', ['-v', tool]);
     } catch {
