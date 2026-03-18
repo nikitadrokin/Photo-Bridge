@@ -130,7 +130,7 @@ export const fixDates = new Command()
       logger.log('=========================================================');
       logger.break();
 
-      await validateTools();
+      await validateTools(['exiftool']);
 
       let fixedCount = 0;
       let alreadyOkCount = 0;
