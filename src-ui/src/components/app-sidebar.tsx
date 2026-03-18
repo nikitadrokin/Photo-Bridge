@@ -82,7 +82,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             isMobile && 'ml-20 mt-2',
           )}
         >
-          iPhone to Pixel
+          {/* iPhone to Pixel */}&nbsp;
         </span>
       </SidebarHeader>
       <SidebarSeparator className="mt-2.5" />
