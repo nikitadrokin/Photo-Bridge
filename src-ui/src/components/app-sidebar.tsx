@@ -5,6 +5,7 @@ import {
   ArrowsClockwise,
   DeviceMobile,
   FilmStrip,
+  Gear,
   GithubLogo,
   RoadHorizon,
 } from '@phosphor-icons/react';
@@ -39,19 +40,25 @@ const routes = [
     to: '/convert',
     label: 'Convert Media',
     icon: FilmStrip,
-    tooltip: 'Convert media files for Pixel compatibility',
+    tooltip: 'Convert media',
   },
   {
     to: '/transfer',
     label: 'Pixel Transfer',
     icon: DeviceMobile,
-    tooltip: 'Push and pull files to/from your Pixel',
+    tooltip: 'Transfer files to Pixel',
   },
   {
     to: '/roadmap',
     label: 'Roadmap',
     icon: RoadHorizon,
     tooltip: 'View planned and upcoming features',
+  },
+  {
+    to: '/settings',
+    label: 'Settings',
+    icon: Gear,
+    tooltip: 'App settings',
   },
 ] as const;
 
@@ -105,14 +112,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                     >
                       <route.icon
                         weight={isActive ? 'duotone' : 'regular'}
-                        className={cn(
-                          isActive && 'text-primary',
-                          !isActive &&
-                            route.to === '/transfer' &&
-                            (isPixelConnected
-                              ? 'text-green-500'
-                              : 'text-muted-foreground'),
-                        )}
+                        className={cn(isActive && 'text-primary')}
                       />
                       <span>{route.label}</span>
                     </SidebarMenuButton>
