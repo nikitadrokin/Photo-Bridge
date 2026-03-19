@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
 
-type TerminalType = 'ghostty' | 'iterm' | 'terminal' | null;
+type TerminalType = 'ghostty' | 'terminal' | null;
 
 interface UseTerminalResult {
   /** Detected terminal app name */
@@ -20,7 +20,6 @@ const TERMINAL_CHECKS: Array<{
   name: string;
 }> = [
   { type: 'ghostty', path: '/Applications/Ghostty.app', name: 'Ghostty' },
-  { type: 'iterm', path: '/Applications/iTerm.app', name: 'iTerm' },
   {
     type: 'terminal',
     path: '/System/Applications/Utilities/Terminal.app',
@@ -93,19 +92,6 @@ export function useTerminal(): UseTerminalResult {
           const cmd = Command.create('exec-sh', [
             '-c',
             `/Applications/Ghostty.app/Contents/MacOS/ghostty -e /opt/homebrew/bin/adb shell -t "cd /sdcard/DCIM/Camera; echo 'You are in the photo library path of your device.'; echo ''; echo '  ls      - View your media'; echo '  exit    - Close the session'; echo ''; /system/bin/sh"`,
-          ]);
-          await cmd.execute();
-        } else if (terminalType === 'iterm') {
-          // iTerm2: use AppleScript
-          const script = `
-                    tell application "iTerm"
-                        activate
-                        create window with default profile command "${fullCommand.replace(/"/g, '\\"')}"
-                    end tell
-                `;
-          const cmd = Command.create('exec-sh', [
-            '-c',
-            `osascript -e '${script.replace(/'/g, "'\\''")}'`,
           ]);
           await cmd.execute();
         } else {
