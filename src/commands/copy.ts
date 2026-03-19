@@ -22,7 +22,7 @@ export const copy = new Command()
   .description(
     'copy iOS media files to Pixel-compatible format (bit-for-bit video copy, no remux)',
   )
-  .argument('[paths...]', 'directory or files to copy', ['Part1'])
+  .argument('[paths...]', 'directory or files to copy')
   .option(
     '-c, --cwd <cwd>',
     'the working directory. defaults to the current directory.',
@@ -123,9 +123,7 @@ async function processDirectory(dirPath: string): Promise<void> {
 async function processIndividualFiles(filePaths: string[]): Promise<void> {
   const regularFiles = filePaths.filter((f) => {
     const ext = path.extname(f).toLowerCase().slice(1);
-    return (
-      IMAGE_EXTENSIONS.includes(ext) || VIDEO_EXTENSIONS.includes(ext)
-    );
+    return IMAGE_EXTENSIONS.includes(ext) || VIDEO_EXTENSIONS.includes(ext);
   });
 
   if (regularFiles.length === 0) {
