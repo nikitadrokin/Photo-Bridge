@@ -142,3 +142,37 @@ export async function processVideo(
     throw error;
   }
 }
+
+/**
+ * Process a video file by copying it bit-for-bit and renaming it to .mp4.
+ *
+ * This just tells macOS to copy the file bit-for-bit, only changing the .mov extension to .mp4:
+ * - no ffmpeg
+ * - no ffprobe
+ * - no metadata rewrite
+ * - no stream changes
+ * - output may not be Pixel-compatible, we are testing if it just works by uploads in Google Photos
+ */
+export async function copyVideo(
+  inputPath: string,
+  outputPath: string,
+): Promise<void> {
+  const baseName = path.basename(inputPath);
+
+  logger.log(`VIDEO: ${baseName} -> Copying .mov to .mp4 container...`);
+
+  try {
+    // fs.copyFile throws errors if the file already exists
+    // so we force remove it first
+    await fs.rm(outputPath, { force: true });
+    await fs.copyFile(inputPath, outputPath);
+  } catch (error) {
+    logger.error(`❌ ERROR: Failed to copy ${baseName}`);
+    try {
+      await fs.rm(outputPath, { force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw error;
+  }
+}
