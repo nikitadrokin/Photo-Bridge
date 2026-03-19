@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransferRouteImport } from './routes/transfer'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
+import { Route as CopyRouteImport } from './routes/copy'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -19,9 +21,19 @@ const TransferRoute = TransferRouteImport.update({
   path: '/transfer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoadmapRoute = RoadmapRouteImport.update({
   id: '/roadmap',
   path: '/roadmap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopyRoute = CopyRouteImport.update({
+  id: '/copy',
+  path: '/copy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConvertRoute = ConvertRouteImport.update({
@@ -38,34 +50,49 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/copy': typeof CopyRoute
   '/roadmap': typeof RoadmapRoute
+  '/settings': typeof SettingsRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/copy': typeof CopyRoute
   '/roadmap': typeof RoadmapRoute
+  '/settings': typeof SettingsRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/copy': typeof CopyRoute
   '/roadmap': typeof RoadmapRoute
+  '/settings': typeof SettingsRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/convert' | '/roadmap' | '/transfer'
+  fullPaths: '/' | '/convert' | '/copy' | '/roadmap' | '/settings' | '/transfer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/convert' | '/roadmap' | '/transfer'
-  id: '__root__' | '/' | '/convert' | '/roadmap' | '/transfer'
+  to: '/' | '/convert' | '/copy' | '/roadmap' | '/settings' | '/transfer'
+  id:
+    | '__root__'
+    | '/'
+    | '/convert'
+    | '/copy'
+    | '/roadmap'
+    | '/settings'
+    | '/transfer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConvertRoute: typeof ConvertRoute
+  CopyRoute: typeof CopyRoute
   RoadmapRoute: typeof RoadmapRoute
+  SettingsRoute: typeof SettingsRoute
   TransferRoute: typeof TransferRoute
 }
 
@@ -78,11 +105,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransferRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roadmap': {
       id: '/roadmap'
       path: '/roadmap'
       fullPath: '/roadmap'
       preLoaderRoute: typeof RoadmapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copy': {
+      id: '/copy'
+      path: '/copy'
+      fullPath: '/copy'
+      preLoaderRoute: typeof CopyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/convert': {
@@ -105,7 +146,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConvertRoute: ConvertRoute,
+  CopyRoute: CopyRoute,
   RoadmapRoute: RoadmapRoute,
+  SettingsRoute: SettingsRoute,
   TransferRoute: TransferRoute,
 }
 export const routeTree = rootRouteImport
