@@ -3,6 +3,7 @@ import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import {
   ArrowsClockwise,
+  Copy,
   DeviceMobile,
   FilmStrip,
   Gear,
@@ -41,6 +42,12 @@ const routes = [
     label: 'Convert Media',
     icon: FilmStrip,
     tooltip: 'Convert media',
+  },
+  {
+    to: '/copy',
+    label: 'Copy Media',
+    icon: Copy,
+    tooltip: 'Copy media',
   },
   {
     to: '/transfer',
