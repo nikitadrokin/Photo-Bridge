@@ -14,7 +14,8 @@ const convertOptionsSchema = z.object({
   jsonl: z.boolean().optional(),
 });
 
-const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng'];
+// prettier-ignore
+const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
 const LEGACY_VIDEO_EXTENSIONS = ['mpg', 'mpeg'];
 
@@ -93,7 +94,7 @@ async function processDirectory(dirPath: string): Promise<void> {
   logger.log('=========================================================');
   logger.info(`SOURCE:      ${inDir}`);
   logger.info(`DESTINATION: ${outDir}`);
-  // logger.info('MODE:        ARCHIVAL (Preserve HDR & HEIC)');
+  logger.info('MODE:        Copy MOV to MP4 container without re-encoding');
   logger.log('=========================================================');
   logger.break();
 
@@ -138,7 +139,7 @@ async function processIndividualFiles(filePaths: string[]): Promise<void> {
   logger.log('=========================================================');
   logger.info(`SOURCE:      ${regularFiles.length} file(s)`);
   logger.info(`DESTINATION: In-place (Output files next to input files)`);
-  logger.info('MODE:        ARCHIVAL (Preserve HDR & HEIC)');
+  logger.info('MODE:        SPM-STYLE COPY/RENAME (Fake MP4)');
   logger.log('=========================================================');
   logger.break();
 
