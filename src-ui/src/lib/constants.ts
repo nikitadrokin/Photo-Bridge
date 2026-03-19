@@ -6,6 +6,7 @@ export const IMAGE_EXTENSIONS = [
   'png',
   'gif',
   'dng',
+  'webp',
 ];
 export const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
 export const ALL_EXTENSIONS = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS];
