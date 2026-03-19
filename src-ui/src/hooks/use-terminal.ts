@@ -99,8 +99,10 @@ export function useTerminal(): UseTerminalResult {
           const introBanner = shLines`
             You are in the photo library path of your device.
 
-              ls      - View your media
-              exit    - Close the session
+              ls       - View your photos and videos
+              df -h .  - View "disk free" available storage
+              du -sh . - View "disk usage" of the photo library
+              exit     - Close the session
 
           `;
 
