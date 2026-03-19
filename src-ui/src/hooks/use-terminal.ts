@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
+import { shJoin, shLines, shSingleQuote } from '@/lib/shell-formatters';
 
 type TerminalType = 'ghostty' | 'terminal' | null;
 
@@ -56,22 +57,22 @@ export function useTerminal(): UseTerminalResult {
           // Continue to next terminal
         }
       }
+
       // No terminal found (shouldn't happen, Terminal.app is always there)
       setIsReady(true);
     }
+
     detectTerminal();
   }, []);
 
   const getCommandString = useCallback(
     (command: string, args: Array<string>): string => {
-      const escapedArgs = args.map((arg) => {
-        // Escape spaces and special characters in paths
-        if (arg.includes(' ') || arg.includes("'") || arg.includes('"')) {
-          return `'${arg.replace(/'/g, "'\\''")}'`;
-        }
-        return arg;
-      });
-      return `${command} ${escapedArgs.join(' ')}`;
+      // Quote every token so the returned string is safe both for display and
+      // for execution via `sh -c`.
+      return [
+        shSingleQuote(command),
+        ...args.map((arg) => shSingleQuote(arg)),
+      ].join(' ');
     },
     [],
   );
@@ -87,12 +88,34 @@ export function useTerminal(): UseTerminalResult {
 
       try {
         if (terminalType === 'ghostty') {
-          // Ghostty: use binary directly with -e flag
-          // Per docs: -e flag passes command directly, auto-sets quit-after-last-window-closed=true
-          const cmd = Command.create('exec-sh', [
-            '-c',
-            `/Applications/Ghostty.app/Contents/MacOS/ghostty -e /opt/homebrew/bin/adb shell -t "cd /sdcard/DCIM/Camera; echo 'You are in the photo library path of your device.'; echo ''; echo '  ls      - View your media'; echo '  exit    - Close the session'; echo ''; /system/bin/sh"`,
+          // Ghostty: use binary directly with -e flag.
+          //
+          // Important: the remote Android script must be passed to `adb shell -t`
+          // as ONE argument. Do not split it across `sh`, `-c`, and the script,
+          // because `adb shell` flattens argv before sending it to the device.
+          //
+          // NOTE: this branch is still intentionally hardcoded to the adb photo
+          // library session — command/args are ignored here.
+          const introBanner = shLines`
+            You are in the photo library path of your device.
+
+              ls      - View your media
+              exit    - Close the session
+
+          `;
+
+          const adbRemoteScript = shJoin([
+            'cd /sdcard/DCIM/Camera',
+            introBanner,
+            'exec /system/bin/sh',
           ]);
+
+          const hostScript = getCommandString(
+            '/Applications/Ghostty.app/Contents/MacOS/ghostty',
+            ['-e', '/opt/homebrew/bin/adb', 'shell', '-t', adbRemoteScript],
+          );
+
+          const cmd = Command.create('exec-sh', ['-c', hostScript]);
           await cmd.execute();
         } else {
           // Terminal.app: use AppleScript
@@ -102,6 +125,7 @@ export function useTerminal(): UseTerminalResult {
                         do script "${fullCommand.replace(/"/g, '\\"')}"
                     end tell
                 `;
+
           const cmd = Command.create('exec-sh', [
             '-c',
             `osascript -e '${script.replace(/'/g, "'\\''")}'`,
