@@ -150,7 +150,7 @@ function ConvertPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Convert */}
                 <button
-                  onClick={() => pixel.convert(selectedPaths)}
+                  onClick={() => pixel.copy(selectedPaths)}
                   disabled={pixel.isRunning}
                   className={cn(
                     'group flex items-center gap-4 rounded-xl border p-4 text-left transition-colors duration-150',
@@ -217,7 +217,7 @@ function ConvertPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => pixel.convertInTerminal(selectedPaths)}
+                    onClick={() => pixel.copyInTerminal(selectedPaths)}
                     disabled={pixel.isRunning}
                     className="h-7 text-xs gap-1.5"
                   >

@@ -9,7 +9,7 @@ export interface TransferPaths {
   destination: string;
 }
 
-export type ActiveOperation = 'pull' | 'push' | 'convert' | 'fix-dates' | null;
+export type ActiveOperation = 'pull' | 'push' | 'convert' | 'copy' | 'fix-dates' | null;
 
 const usePixelInternal = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -122,6 +122,26 @@ const usePixelInternal = () => {
     [terminal],
   );
 
+  const copy = useCallback(
+    async (paths: Array<string>) => {
+      if (paths.length === 0) return;
+      setActiveOperation('copy');
+      await execute(['copy', ...paths, '--jsonl'], {
+        onFinish: () => setActiveOperation(null),
+      });
+    },
+    [execute],
+  );
+
+  const copyInTerminal = useCallback(
+    async (paths: Array<string>) => {
+      if (paths.length === 0) return;
+      // Open the native terminal with the itp copy command
+      await terminal.openInTerminal('itp', ['copy', ...paths]);
+    },
+    [terminal],
+  );
+
   const fixDates = useCallback(
     async (paths: Array<string>) => {
       if (paths.length === 0) return;
@@ -182,6 +202,8 @@ const usePixelInternal = () => {
     shell,
     convert,
     convertInTerminal,
+    copy,
+    copyInTerminal,
     fixDates,
     fixDatesInTerminal,
     terminalName: terminal.terminalName,

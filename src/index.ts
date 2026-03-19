@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { convert } from './commands/convert.js';
+import { copy } from './commands/copy.js';
 import { randomize } from './commands/randomize.js';
 import { checkAdb } from './commands/check-adb.js';
 import { pushToPixel } from './commands/push-to-pixel.js';
@@ -27,6 +28,7 @@ async function main() {
     .version('0.0.9');
 
   program.addCommand(convert);
+  program.addCommand(copy);
   program.addCommand(randomize);
   program.addCommand(checkAdb);
   program.addCommand(pushToPixel);
