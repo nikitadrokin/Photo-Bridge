@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "PhotoBridge",
   "mainBinaryName": "photo-bridge",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "identifier": "me.nkdr.photo-bridge",
   "build": {
     "frontendDist": "../src-ui/dist",
