@@ -47,6 +47,8 @@ read -p "Bump version to $NEXT_VERSION before building? (y/N) " -n 1 -r
 echo ""
 echo ""
 
+SAME_VERSION_RELEASE=false
+
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     VERSION_TO_BUILD="$NEXT_VERSION"
     echo -e "${CYAN}Updating version numbers to $NEXT_VERSION...${NC}"
@@ -69,6 +71,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     
 else
     VERSION_TO_BUILD="$CURRENT_VERSION"
+    SAME_VERSION_RELEASE=true
     echo -e "${YELLOW}Keeping current version $CURRENT_VERSION${NC}"
 fi
 
@@ -123,6 +126,22 @@ if $AUTO_PUBLISH; then
     echo ""
     echo -e "${CYAN}Publishing release...${NC}"
 
+    # Purge existing tag/release if re-releasing same version
+    if $SAME_VERSION_RELEASE; then
+        echo ""
+        echo -e "${YELLOW}Same version release — cleaning up any existing tag/release...${NC}"
+        gh release delete "v$VERSION_TO_BUILD" --yes 2>/dev/null && \
+            echo -e "${GREEN}  ✓ Deleted existing GitHub release${NC}" || \
+            echo -e "${YELLOW}  ⏭ No existing GitHub release to delete${NC}"
+        git -C "$SCRIPT_DIR" push origin --delete "v$VERSION_TO_BUILD" 2>/dev/null && \
+            echo -e "${GREEN}  ✓ Deleted remote tag${NC}" || \
+            echo -e "${YELLOW}  ⏭ No remote tag to delete${NC}"
+        git -C "$SCRIPT_DIR" tag -d "v$VERSION_TO_BUILD" 2>/dev/null && \
+            echo -e "${GREEN}  ✓ Deleted local tag${NC}" || \
+            echo -e "${YELLOW}  ⏭ No local tag to delete${NC}"
+        echo ""
+    fi
+
     echo -e "${CYAN}Step 1: Committing changes...${NC}"
     git -C "$SCRIPT_DIR" add -A && git -C "$SCRIPT_DIR" commit -m "Release v$VERSION_TO_BUILD"
     echo -e "${GREEN}  ✓ Changes committed${NC}"
@@ -142,6 +161,16 @@ else
     echo ""
     echo -e "${CYAN}To publish this release:${NC}"
     echo ""
+
+    # Include cleanup instructions if re-releasing same version
+    if $SAME_VERSION_RELEASE; then
+        echo "  0. Clean up existing tag/release (errors are safe to ignore):"
+        echo "     gh release delete v$VERSION_TO_BUILD --yes"
+        echo "     git push origin --delete v$VERSION_TO_BUILD"
+        echo "     git tag -d v$VERSION_TO_BUILD"
+        echo ""
+    fi
+
     echo "  1. Commit changes:"
     echo "     git add -A && git commit -m \"Release v$VERSION_TO_BUILD\""
     echo ""
