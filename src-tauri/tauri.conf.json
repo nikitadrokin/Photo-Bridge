@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "iPhone to Pixel",
   "mainBinaryName": "iphone-to-pixel",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "identifier": "me.nkdr.iphone-to-pixel",
   "build": {
     "frontendDist": "../src-ui/dist",

@@ -1,6 +1,6 @@
 {
   "name": "iphone-to-pixel",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Convert iOS media files for Pixel compatibility",
   "type": "module",
   "files": [

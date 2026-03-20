@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.0.9"
+version = "0.0.10"
 description = "Transfer your iPhone media to Google Pixel 1"
 authors = ["you"]
 license = ""
