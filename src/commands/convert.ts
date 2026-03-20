@@ -29,12 +29,14 @@ export const convert = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'enable JSON output for UI integration')
+  .option('--attempt-atmos', 'mark multichannel eac3 output as experimental Atmos attempt')
   .action(async (paths: string[], opts) => {
     try {
       const options = convertOptionsSchema.parse({
         cwd: path.resolve(opts.cwd),
         jsonl: opts.jsonl,
       });
+      const attemptAtmos = Boolean(opts.attemptAtmos);
 
       if (options.jsonl) {
         logger.setMode('json');
@@ -70,9 +72,9 @@ export const convert = new Command()
       }
 
       if (directories.length === 1 && files.length === 0) {
-        await processDirectory(directories[0].path);
+        await processDirectory(directories[0].path, attemptAtmos);
       } else if (files.length > 0) {
-        await processIndividualFiles(files.map((f) => f.path));
+        await processIndividualFiles(files.map((f) => f.path), attemptAtmos);
       } else {
         logger.error('No valid files or directories provided.');
         process.exit(1);
@@ -84,7 +86,7 @@ export const convert = new Command()
     }
   });
 
-async function processDirectory(dirPath: string): Promise<void> {
+async function processDirectory(dirPath: string, attemptAtmos: boolean): Promise<void> {
   const inDir = path.resolve(dirPath);
   const outDir = `${inDir}_Remuxed`;
 
@@ -108,6 +110,7 @@ async function processDirectory(dirPath: string): Promise<void> {
   const { processedCount, skippedCount } = await processFiles(
     regularFiles,
     outDir,
+    attemptAtmos,
   );
 
   logger.break();
@@ -120,7 +123,7 @@ async function processDirectory(dirPath: string): Promise<void> {
   logger.break();
 }
 
-async function processIndividualFiles(filePaths: string[]): Promise<void> {
+async function processIndividualFiles(filePaths: string[], attemptAtmos: boolean): Promise<void> {
   const regularFiles = filePaths.filter((f) => {
     const ext = path.extname(f).toLowerCase().slice(1);
     return (
@@ -148,6 +151,7 @@ async function processIndividualFiles(filePaths: string[]): Promise<void> {
   const { processedCount, skippedCount } = await processFiles(
     regularFiles,
     null,
+    attemptAtmos,
   );
 
   logger.break();
@@ -162,6 +166,7 @@ async function processIndividualFiles(filePaths: string[]): Promise<void> {
 async function processFiles(
   files: string[],
   outDir: string | null,
+  attemptAtmos: boolean,
 ): Promise<{ processedCount: number; skippedCount: number }> {
   let processedCount = 0;
   let skippedCount = 0;
@@ -215,7 +220,7 @@ async function processFiles(
         // File doesn't exist, proceed
       }
 
-      await processVideo(file, outFile);
+      await processVideo(file, outFile, attemptAtmos);
       processedCount++;
       continue;
     }
