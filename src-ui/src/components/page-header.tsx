@@ -17,22 +17,41 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
 
   return (
     <header
+      data-tauri-drag-region
       className={cn(
         'sticky top-0 z-10 shrink-0 border-b border-border bg-background/80 backdrop-blur-lg px-6 py-3 transition-[padding] duration-200 ease-in-out',
         !isFullscreen && (!sidebarOpen || isMobile) && 'pl-26',
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3" data-tauri-drag-region>
         <SidebarTrigger className="-ml-2 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <div className="flex-1 min-w-0" data-tauri-drag-region>
+          <div
+            className="flex items-center justify-between gap-4"
+            data-tauri-drag-region
+          >
+            <h1
+              className="text-2xl font-semibold tracking-tight"
+              data-tauri-drag-region
+            >
+              {title}
+            </h1>
             {children ? (
-              <div className="flex items-center gap-2 shrink-0">{children}</div>
+              <div
+                className="flex items-center gap-2 shrink-0"
+                data-tauri-drag-region
+              >
+                {children}
+              </div>
             ) : null}
           </div>
           {description ? (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p
+              className="mt-1 text-sm text-muted-foreground"
+              data-tauri-drag-region
+            >
+              {description}
+            </p>
           ) : null}
         </div>
       </div>
