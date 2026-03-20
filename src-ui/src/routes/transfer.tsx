@@ -58,7 +58,7 @@ function TransferPage() {
                 title="Open Shell"
                 description="Launch an interactive ADB shell"
                 onClick={pixel.shell}
-                disabled={isDisabled}
+                // disabled={isDisabled}
               />
             </div>
           </section>
