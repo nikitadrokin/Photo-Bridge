@@ -17,6 +17,7 @@
     "build:cli": "tsup",
     "build:sidecar": "bun build ./src/index.ts --compile --outfile src-tauri/binaries/pb-aarch64-apple-darwin",
     "dev:tauri": "tauri dev",
+    "build:tauri": "tauri build",
     "release:tauri": "./release.sh",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit"
