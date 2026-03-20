@@ -27,7 +27,7 @@ const usePixelState = () => {
   );
 
   const { execute, isRunning, logs, clearLogs, logsEndRef } = useCommand({
-    sidecar: 'binaries/itp',
+    sidecar: 'binaries/pb',
   });
 
   const terminal = useTerminal();
@@ -124,8 +124,8 @@ const usePixelState = () => {
   const convertInTerminal = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) return;
-      // Open the native terminal with the itp convert command
-      await terminal.openInTerminal('itp', ['convert', ...paths]);
+      // Open the native terminal with the pb convert command
+      await terminal.openInTerminal('pb', ['convert', ...paths]);
     },
     [terminal],
   );
@@ -144,8 +144,8 @@ const usePixelState = () => {
   const fixDatesInTerminal = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) return;
-      // Open the native terminal with the itp fix-dates command
-      await terminal.openInTerminal('itp', ['fix-dates', ...paths]);
+      // Open the native terminal with the pb fix-dates command
+      await terminal.openInTerminal('pb', ['fix-dates', ...paths]);
     },
     [terminal],
   );

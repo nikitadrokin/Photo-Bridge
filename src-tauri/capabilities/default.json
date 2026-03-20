@@ -22,7 +22,7 @@
           "args": true
         },
         {
-          "name": "binaries/itp",
+          "name": "binaries/pb",
           "sidecar": true,
           "args": true
         },
@@ -47,7 +47,7 @@
           "args": true
         },
         {
-          "name": "binaries/itp",
+          "name": "binaries/pb",
           "sidecar": true,
           "args": true
         },
