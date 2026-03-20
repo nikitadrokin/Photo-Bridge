@@ -106,7 +106,12 @@ const LogViewer: React.FC<LogViewerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={openActiveInTerminal}
+                // onClick={openActiveInTerminal}
+                onClick={() =>
+                  alert(
+                    'This is bugged right now. The code says "openActiveInTerminal", which confuses agents into thinking this is a generic function. The function is hardcoded to make one action, and we need to update that function to be generic. Until then, this button shows future behavior, not what I have right now.',
+                  )
+                }
                 className="h-6 text-xs text-white/40 hover:text-white/70 hover:bg-white/5"
               >
                 <Terminal size={12} />
