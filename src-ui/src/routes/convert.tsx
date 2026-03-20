@@ -12,6 +12,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import LogViewer from '@/components/log-viewer';
 import { PageHeader } from '@/components/page-header';
@@ -155,30 +156,15 @@ function ConvertPage() {
                 {pixel.terminalReady && pixel.terminalName && (
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-medium">Run Mode</span>
-                    <div className="flex bg-muted/50 p-1 rounded-lg border">
-                      <button
-                        onClick={() => setRunMode('in-app')}
-                        className={cn(
-                          'px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
-                          runMode === 'in-app'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        In-App
-                      </button>
-                      <button
-                        onClick={() => setRunMode('terminal')}
-                        className={cn(
-                          'px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
-                          runMode === 'terminal'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        Terminal
-                      </button>
-                    </div>
+                    <Tabs 
+                      value={runMode} 
+                      onValueChange={(val) => setRunMode(val as 'in-app' | 'terminal')}
+                    >
+                      <TabsList>
+                        <TabsTrigger value="in-app">In-App</TabsTrigger>
+                        <TabsTrigger value="terminal">Terminal</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </div>
                 )}
 
