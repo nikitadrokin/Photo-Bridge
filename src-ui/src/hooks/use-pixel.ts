@@ -9,6 +9,7 @@ export interface TransferPaths {
   destination: string;
 }
 
+// prettier-ignore
 export type ActiveOperation = 'pull' | 'push' | 'convert' | 'copy' | 'fix-dates' | null;
 
 const usePixelInternal = () => {
