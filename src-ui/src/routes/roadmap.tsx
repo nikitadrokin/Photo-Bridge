@@ -167,7 +167,7 @@ function RoadmapPage() {
           {/* Hero */}
           <div className="space-y-2">
             <p className="text-muted-foreground text-base max-w-2xl text-pretty leading-relaxed">
-              Our vision for the future of iPhone to Pixel. We're building a
+              Our vision for the future of PhotoBridge. We're building a
               tool that scales from quick transfers to deep system
               introspection.
             </p>

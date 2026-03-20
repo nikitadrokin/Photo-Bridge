@@ -27,7 +27,7 @@ const Footer: React.FC = () => {
         </span>
         <span className="text-muted-foreground">•</span>
         <a
-          href="https://github.com/nikitadrokin/iphone-to-pixel"
+          href="https://github.com/nikitadrokin/photo-bridge"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-primary hover:underline"

@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-OUTPUT="iphone-to-pixel-code.zip"
+OUTPUT="photo-bridge-code.zip"
 
 zip -r "$OUTPUT" \
   src \

@@ -1,4 +1,4 @@
-# iPhone to Pixel Converter
+# PhotoBridge
 
 A lightweight macOS utility to convert iOS media files (HEIC, MOV, HEVC) into formats compatible with Google Pixel 1 (and other devices), preserving original metadata and quality.
 
@@ -32,8 +32,8 @@ To build the app manually (e.g., to create a `.dmg` or `.app` file):
 
 2.  **Clone & Install**:
     ```bash
-    git clone https://github.com/nikitadrokin/iphone-to-pixel.git
-    cd iphone-to-pixel
+    git clone https://github.com/nikitadrokin/photo-bridge.git
+    cd photo-bridge
     bun install
     ```
 
@@ -51,14 +51,14 @@ To build the app manually (e.g., to create a `.dmg` or `.app` file):
 You can install the app easily using Homebrew:
 
 ```bash
-brew install nikitadrokin/tap/iphone-to-pixel
+brew install nikitadrokin/tap/photo-bridge
 ```
 
 #### "App is damaged" Error
-If you see a message saying *"iphone-to-pixel" is damaged and can't be opened*, this is due to macOS security requirements for non-App Store apps. To fix it, run:
+If you see a message saying *"PhotoBridge" is damaged and can't be opened*, this is due to macOS security requirements for non-App Store apps. To fix it, run:
 
 ```bash
-xattr -cr '/Applications/iPhone to Pixel.app'
+xattr -cr '/Applications/PhotoBridge.app'
 ```
 
 

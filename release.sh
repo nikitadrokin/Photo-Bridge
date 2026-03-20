@@ -95,7 +95,7 @@ fi
 SHA256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
 
 # Update Homebrew cask file
-CASK_FILE="$SCRIPT_DIR/../homebrew-tap/Casks/iphone-to-pixel.rb"
+CASK_FILE="$SCRIPT_DIR/../homebrew-tap/Casks/photo-bridge.rb"
 if [[ -f "$CASK_FILE" ]]; then
     echo -e "${CYAN}Updating Homebrew cask...${NC}"
     # Update version

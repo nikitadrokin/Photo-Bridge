@@ -1,4 +1,4 @@
-# iPhone to Pixel - Feature Improvements
+# PhotoBridge - Feature Improvements
 
 ## 🎨 UI/UX Enhancements
 

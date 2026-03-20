@@ -2,13 +2,13 @@
 
 # I've already started making my own tool, and if you do deep research on it, you'll see what my approach is. My question is: can you research it deeply and provide feedback on how I can further improve the logic to save the datetimes however I can? We can do this by stitching together what works from Google Photos (you mentioned the JSON file), and using that to work on the files and make them seem originally made in their true time. Also, since Labs is selected, either make a tool or a prettier form of showing me an example of how this would be done using the tool I'm developing now.
 
-[https://github.com/nikitadrokin/iphone-to-pixel](https://github.com/nikitadrokin/iphone-to-pixel)
+[https://github.com/nikitadrokin/photo-bridge](https://github.com/nikitadrokin/photo-bridge)
 
-![Metadata DateTime Preservation Flow for iphone-to-pixel Tool]
+![Metadata DateTime Preservation Flow for PhotoBridge Tool]
 
-![Metadata DateTime Preservation Flow for iphone-to-pixel Tool](https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/429a4062c1dfbd1d9b30c1a3d990862c/e78a3192-ede5-46ee-94ae-916bb0924d94/c7df30a8.png)
+![Metadata DateTime Preservation Flow for PhotoBridge Tool](https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/429a4062c1dfbd1d9b30c1a3d990862c/e78a3192-ede5-46ee-94ae-916bb0924d94/c7df30a8.png)
 
-Metadata DateTime Preservation Flow for iphone-to-pixel Tool
+Metadata DateTime Preservation Flow for PhotoBridge Tool
 
 ---
 
@@ -85,7 +85,7 @@ Your tool should try in order:
 Based on your Homebrew distribution and cross-platform needs:
 
 ```
-iphone-to-pixel with metadata preservation:
+PhotoBridge with metadata preservation:
 
 1. Detect input type:
    - Google Takeout ZIP? → Extract, find JSON pairs
@@ -120,7 +120,7 @@ iphone-to-pixel with metadata preservation:
 4. **Video support**: Ensure MP4/WEBM metadata handling (trickier than JPEG)
 5. **Logging**: Show which timestamp source was used for each file
 
-The key advantage of your tool doing this: users can migrate iPhone→Google Photos→Pixel *once* with `iphone-to-pixel --process-takeout` and never lose capture times again.[^2][^1][^3]
+The key advantage of your tool doing this: users can migrate iPhone→Google Photos→Pixel *once* with `photo-bridge --process-takeout` and never lose capture times again.[^2][^1][^3]
 
 Would you like me to elaborate on any specific implementation detail, or create a more detailed code example for your language of choice?
 <span style="display:none">[^10][^11][^12][^13][^14][^15][^4][^5][^6][^7][^8][^9]</span>

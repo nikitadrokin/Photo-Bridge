@@ -1,5 +1,5 @@
 {
-  "name": "iphone-to-pixel",
+  "name": "photo-bridge",
   "version": "0.0.10",
   "description": "Convert iOS media files for Pixel compatibility",
   "type": "module",

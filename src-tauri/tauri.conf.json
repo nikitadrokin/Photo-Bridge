@@ -1,9 +1,9 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "iPhone to Pixel",
-  "mainBinaryName": "iphone-to-pixel",
+  "productName": "PhotoBridge",
+  "mainBinaryName": "photo-bridge",
   "version": "0.0.10",
-  "identifier": "me.nkdr.iphone-to-pixel",
+  "identifier": "me.nkdr.photo-bridge",
   "build": {
     "frontendDist": "../src-ui/dist",
     "devUrl": "http://localhost:3000",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "iPhone to Pixel",
+        "title": "PhotoBridge",
         "width": 800,
         "height": 600,
         "minWidth": 420,

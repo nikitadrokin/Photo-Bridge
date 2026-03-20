@@ -183,7 +183,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             </span>
             <div className="flex items-center gap-2">
               <a
-                href="https://github.com/nikitadrokin/iphone-to-pixel"
+                href="https://github.com/nikitadrokin/photo-bridge"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-primary hover:underline"
