@@ -23,7 +23,7 @@ process.on('SIGTERM', () => process.exit(0));
 
 async function main() {
   const program = new Command()
-    .name('itp')
+    .name('pb')
     .description('Convert iOS media files for Google Pixel 1 compatibility')
     .version('0.0.11');
 
