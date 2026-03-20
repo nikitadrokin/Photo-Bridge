@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
         <span>
           Made with 🫶🏻 by{' '}
           <a
-            href="https://github.com/nikitadrokin"
+            href="https://nkdr.me"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"
