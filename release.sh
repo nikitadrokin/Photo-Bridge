@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+# Parse flags
+AUTO_PUBLISH=false
+for arg in "$@"; do
+    case "$arg" in
+        --auto) AUTO_PUBLISH=true ;;
+    esac
+done
+
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -111,16 +119,39 @@ echo -e "Version:  ${CYAN}$VERSION_TO_BUILD${NC}"
 echo -e "DMG Path: ${CYAN}$DMG_PATH${NC}"
 echo -e "SHA256:   ${CYAN}$SHA256${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
-echo ""
-echo -e "${CYAN}To publish this release:${NC}"
-echo ""
-echo "  1. Commit changes:"
-echo "     git add -A && git commit -m \"Release v$VERSION_TO_BUILD\""
-echo ""
-echo "  2. Create tag:"
-echo "     git tag v$VERSION_TO_BUILD"
-echo "     git push origin master --tags"
-echo ""
-echo "  3. Create GitHub release:"
-echo "     gh release create v$VERSION_TO_BUILD \"$DMG_PATH\" --title \"v$VERSION_TO_BUILD\" --generate-notes"
-echo ""
+if $AUTO_PUBLISH; then
+    echo ""
+    echo -e "${CYAN}Publishing release...${NC}"
+
+    echo -e "${CYAN}Step 1: Committing changes...${NC}"
+    git -C "$SCRIPT_DIR" add -A && git -C "$SCRIPT_DIR" commit -m "Release v$VERSION_TO_BUILD"
+    echo -e "${GREEN}  ✓ Changes committed${NC}"
+
+    echo -e "${CYAN}Step 2: Creating tag and pushing...${NC}"
+    git -C "$SCRIPT_DIR" tag "v$VERSION_TO_BUILD"
+    git -C "$SCRIPT_DIR" push origin master --tags
+    echo -e "${GREEN}  ✓ Tag v$VERSION_TO_BUILD pushed${NC}"
+
+    echo -e "${CYAN}Step 3: Creating GitHub release...${NC}"
+    gh release create "v$VERSION_TO_BUILD" "$DMG_PATH" --title "v$VERSION_TO_BUILD" --generate-notes
+    echo -e "${GREEN}  ✓ GitHub release created${NC}"
+
+    echo ""
+    echo -e "${GREEN}🎉 Release v$VERSION_TO_BUILD published!${NC}"
+else
+    echo ""
+    echo -e "${CYAN}To publish this release:${NC}"
+    echo ""
+    echo "  1. Commit changes:"
+    echo "     git add -A && git commit -m \"Release v$VERSION_TO_BUILD\""
+    echo ""
+    echo "  2. Create tag:"
+    echo "     git tag v$VERSION_TO_BUILD"
+    echo "     git push origin master --tags"
+    echo ""
+    echo "  3. Create GitHub release:"
+    echo "     gh release create v$VERSION_TO_BUILD \"$DMG_PATH\" --title \"v$VERSION_TO_BUILD\" --generate-notes"
+    echo ""
+    echo -e "${YELLOW}Tip: Run with --auto to publish automatically.${NC}"
+    echo ""
+fi
