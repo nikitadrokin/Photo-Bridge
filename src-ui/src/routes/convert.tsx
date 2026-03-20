@@ -209,7 +209,7 @@ function ConvertPage() {
               </div>
 
               {/* Terminal buttons (secondary) */}
-              {pixel.terminalReady && pixel.terminalName ? (
+              {/* {pixel.terminalReady && pixel.terminalName ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
                     Run in terminal:
@@ -235,7 +235,7 @@ function ConvertPage() {
                     Fix Dates
                   </Button>
                 </div>
-              ) : null}
+              ) : null} */}
             </>
           )}
 
