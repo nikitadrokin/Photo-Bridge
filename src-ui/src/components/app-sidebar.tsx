@@ -102,9 +102,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       </SidebarHeader>
       <SidebarSeparator className="mt-2.5" />
       <SidebarContent>
-        {/* Navigation */}
+        {/* Core */}
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {routes.map((route) => {
