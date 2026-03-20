@@ -143,8 +143,13 @@ if $AUTO_PUBLISH; then
     fi
 
     echo -e "${CYAN}Step 1: Committing changes...${NC}"
-    git -C "$SCRIPT_DIR" add -A && git -C "$SCRIPT_DIR" commit -m "Release v$VERSION_TO_BUILD"
-    echo -e "${GREEN}  ✓ Changes committed${NC}"
+    git -C "$SCRIPT_DIR" add -A
+    if git -C "$SCRIPT_DIR" diff --cached --quiet; then
+        echo -e "${YELLOW}  ⏭ Nothing to commit${NC}"
+    else
+        git -C "$SCRIPT_DIR" commit -m "Release v$VERSION_TO_BUILD"
+        echo -e "${GREEN}  ✓ Changes committed${NC}"
+    fi
 
     echo -e "${CYAN}Step 2: Creating tag and pushing...${NC}"
     git -C "$SCRIPT_DIR" tag "v$VERSION_TO_BUILD"
