@@ -63,12 +63,12 @@ function TransferPage() {
           </section>
 
           {/* Transfer Logs */}
-          {/* <section className="flex flex-col min-h-0">
+          <section className="flex flex-col min-h-0">
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
               Transfer Logs
             </h2>
             <LogViewer emptyMessage="Connect your Pixel to get started" />
-          </section> */}
+          </section>
         </div>
       </main>
     </>
