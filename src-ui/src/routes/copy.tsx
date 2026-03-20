@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
@@ -24,11 +24,12 @@ import {
   VIDEO_EXTENSIONS,
 } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { useMediaStore } from '@/stores/media-store';
 
 export const Route = createFileRoute('/copy')({ component: ConvertPage });
 
 function ConvertPage() {
-  const [selectedPaths, setSelectedPaths] = useState<Array<string>>([]);
+  const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
 
   const hasSelection = selectedPaths.length > 0;
@@ -57,7 +58,7 @@ function ConvertPage() {
       setSelectedPaths(Array.isArray(selected) ? selected : [selected]);
       pixel.clearLogs();
     }
-  }, [pixel]);
+  }, [pixel, setSelectedPaths]);
 
   const selectFolder = useCallback(async () => {
     const selected = await open({
@@ -69,9 +70,7 @@ function ConvertPage() {
       setSelectedPaths([selected]);
       pixel.clearLogs();
     }
-  }, [pixel]);
-
-  const clearSelection = useCallback(() => setSelectedPaths([]), []);
+  }, [pixel, setSelectedPaths]);
 
   return (
     <>
@@ -218,7 +217,8 @@ function ConvertPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => pixel.copyInTerminal(selectedPaths)}
-                    disabled={pixel.isRunning}
+                    // disabled={pixel.isRunning}
+                    disabled
                     className="h-7 text-xs gap-1.5"
                   >
                     <Terminal size={12} />
@@ -228,7 +228,8 @@ function ConvertPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => pixel.fixDatesInTerminal(selectedPaths)}
-                    disabled={pixel.isRunning}
+                    // disabled={pixel.isRunning}
+                    disabled
                     className="h-7 text-xs gap-1.5"
                   >
                     <Terminal size={12} />
