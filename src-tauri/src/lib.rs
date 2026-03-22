@@ -1,3 +1,5 @@
+mod adb_track;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -11,8 +13,17 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            adb_track::spawn_tracker(app.handle().clone());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if matches!(
+                event,
+                tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+            ) {
+                adb_track::kill_tracker(app);
+            }
+        });
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCommand } from '@/hooks/use-command';
 import { useTerminal } from '@/hooks/use-terminal';
@@ -31,9 +32,20 @@ const usePixelInternal = () => {
     });
   }, [execute]);
 
-  // Check on mount
   useEffect(() => {
     checkConnection();
+  }, [checkConnection]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listen<{ connected: boolean }>('adb-device-state', (e) => {
+      setIsConnected(e.payload.connected);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   const pushFiles = useCallback(async () => {
