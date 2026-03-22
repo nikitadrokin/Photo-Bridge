@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { buildDetailRows } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
 import ScrollArea from '@/components/ui/scroll-area';
-import { usePixel } from '@/contexts/pixel-context';
+import { usePixel } from '@/hooks/use-pixel';
 import { useUiStore } from '@/stores/ui-store';
 
 interface ActivityFeedProps {

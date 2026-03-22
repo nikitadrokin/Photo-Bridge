@@ -7,7 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { buildAlertRows, deriveActivityStats } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
-import { usePixel } from '@/contexts/pixel-context';
+import { usePixel } from '@/hooks/use-pixel';
 
 interface StatCardProps {
   label: string;

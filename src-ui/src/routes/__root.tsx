@@ -3,7 +3,7 @@ import { AppPageChrome } from '@/components/app-page-chrome';
 import { Toaster } from '@/components/ui/sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
-import { PixelProvider, usePixel } from '@/contexts/pixel-context';
+import { PixelProvider, usePixel } from '@/hooks/use-pixel';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const Route = createRootRoute({

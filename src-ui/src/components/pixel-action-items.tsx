@@ -7,7 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import ActionItem from '@/components/action-item';
-import { usePixel } from '@/contexts/pixel-context';
+import { usePixel } from '@/hooks/use-pixel';
 
 const PixelActionItems: React.FC = () => {
   const pixel = usePixel();

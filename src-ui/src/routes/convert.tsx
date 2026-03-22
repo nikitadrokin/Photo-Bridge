@@ -17,7 +17,7 @@ import DropzoneOverlay from '@/components/dropzone-overlay';
 import ActivityFeed from '@/components/activity-feed';
 import ActivityStatsPanel from '@/components/activity-stats-panel';
 import { useDragDrop } from '@/hooks/use-drag-drop';
-import { usePixel } from '@/contexts/pixel-context';
+import { usePixel } from '@/hooks/use-pixel';
 import {
   ALL_EXTENSIONS,
   IMAGE_EXTENSIONS,
@@ -157,9 +157,11 @@ function ConvertPage() {
                 {pixel.terminalReady && pixel.terminalName && (
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-medium">Run Mode</span>
-                    <Tabs 
-                      value={runMode} 
-                      onValueChange={(val) => setRunMode(val as 'in-app' | 'terminal')}
+                    <Tabs
+                      value={runMode}
+                      onValueChange={(val) =>
+                        setRunMode(val as 'in-app' | 'terminal')
+                      }
                     >
                       <TabsList>
                         <TabsTrigger value="in-app">In-App</TabsTrigger>

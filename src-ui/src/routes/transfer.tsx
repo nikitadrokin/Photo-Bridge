@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
 import LogViewer from '@/components/log-viewer';
-import { usePixel } from '@/contexts/pixel-context';
+import { usePixel } from '@/hooks/use-pixel';
 import { ConnectionStatus } from '@/components/connection-status';
 import { ActionCard } from '@/components/action-card';
 

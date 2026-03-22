@@ -17,7 +17,7 @@ import DropzoneOverlay from '@/components/dropzone-overlay';
 import ActivityFeed from '@/components/activity-feed';
 import ActivityStatsPanel from '@/components/activity-stats-panel';
 import { useDragDrop } from '@/hooks/use-drag-drop';
-import { usePixel } from '@/contexts/pixel-context';
+import { usePixel } from '@/hooks/use-pixel';
 import {
   ALL_EXTENSIONS,
   IMAGE_EXTENSIONS,
