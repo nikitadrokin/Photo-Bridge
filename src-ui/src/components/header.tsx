@@ -19,7 +19,7 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
     <header
       data-tauri-drag-region
       className={cn(
-        'z-10 shrink-0 border-b border-border bg-background/80 backdrop-blur-lg px-6 py-3 transition-[padding] duration-200 ease-in-out',
+        'z-10 shrink-0 border-b mx-2 border-border bg-background/80 backdrop-blur-lg px-4 py-3 transition-[padding] duration-200 ease-in-out',
         !isFullscreen && (!sidebarOpen || isMobile) && 'pl-26',
       )}
     >
