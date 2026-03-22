@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import ActivityFeed from '@/components/activity-feed';
+import ActivityStatsPanel from '@/components/activity-stats-panel';
 import { PageHeader } from '@/components/page-header';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/contexts/pixel-context';
@@ -237,6 +238,8 @@ function ConvertPage() {
                     </div>
                   </button>
                 </div>
+
+                {runMode === 'in-app' ? <ActivityStatsPanel /> : null}
               </>
             )}
           </div>
