@@ -1,11 +1,11 @@
-import type { CliUiEventV1 } from '@cli-protocol';
+import type { EventV1 } from '@cli-protocol';
 
 export function verbForCommand(command: 'convert' | 'copy'): string {
   return command === 'copy' ? 'Copy' : 'Convert';
 }
 
 /** Numbers for the summary cards — live from file events until `session` end arrives. */
-export function deriveActivityStats(events: Array<CliUiEventV1>): {
+export function deriveActivityStats(events: Array<EventV1>): {
   total: number | null;
   added: number;
   skipped: number;
@@ -89,7 +89,7 @@ export function deriveActivityStats(events: Array<CliUiEventV1>): {
   };
 }
 
-export function formatActivityLine(event: CliUiEventV1): {
+export function formatActivityLine(event: EventV1): {
   tone: 'default' | 'success' | 'warn' | 'error' | 'muted';
   text: string;
 } | null {
@@ -199,9 +199,7 @@ export function formatActivityLine(event: CliUiEventV1): {
 export type ActivityRow = { key: string; tone: string; text: string };
 
 /** Rows for the Summary panel (session + file lines only; no warn/error/blocked banners). */
-export function buildDetailRows(
-  events: Array<CliUiEventV1>,
-): Array<ActivityRow> {
+export function buildDetailRows(events: Array<EventV1>): Array<ActivityRow> {
   const rows: Array<ActivityRow> = [];
   events.forEach((event, i) => {
     if (event.kind === 'progress') return;
@@ -224,9 +222,7 @@ export function buildDetailRows(
 }
 
 /** Banner rows shown in the left stats panel. */
-export function buildAlertRows(
-  events: Array<CliUiEventV1>,
-): Array<ActivityRow> {
+export function buildAlertRows(events: Array<EventV1>): Array<ActivityRow> {
   const rows: Array<ActivityRow> = [];
   events.forEach((event, i) => {
     if (

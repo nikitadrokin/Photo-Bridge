@@ -17,13 +17,13 @@ export type FileStatus = 'done' | 'skipped' | 'failed';
 /**
  * Why a file was skipped or failed (machine-oriented; UI maps to strings).
  */
-export type CliUiFileReason =
+export type FileErrorReason =
   | 'output_exists'
   | 'output_same_as_input'
   | 'unreadable_video'
   | 'processing_error';
 
-export interface CliUiSessionEvent {
+export interface SessionEvent {
   readonly v: 1;
   readonly kind: 'session';
   readonly phase: 'start' | 'end';
@@ -38,7 +38,7 @@ export interface CliUiSessionEvent {
   readonly failed?: number;
 }
 
-export interface CliUiFileEvent {
+export interface FileEvent {
   readonly v: 1;
   readonly kind: 'file';
   readonly status: FileStatus;
@@ -48,44 +48,44 @@ export interface CliUiFileEvent {
   /** Target container/extension without dot, e.g. `mp4`; same as extIn when unchanged. */
   readonly extOut: string;
   readonly name?: string;
-  readonly reason?: CliUiFileReason;
+  readonly reason?: FileErrorReason;
 }
 
-export interface CliUiProgressEvent {
+export interface ProgressEvent {
   readonly v: 1;
   readonly kind: 'progress';
   readonly done: number;
   readonly total: number;
 }
 
-export interface CliUiBlockedEvent {
+export interface BlockedEvent {
   readonly v: 1;
   readonly kind: 'blocked';
   readonly code: 'missing_tools' | string;
   readonly tools?: readonly string[];
 }
 
-export interface CliUiSeverityEvent {
+export interface SeverityEvent {
   readonly v: 1;
   readonly kind: 'warn' | 'error';
   readonly code: string;
   readonly detail?: string;
 }
 
-export type CliUiEventV1 =
-  | CliUiSessionEvent
-  | CliUiFileEvent
-  | CliUiProgressEvent
-  | CliUiBlockedEvent
-  | CliUiSeverityEvent;
+export type EventV1 =
+  | SessionEvent
+  | FileEvent
+  | ProgressEvent
+  | BlockedEvent
+  | SeverityEvent;
 
 /** Legacy stdout lines from `logger` before structured events. */
-export interface LegacyCliLog {
+export interface Log {
   readonly type: 'error' | 'warn' | 'info' | 'success' | 'log';
   readonly message: string;
 }
 
-const LEGACY_TYPES = new Set<LegacyCliLog['type']>([
+const LEGACY_TYPES = new Set<Log['type']>([
   'error',
   'warn',
   'info',
@@ -97,7 +97,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isCliUiEventV1(parsed: unknown): parsed is CliUiEventV1 {
+function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
   if (!isRecord(parsed) || parsed.v !== 1 || typeof parsed.kind !== 'string') {
     return false;
   }
@@ -133,19 +133,19 @@ function isCliUiEventV1(parsed: unknown): parsed is CliUiEventV1 {
   }
 }
 
-function isLegacyCliLog(parsed: unknown): parsed is LegacyCliLog {
+function isLegacyCliLog(parsed: unknown): parsed is Log {
   if (!isRecord(parsed)) return false;
   const t = parsed.type;
   return (
     typeof t === 'string' &&
-    LEGACY_TYPES.has(t as LegacyCliLog['type']) &&
+    LEGACY_TYPES.has(t as Log['type']) &&
     typeof parsed.message === 'string'
   );
 }
 
 export type ParsedCliLine =
-  | { readonly tag: 'ui'; readonly event: CliUiEventV1 }
-  | { readonly tag: 'legacy'; readonly log: LegacyCliLog }
+  | { readonly tag: 'ui'; readonly event: EventV1 }
+  | { readonly tag: 'legacy'; readonly log: Log }
   | { readonly tag: 'raw'; readonly text: string };
 
 /**

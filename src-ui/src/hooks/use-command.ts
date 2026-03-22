@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
-import { parseCliUiLine, type CliUiEventV1 } from '@cli-protocol';
+import { parseCliUiLine, type EventV1 } from '@cli-protocol';
 import type { LogMessage } from '@/lib/types';
 
 interface UseCommandOptions {
@@ -19,7 +19,7 @@ interface UseCommandResult {
   /** Log messages from stdout/stderr (legacy JSON or non-JSON lines) */
   logs: Array<LogMessage>;
   /** Structured UI events from `--jsonl` sidecar output */
-  activityEvents: Array<CliUiEventV1>;
+  activityEvents: Array<EventV1>;
   /** Clear logs and activity */
   clearLogs: () => void;
   /** Ref for auto-scrolling */
@@ -32,9 +32,7 @@ interface UseCommandResult {
 export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<Array<LogMessage>>([]);
-  const [activityEvents, setActivityEvents] = useState<Array<CliUiEventV1>>(
-    [],
-  );
+  const [activityEvents, setActivityEvents] = useState<Array<EventV1>>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const stdoutBufferRef = useRef('');
 
@@ -56,7 +54,7 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
     setLogs((prev) => [...prev, log]);
   }, []);
 
-  const addActivity = useCallback((event: CliUiEventV1) => {
+  const addActivity = useCallback((event: EventV1) => {
     setActivityEvents((prev) => [...prev, event]);
   }, []);
 

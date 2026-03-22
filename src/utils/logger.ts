@@ -1,5 +1,5 @@
 import kleur from 'kleur';
-import type { CliUiEventV1 } from '../../cli-ui-protocol.js';
+import type { EventV1 } from '../../cli-ui-protocol.js';
 
 let mode: 'text' | 'json' = 'text';
 
@@ -13,7 +13,7 @@ export const logger = {
   /**
    * Emit one structured UI event (NDJSON). No-op in text mode.
    */
-  emitUi(event: CliUiEventV1) {
+  emitUi(event: EventV1) {
     if (mode === 'json') {
       console.log(JSON.stringify(event));
     }
