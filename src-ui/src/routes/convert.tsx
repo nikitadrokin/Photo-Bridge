@@ -80,10 +80,10 @@ function ConvertPage() {
     <>
       <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
 
-      <main className="flex-1 px-6 py-6">
+      <main className="flex-1 p-2">
         <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
           {/* LEFT PANEL: Controls */}
-          <div className="flex flex-col gap-6 pb-6">
+          <div className="flex flex-col gap-6">
             {/* Empty state / File selection */}
             {!hasSelection ? (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">
@@ -247,7 +247,7 @@ function ConvertPage() {
           </div>
 
           {/* RIGHT PANEL: Log Viewer / Terminal Message */}
-          <div className="flex flex-col min-h-0 pb-6">
+          <div className="flex flex-col min-h-0">
             {runMode === 'terminal' ? (
               <div className="flex-1 min-h-[400px] flex flex-col items-center justify-center rounded-xl border bg-muted/20 text-muted-foreground">
                 <div className="text-center space-y-2">
