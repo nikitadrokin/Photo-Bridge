@@ -4,36 +4,67 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
+import { Outlet } from '@tanstack/react-router';
 import { PageHeader } from '@/components/header';
 import { useRoutePageMetadata } from '@/lib/route-page-metadata';
 
-const SetPageHeaderActionsContext = createContext<React.Dispatch<
-  SetStateAction<ReactNode>
-> | null>(null);
+interface PageHeaderActionsContextValue {
+  /** Current nodes shown beside the page title. */
+  headerActions: ReactNode;
+  /** Updates `headerActions`; used by `useRegisterPageHeaderActions`. */
+  setHeaderActions: React.Dispatch<SetStateAction<ReactNode>>;
+}
 
-interface AppPageChromeProps {
-  /** Main route outlet; scrolls independently of the header. */
+const PageHeaderActionsContext =
+  createContext<PageHeaderActionsContextValue | null>(null);
+
+interface PageHeaderActionsProviderProps {
   children: ReactNode;
+}
+
+/**
+ * Supplies header action state for the app shell so routes and other chrome
+ * (e.g. sidebar) can register `PageHeader` actions.
+ */
+export function PageHeaderActionsProvider({
+  children,
+}: PageHeaderActionsProviderProps) {
+  const [headerActions, setHeaderActions] = useState<ReactNode>(null);
+
+  const value = useMemo(
+    () => ({ headerActions, setHeaderActions }),
+    [headerActions],
+  );
+
+  return (
+    <PageHeaderActionsContext.Provider value={value}>
+      {children}
+    </PageHeaderActionsContext.Provider>
+  );
 }
 
 /**
  * App shell: fixed page header (title from route `staticData`) and scrollable body.
  */
-export function AppPageChrome({ children }: AppPageChromeProps) {
+export function AppPageChrome() {
   const { title, description } = useRoutePageMetadata();
-  const [headerActions, setHeaderActions] = useState<ReactNode>(null);
+  const ctx = useContext(PageHeaderActionsContext);
+  if (!ctx) {
+    throw new Error('AppPageChrome must be used within PageHeaderActionsProvider.');
+  }
 
   return (
-    <SetPageHeaderActionsContext.Provider value={setHeaderActions}>
+    <>
       <PageHeader title={title} description={description}>
-        {headerActions}
+        {ctx.headerActions}
       </PageHeader>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-        {children}
+        <Outlet />
       </div>
-    </SetPageHeaderActionsContext.Provider>
+    </>
   );
 }
 
@@ -42,17 +73,19 @@ export function AppPageChrome({ children }: AppPageChromeProps) {
  * Clears on unmount.
  */
 export function useRegisterPageHeaderActions(actions: ReactNode): void {
-  const setActions = useContext(SetPageHeaderActionsContext);
-  if (!setActions) {
+  const ctx = useContext(PageHeaderActionsContext);
+  if (!ctx) {
     throw new Error(
-      'useRegisterPageHeaderActions must be used within AppPageChrome.',
+      'useRegisterPageHeaderActions must be used within PageHeaderActionsProvider.',
     );
   }
 
+  const { setHeaderActions } = ctx;
+
   useEffect(() => {
-    setActions(actions);
+    setHeaderActions(actions);
     return () => {
-      setActions(null);
+      setHeaderActions(null);
     };
-  }, [actions, setActions]);
+  }, [actions, setHeaderActions]);
 }
