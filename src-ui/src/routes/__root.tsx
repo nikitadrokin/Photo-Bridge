@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute } from '@tanstack/react-router';
+import { AppPageChrome } from '@/components/app-page-chrome';
 import { Toaster } from '@/components/ui/sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
@@ -16,7 +17,9 @@ function RootComponent() {
         <SidebarProvider>
           <AppSidebarWithContext />
           <SidebarInset className="flex flex-col">
-            <Outlet />
+            <AppPageChrome>
+              <Outlet />
+            </AppPageChrome>
             <Toaster position="bottom-center" richColors />
           </SidebarInset>
         </SidebarProvider>

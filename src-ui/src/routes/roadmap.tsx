@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   ArrowRight,
@@ -8,9 +9,12 @@ import {
 } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/page-header';
+import { useRegisterPageHeaderActions } from '@/components/app-page-chrome';
 
-export const Route = createFileRoute('/roadmap')({ component: RoadmapPage });
+export const Route = createFileRoute('/roadmap')({
+  staticData: { pageTitle: 'Roadmap' },
+  component: RoadmapPage,
+});
 
 type FeatureStatus = 'planned' | 'in-progress' | 'completed';
 
@@ -149,20 +153,22 @@ const FeatureCard = ({ feature }: { feature: RoadmapFeature }) => {
 };
 
 function RoadmapPage() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <PageHeader title="Roadmap">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs text-muted-foreground"
-        >
-          Suggest Feature
-        </Button>
-      </PageHeader>
+  const headerActions = useMemo(
+    () => (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 text-xs text-muted-foreground"
+      >
+        Suggest Feature
+      </Button>
+    ),
+    [],
+  );
+  useRegisterPageHeaderActions(headerActions);
 
-      <div className="min-h-0 flex-1">
-        <div className="mx-auto max-w-3xl px-6 pb-10 space-y-10">
+  return (
+    <div className="mx-auto max-w-3xl px-6 pb-10 space-y-10">
           {/* Hero */}
           <div className="space-y-2">
             <p className="text-muted-foreground text-base max-w-2xl text-pretty leading-relaxed">
@@ -218,8 +224,6 @@ function RoadmapPage() {
               </Button>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

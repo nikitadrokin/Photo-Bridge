@@ -4,9 +4,11 @@ import LogViewer from '@/components/log-viewer';
 import { usePixel } from '@/contexts/pixel-context';
 import { ConnectionStatus } from '@/components/connection-status';
 import { ActionCard } from '@/components/action-card';
-import { PageHeader } from '@/components/page-header';
 
-export const Route = createFileRoute('/transfer')({ component: TransferPage });
+export const Route = createFileRoute('/transfer')({
+  staticData: { pageTitle: 'Pixel Transfer' },
+  component: TransferPage,
+});
 
 function TransferPage() {
   const pixel = usePixel();
@@ -15,8 +17,6 @@ function TransferPage() {
 
   return (
     <>
-      <PageHeader title="Pixel Transfer" />
-
       <main className="flex-1 px-6 py-6">
         <div className="mx-auto flex flex-col max-w-5xl gap-8 pb-6">
           {/* Connection Status */}

@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import ActivityFeed from '@/components/activity-feed';
 import ActivityStatsPanel from '@/components/activity-stats-panel';
-import { PageHeader } from '@/components/page-header';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/contexts/pixel-context';
 import {
@@ -27,7 +26,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useMediaStore } from '@/stores/media-store';
 
-export const Route = createFileRoute('/copy')({ component: ConvertPage });
+export const Route = createFileRoute('/copy')({
+  staticData: { pageTitle: 'Copy Media' },
+  component: ConvertPage,
+});
 
 function ConvertPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
@@ -76,8 +78,6 @@ function ConvertPage() {
   return (
     <>
       <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
-
-      <PageHeader title="Copy Media" />
 
       <main className="flex-1 px-6 py-6">
         <div className="mx-auto flex flex-col max-w-3xl gap-6">

@@ -16,7 +16,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import ActivityFeed from '@/components/activity-feed';
 import ActivityStatsPanel from '@/components/activity-stats-panel';
-import { PageHeader } from '@/components/page-header';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/contexts/pixel-context';
 import {
@@ -27,7 +26,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useMediaStore } from '@/stores/media-store';
 
-export const Route = createFileRoute('/convert')({ component: ConvertPage });
+export const Route = createFileRoute('/convert')({
+  staticData: { pageTitle: 'Convert Media' },
+  component: ConvertPage,
+});
 
 function ConvertPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
@@ -77,8 +79,6 @@ function ConvertPage() {
   return (
     <>
       <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
-
-      <PageHeader title="Convert Media" />
 
       <main className="flex-1 px-6 py-6">
         <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
