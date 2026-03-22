@@ -6,7 +6,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/header';
 import { useRoutePageMetadata } from '@/lib/route-page-metadata';
 
 const SetPageHeaderActionsContext = createContext<React.Dispatch<
