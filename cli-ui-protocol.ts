@@ -151,7 +151,7 @@ export type ParsedCliLine =
 /**
  * Parse one NDJSON line from sidecar stdout.
  */
-export function parseCliUiLine(line: string): ParsedCliLine {
+export function parseLineFromCLI(line: string): ParsedCliLine {
   const trimmed = line.replace(/\r$/, '').trim();
   if (trimmed.length === 0) {
     return { tag: 'raw', text: '' };
