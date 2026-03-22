@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js';
 import { validateTools } from '../utils/validation.js';
 import { fixDatesOnPhoto } from '../utils/dates.js';
 import { ConversionFileError } from '../utils/conversion-file-error.js';
-import type { CliUiMediaKind } from '../../cli-ui-protocol.js';
+import type { MediaType } from '../../cli-ui-protocol.js';
 
 const convertOptionsSchema = z.object({
   cwd: z.string(),
@@ -21,7 +21,7 @@ const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'w
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
 const LEGACY_VIDEO_EXTENSIONS = ['mpg', 'mpeg'];
 
-function cliMediaKind(ext: string): CliUiMediaKind {
+function cliMediaKind(ext: string): MediaType {
   if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
   if (LEGACY_VIDEO_EXTENSIONS.includes(ext)) return 'legacy_video';
   return 'video';
@@ -241,169 +241,118 @@ async function processFiles(
   }
 
   try {
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const baseName = path.basename(file);
-    const ext = path.extname(file).toLowerCase().slice(1);
-    const outputDirectory = outDir ?? path.dirname(file);
-    const media = cliMediaKind(ext);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const baseName = path.basename(file);
+      const ext = path.extname(file).toLowerCase().slice(1);
+      const outputDirectory = outDir ?? path.dirname(file);
+      const media = cliMediaKind(ext);
 
-    if (IMAGE_EXTENSIONS.includes(ext)) {
-      const outFile = path.join(outputDirectory, baseName);
+      if (IMAGE_EXTENSIONS.includes(ext)) {
+        const outFile = path.join(outputDirectory, baseName);
 
-      if (outFile === file) {
-        skippedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'skipped',
-            media: 'image',
-            extIn: ext,
-            extOut: ext,
-            name: baseName,
-            reason: 'output_same_as_input',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
+        if (outFile === file) {
+          skippedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media: 'image',
+              extIn: ext,
+              extOut: ext,
+              name: baseName,
+              reason: 'output_same_as_input',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        }
+
+        try {
+          await fs.access(outFile);
+          await fixDatesOnPhoto(outFile);
+          skippedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media: 'image',
+              extIn: ext,
+              extOut: ext,
+              name: baseName,
+              reason: 'output_exists',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        } catch {
+          // File doesn't exist, proceed
+        }
+
+        try {
+          await processImage(file, outFile);
+          processedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'done',
+              media: 'image',
+              extIn: ext,
+              extOut: ext,
+              name: baseName,
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+        } catch (err) {
+          failedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'failed',
+              media: 'image',
+              extIn: ext,
+              extOut: ext,
+              name: baseName,
+              reason: 'processing_error',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          throw new ConversionFileError(
+            err instanceof Error ? err.message : String(err),
+          );
         }
         continue;
       }
 
-      try {
-        await fs.access(outFile);
-        await fixDatesOnPhoto(outFile);
-        skippedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'skipped',
-            media: 'image',
-            extIn: ext,
-            extOut: ext,
-            name: baseName,
-            reason: 'output_exists',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        continue;
-      } catch {
-        // File doesn't exist, proceed
-      }
+      if (VIDEO_EXTENSIONS.includes(ext)) {
+        const stem = path.basename(file, path.extname(file));
+        const outFile = path.join(outputDirectory, `${stem}.mp4`);
 
-      try {
-        await processImage(file, outFile);
-        processedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'done',
-            media: 'image',
-            extIn: ext,
-            extOut: ext,
-            name: baseName,
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-      } catch (err) {
-        failedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'failed',
-            media: 'image',
-            extIn: ext,
-            extOut: ext,
-            name: baseName,
-            reason: 'processing_error',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        throw new ConversionFileError(
-          err instanceof Error ? err.message : String(err),
-        );
-      }
-      continue;
-    }
-
-    if (VIDEO_EXTENSIONS.includes(ext)) {
-      const stem = path.basename(file, path.extname(file));
-      const outFile = path.join(outputDirectory, `${stem}.mp4`);
-
-      if (outFile === file) {
-        skippedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'skipped',
-            media,
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-            reason: 'output_same_as_input',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        continue;
-      }
-
-      try {
-        await fs.access(outFile);
-        skippedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'skipped',
-            media,
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-            reason: 'output_exists',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        continue;
-      } catch {
-        // File doesn't exist, proceed
-      }
-
-      try {
-        const wrote = await processVideo(file, outFile);
-        if (!wrote) {
+        if (outFile === file) {
           skippedCount++;
           if (isJson) {
             logger.emitUi({
@@ -414,169 +363,220 @@ async function processFiles(
               extIn: ext,
               extOut: 'mp4',
               name: baseName,
-              reason: 'unreadable_video',
+              reason: 'output_same_as_input',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
             });
           }
-        } else {
+          continue;
+        }
+
+        try {
+          await fs.access(outFile);
+          skippedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media,
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'output_exists',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        } catch {
+          // File doesn't exist, proceed
+        }
+
+        try {
+          const wrote = await processVideo(file, outFile);
+          if (!wrote) {
+            skippedCount++;
+            if (isJson) {
+              logger.emitUi({
+                v: 1,
+                kind: 'file',
+                status: 'skipped',
+                media,
+                extIn: ext,
+                extOut: 'mp4',
+                name: baseName,
+                reason: 'unreadable_video',
+              });
+            }
+          } else {
+            processedCount++;
+            if (isJson) {
+              logger.emitUi({
+                v: 1,
+                kind: 'file',
+                status: 'done',
+                media,
+                extIn: ext,
+                extOut: 'mp4',
+                name: baseName,
+              });
+            }
+          }
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+        } catch (err) {
+          failedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'failed',
+              media,
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'processing_error',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          throw new ConversionFileError(
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+        continue;
+      }
+
+      if (LEGACY_VIDEO_EXTENSIONS.includes(ext)) {
+        const stem = path.basename(file, path.extname(file));
+        const outFile = path.join(outputDirectory, `${stem}.mp4`);
+
+        if (outFile === file) {
+          skippedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media: 'legacy_video',
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'output_same_as_input',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        }
+
+        try {
+          await fs.access(outFile);
+          skippedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media: 'legacy_video',
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'output_exists',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        } catch {
+          // File doesn't exist, proceed
+        }
+
+        try {
+          await processLegacyVideo(file, outFile);
           processedCount++;
           if (isJson) {
             logger.emitUi({
               v: 1,
               kind: 'file',
               status: 'done',
-              media,
+              media: 'legacy_video',
               extIn: ext,
               extOut: 'mp4',
               name: baseName,
             });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
           }
-        }
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-      } catch (err) {
-        failedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'failed',
-            media,
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-            reason: 'processing_error',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        throw new ConversionFileError(
-          err instanceof Error ? err.message : String(err),
-        );
-      }
-      continue;
-    }
-
-    if (LEGACY_VIDEO_EXTENSIONS.includes(ext)) {
-      const stem = path.basename(file, path.extname(file));
-      const outFile = path.join(outputDirectory, `${stem}.mp4`);
-
-      if (outFile === file) {
-        skippedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'skipped',
-            media: 'legacy_video',
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-            reason: 'output_same_as_input',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
+        } catch (err) {
+          failedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'failed',
+              media: 'legacy_video',
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'processing_error',
+            });
+            logger.emitUi({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          throw new ConversionFileError(
+            err instanceof Error ? err.message : String(err),
+          );
         }
         continue;
       }
 
-      try {
-        await fs.access(outFile);
-        skippedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'skipped',
-            media: 'legacy_video',
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-            reason: 'output_exists',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        continue;
-      } catch {
-        // File doesn't exist, proceed
+      if (isJson) {
+        logger.emitUi({
+          v: 1,
+          kind: 'progress',
+          done: i + 1,
+          total: files.length,
+        });
       }
-
-      try {
-        await processLegacyVideo(file, outFile);
-        processedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'done',
-            media: 'legacy_video',
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-      } catch (err) {
-        failedCount++;
-        if (isJson) {
-          logger.emitUi({
-            v: 1,
-            kind: 'file',
-            status: 'failed',
-            media: 'legacy_video',
-            extIn: ext,
-            extOut: 'mp4',
-            name: baseName,
-            reason: 'processing_error',
-          });
-          logger.emitUi({
-            v: 1,
-            kind: 'progress',
-            done: i + 1,
-            total: files.length,
-          });
-        }
-        throw new ConversionFileError(
-          err instanceof Error ? err.message : String(err),
-        );
-      }
-      continue;
     }
 
-    if (isJson) {
-      logger.emitUi({
-        v: 1,
-        kind: 'progress',
-        done: i + 1,
-        total: files.length,
-      });
-    }
-  }
-
-  return { processedCount, skippedCount };
+    return { processedCount, skippedCount };
   } finally {
     if (isJson) {
       logger.emitUi({

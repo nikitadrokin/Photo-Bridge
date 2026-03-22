@@ -3,16 +3,16 @@
  * User-facing copy lives in the Tauri UI; payloads stay minimal (kinds, codes, counts).
  */
 
-export type CliUiCommand = 'convert' | 'copy';
+export type Command = 'convert' | 'copy';
 
 /** How inputs were resolved: one directory vs explicit file list. */
-export type CliUiSessionLayout = 'directory' | 'files';
+export type SessionLayout = 'directory' | 'files';
 
 /** High-level media bucket for a single input file. */
-export type CliUiMediaKind = 'image' | 'video' | 'legacy_video';
+export type MediaType = 'image' | 'video' | 'legacy_video';
 
 /** Outcome for one file row in the activity feed. */
-export type CliUiFileStatus = 'done' | 'skipped' | 'failed';
+export type FileStatus = 'done' | 'skipped' | 'failed';
 
 /**
  * Why a file was skipped or failed (machine-oriented; UI maps to strings).
@@ -27,8 +27,8 @@ export interface CliUiSessionEvent {
   readonly v: 1;
   readonly kind: 'session';
   readonly phase: 'start' | 'end';
-  readonly command: CliUiCommand;
-  readonly layout: CliUiSessionLayout;
+  readonly command: Command;
+  readonly layout: SessionLayout;
   /** Absolute output directory when batching to a folder; omitted for in-place files mode. */
   readonly outputDir?: string;
   /** Number of media files considered in this run (after extension filter). */
@@ -41,8 +41,8 @@ export interface CliUiSessionEvent {
 export interface CliUiFileEvent {
   readonly v: 1;
   readonly kind: 'file';
-  readonly status: CliUiFileStatus;
-  readonly media: CliUiMediaKind;
+  readonly status: FileStatus;
+  readonly media: MediaType;
   /** Normalized extension without dot, e.g. `mov`, `heic`. */
   readonly extIn: string;
   /** Target container/extension without dot, e.g. `mp4`; same as extIn when unchanged. */
@@ -121,8 +121,7 @@ function isCliUiEventV1(parsed: unknown): parsed is CliUiEventV1 {
       );
     case 'progress':
       return (
-        typeof parsed.done === 'number' &&
-        typeof parsed.total === 'number'
+        typeof parsed.done === 'number' && typeof parsed.total === 'number'
       );
     case 'blocked':
       return typeof parsed.code === 'string';

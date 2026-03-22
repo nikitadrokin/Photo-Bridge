@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import type { CliUiMediaKind } from '../../cli-ui-protocol.js';
+import type { MediaType } from '../../cli-ui-protocol.js';
 import { processImage } from '../processors/image.js';
 import { copyVideo } from '../processors/video.js';
 import { logger } from '../utils/logger.js';
@@ -19,7 +19,7 @@ const copyOptionsSchema = z.object({
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
 
-function cliMediaKind(ext: string): CliUiMediaKind {
+function cliMediaKind(ext: string): MediaType {
   if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
   return 'video';
 }
