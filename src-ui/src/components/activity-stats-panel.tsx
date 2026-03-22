@@ -104,7 +104,7 @@ const ActivityStatsPanel: React.FC = () => {
       ) : null}
 
       {hasAlerts ? (
-        <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
+        <div className="max-h-36 overflow-y-auto overscroll-y-none space-y-2 pr-1">
           {alertRows.map((row) => (
             <div
               key={row.key}

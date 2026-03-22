@@ -79,8 +79,8 @@ function ConvertPage() {
 
       <PageHeader title="Copy Media" />
 
-      <main className="flex-1 overflow-auto px-6 py-6">
-        <div className="mx-auto flex flex-col max-w-3xl h-full gap-6">
+      <main className="flex-1 px-6 py-6">
+        <div className="mx-auto flex flex-col max-w-3xl gap-6">
           {/* Empty state / File selection */}
           {!hasSelection ? (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">

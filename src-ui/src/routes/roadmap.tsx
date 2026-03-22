@@ -8,7 +8,6 @@ import {
 } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import ScrollArea from '@/components/ui/scroll-area';
 import { PageHeader } from '@/components/page-header';
 
 export const Route = createFileRoute('/roadmap')({ component: RoadmapPage });
@@ -151,7 +150,7 @@ const FeatureCard = ({ feature }: { feature: RoadmapFeature }) => {
 
 function RoadmapPage() {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader title="Roadmap">
         <Button
           variant="ghost"
@@ -162,7 +161,7 @@ function RoadmapPage() {
         </Button>
       </PageHeader>
 
-      <ScrollArea className="flex-1">
+      <div className="min-h-0 flex-1">
         <div className="mx-auto max-w-3xl px-6 pb-10 space-y-10">
           {/* Hero */}
           <div className="space-y-2">
@@ -220,7 +219,7 @@ function RoadmapPage() {
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

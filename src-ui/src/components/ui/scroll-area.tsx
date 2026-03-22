@@ -21,7 +21,7 @@ const ScrollArea: React.FC<ScrollAreaProps> = ({
   return (
     <div
       className={cn(
-        'in-[**]:overflow-hidden overflow-y-auto flex flex-col relative',
+        'in-[**]:overflow-hidden overflow-y-auto overscroll-y-none flex flex-col relative',
         'before:absolute before:rounded-t-3xl md:before:rounded-t-none before:inset-x-0 before:top-0 before:z-10 before:h-(--gradient-height-top) before:bg-linear-to-b before:from-(--gradient-color) before:to-transparent before:content-[""]',
         'after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:h-(--gradient-height-bottom) after:bg-linear-to-t after:from-(--gradient-color) after:to-transparent after:content-[""]',
         isMobile
