@@ -12,7 +12,9 @@ export async function processImage(
 ): Promise<void> {
   const baseName = path.basename(inputPath);
 
-  logger.log(`PHOTO: ${baseName} -> Copying (Bit-for-bit)...`);
+  if (logger.getMode() !== 'json') {
+    logger.log(`PHOTO: ${baseName} -> Copying (Bit-for-bit)...`);
+  }
 
   // Copy file exactly
   await fs.copyFile(inputPath, outputPath);

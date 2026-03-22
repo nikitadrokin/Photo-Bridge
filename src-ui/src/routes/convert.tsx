@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DropzoneOverlay from '@/components/dropzone-overlay';
-import LogViewer from '@/components/log-viewer';
+import ActivityFeed from '@/components/activity-feed';
 import { PageHeader } from '@/components/page-header';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/contexts/pixel-context';
@@ -255,7 +255,7 @@ function ConvertPage() {
                 </div>
               </div>
             ) : (
-              <LogViewer emptyMessage="Output will appear here after conversion" />
+              <ActivityFeed emptyMessage="Activity will appear here after conversion" />
             )}
           </div>
         </div>

@@ -1,10 +1,22 @@
 import kleur from 'kleur';
+import type { CliUiEventV1 } from '../../cli-ui-protocol.js';
 
 let mode: 'text' | 'json' = 'text';
 
 export const logger = {
   setMode(newMode: 'text' | 'json') {
     mode = newMode;
+  },
+  getMode(): 'text' | 'json' {
+    return mode;
+  },
+  /**
+   * Emit one structured UI event (NDJSON). No-op in text mode.
+   */
+  emitUi(event: CliUiEventV1) {
+    if (mode === 'json') {
+      console.log(JSON.stringify(event));
+    }
   },
   error(...args: unknown[]) {
     if (mode === 'json') {

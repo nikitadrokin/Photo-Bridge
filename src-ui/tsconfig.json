@@ -29,7 +29,8 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@cli-protocol": ["../cli-ui-protocol.ts"]
     }
   }
 }

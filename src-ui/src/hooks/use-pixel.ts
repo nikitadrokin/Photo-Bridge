@@ -20,9 +20,10 @@ const usePixelInternal = () => {
     null,
   );
 
-  const { execute, isRunning, logs, clearLogs, logsEndRef } = useCommand({
-    sidecar: 'binaries/pb',
-  });
+  const { execute, isRunning, logs, activityEvents, clearLogs, logsEndRef } =
+    useCommand({
+      sidecar: 'binaries/pb',
+    });
 
   const terminal = useTerminal();
 
@@ -206,6 +207,7 @@ const usePixelInternal = () => {
     isConnected,
     isRunning,
     logs,
+    activityEvents,
     clearLogs: clearAll,
     logsEndRef,
     checkConnection,

@@ -12,8 +12,11 @@ export async function processLegacyVideo(
   outputPath: string,
 ): Promise<void> {
   const baseName = path.basename(inputPath);
+  const jsonUi = logger.getMode() === 'json';
 
-  logger.log(`LEGACY VIDEO: ${baseName} -> MP4 (Transcoding to H.264/AAC)`);
+  if (!jsonUi) {
+    logger.log(`LEGACY VIDEO: ${baseName} -> MP4 (Transcoding to H.264/AAC)`);
+  }
 
   try {
     const ffmpeg = execa('ffmpeg', [
@@ -42,16 +45,17 @@ export async function processLegacyVideo(
       outputPath,
     ]);
 
-    // FFmpeg writes progress to stderr, stream it through logger
-    ffmpeg.stderr?.on('data', (data: Buffer) => {
-      const lines = data.toString().split('\n').filter(Boolean);
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed) {
-          logger.log(`  ${trimmed}`);
+    if (!jsonUi) {
+      ffmpeg.stderr?.on('data', (data: Buffer) => {
+        const lines = data.toString().split('\n').filter(Boolean);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed) {
+            logger.log(`  ${trimmed}`);
+          }
         }
-      }
-    });
+      });
+    }
 
     await ffmpeg;
 
@@ -60,12 +64,23 @@ export async function processLegacyVideo(
 
     // Verify that dates were successfully recovered
     if (!(await hasValidCreateDate(outputPath))) {
-      logger.warn(
-        `⚠️  WARNING: Could not recover creation date for ${baseName} - metadata may need manual correction`,
-      );
+      if (jsonUi) {
+        logger.emitUi({
+          v: 1,
+          kind: 'warn',
+          code: 'date_not_recovered',
+          detail: baseName,
+        });
+      } else {
+        logger.warn(
+          `⚠️  WARNING: Could not recover creation date for ${baseName} - metadata may need manual correction`,
+        );
+      }
     }
   } catch (error) {
-    logger.error(`❌ ERROR: Failed to convert ${baseName}`);
+    if (!jsonUi) {
+      logger.error(`❌ ERROR: Failed to convert ${baseName}`);
+    }
     try {
       await fs.unlink(outputPath);
     } catch {

@@ -48,20 +48,24 @@ async function probeCodecs(inputPath: string): Promise<CodecInfo> {
 }
 
 /**
- * Process a video file by remuxing to MP4 and fixing metadata
+ * Process a video file by remuxing to MP4 and fixing metadata.
+ * @returns `true` if output was written, `false` if skipped (unreadable).
  */
 export async function processVideo(
   inputPath: string,
   outputPath: string,
-): Promise<void> {
+): Promise<boolean> {
   const baseName = path.basename(inputPath);
+  const jsonUi = logger.getMode() === 'json';
 
   // Probe codecs
   const codecs = await probeCodecs(inputPath);
 
   if (codecs.video === 'unknown') {
-    logger.warn(`⚠️  SKIP: Unreadable video ${baseName}`);
-    return;
+    if (!jsonUi) {
+      logger.warn(`⚠️  SKIP: Unreadable video ${baseName}`);
+    }
+    return false;
   }
 
   // Video flags: Always copy to preserve HDR/Dolby Vision
@@ -85,9 +89,11 @@ export async function processVideo(
     audioType = 'CONVERT';
   }
 
-  logger.log(
-    `VIDEO: ${baseName} [${codecs.video}] -> MP4 (HDR Preserved) [Audio:${audioType}]`,
-  );
+  if (!jsonUi) {
+    logger.log(
+      `VIDEO: ${baseName} [${codecs.video}] -> MP4 (HDR Preserved) [Audio:${audioType}]`,
+    );
+  }
 
   try {
     // Remux video - capture stderr for progress streaming
@@ -108,17 +114,17 @@ export async function processVideo(
       outputPath,
     ]);
 
-    // FFmpeg writes progress to stderr, stream it through logger
-    ffmpeg.stderr?.on('data', (data: Buffer) => {
-      const lines = data.toString().split('\n').filter(Boolean);
-      for (const line of lines) {
-        // Use carriage return lines as progress updates
-        const trimmed = line.trim();
-        if (trimmed) {
-          logger.log(`  ${trimmed}`);
+    if (!jsonUi) {
+      ffmpeg.stderr?.on('data', (data: Buffer) => {
+        const lines = data.toString().split('\n').filter(Boolean);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed) {
+            logger.log(`  ${trimmed}`);
+          }
         }
-      }
-    });
+      });
+    }
 
     await ffmpeg;
 
@@ -127,12 +133,24 @@ export async function processVideo(
 
     // Verify that dates were successfully recovered
     if (!(await hasValidCreateDate(outputPath))) {
-      logger.warn(
-        `⚠️  WARNING: Could not recover creation date for ${baseName} - metadata may need manual correction`,
-      );
+      if (jsonUi) {
+        logger.emitUi({
+          v: 1,
+          kind: 'warn',
+          code: 'date_not_recovered',
+          detail: baseName,
+        });
+      } else {
+        logger.warn(
+          `⚠️  WARNING: Could not recover creation date for ${baseName} - metadata may need manual correction`,
+        );
+      }
     }
+    return true;
   } catch (error) {
-    logger.error(`❌ ERROR: Failed to convert ${baseName}`);
+    if (!jsonUi) {
+      logger.error(`❌ ERROR: Failed to convert ${baseName}`);
+    }
     // Clean up failed output file
     try {
       await fs.unlink(outputPath);
@@ -158,8 +176,11 @@ export async function copyVideo(
   outputPath: string,
 ): Promise<void> {
   const baseName = path.basename(inputPath);
+  const jsonUi = logger.getMode() === 'json';
 
-  logger.log(`VIDEO: ${baseName} -> Copying .mov to .mp4 container...`);
+  if (!jsonUi) {
+    logger.log(`VIDEO: ${baseName} -> Copying .mov to .mp4 container...`);
+  }
 
   try {
     // fs.copyFile throws errors if the file already exists
@@ -167,7 +188,9 @@ export async function copyVideo(
     await fs.rm(outputPath, { force: true });
     await fs.copyFile(inputPath, outputPath);
   } catch (error) {
-    logger.error(`❌ ERROR: Failed to copy ${baseName}`);
+    if (!jsonUi) {
+      logger.error(`❌ ERROR: Failed to copy ${baseName}`);
+    }
     try {
       await fs.rm(outputPath, { force: true });
     } catch {

@@ -8,6 +8,8 @@ import { processLegacyVideo } from '../processors/legacy-video.js';
 import { logger } from '../utils/logger.js';
 import { validateTools } from '../utils/validation.js';
 import { fixDatesOnPhoto } from '../utils/dates.js';
+import { ConversionFileError } from '../utils/conversion-file-error.js';
+import type { CliUiMediaKind } from '../../cli-ui-protocol.js';
 
 const convertOptionsSchema = z.object({
   cwd: z.string(),
@@ -18,6 +20,12 @@ const convertOptionsSchema = z.object({
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
 const LEGACY_VIDEO_EXTENSIONS = ['mpg', 'mpeg'];
+
+function cliMediaKind(ext: string): CliUiMediaKind {
+  if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
+  if (LEGACY_VIDEO_EXTENSIONS.includes(ext)) return 'legacy_video';
+  return 'video';
+}
 
 export const convert = new Command()
   .name('convert')
@@ -55,7 +63,15 @@ export const convert = new Command()
 
       const existingPaths = pathStats.filter((p) => p.exists);
       if (existingPaths.length === 0) {
-        logger.error('No valid paths provided.');
+        if (options.jsonl) {
+          logger.emitUi({
+            v: 1,
+            kind: 'error',
+            code: 'no_valid_paths',
+          });
+        } else {
+          logger.error('No valid paths provided.');
+        }
         process.exit(1);
       }
 
@@ -63,9 +79,17 @@ export const convert = new Command()
       const directories = existingPaths.filter((p) => p.stat?.isDirectory());
 
       if (directories.length > 1) {
-        logger.error(
-          'Multiple directories provided. Please provide only one directory.',
-        );
+        if (options.jsonl) {
+          logger.emitUi({
+            v: 1,
+            kind: 'error',
+            code: 'multiple_directories',
+          });
+        } else {
+          logger.error(
+            'Multiple directories provided. Please provide only one directory.',
+          );
+        }
         process.exit(1);
       }
 
@@ -74,12 +98,31 @@ export const convert = new Command()
       } else if (files.length > 0) {
         await processIndividualFiles(files.map((f) => f.path));
       } else {
-        logger.error('No valid files or directories provided.');
+        if (options.jsonl) {
+          logger.emitUi({
+            v: 1,
+            kind: 'error',
+            code: 'no_valid_inputs',
+          });
+        } else {
+          logger.error('No valid files or directories provided.');
+        }
         process.exit(1);
       }
     } catch (error) {
-      logger.break();
-      logger.error(error instanceof Error ? error.message : String(error));
+      if (logger.getMode() === 'json') {
+        if (!(error instanceof ConversionFileError)) {
+          logger.emitUi({
+            v: 1,
+            kind: 'error',
+            code: 'uncaught',
+            detail: error instanceof Error ? error.message : String(error),
+          });
+        }
+      } else {
+        logger.break();
+        logger.error(error instanceof Error ? error.message : String(error));
+      }
       process.exit(1);
     }
   });
@@ -90,13 +133,15 @@ async function processDirectory(dirPath: string): Promise<void> {
 
   await fs.mkdir(outDir, { recursive: true });
 
-  logger.break();
-  logger.log('=========================================================');
-  logger.info(`SOURCE:      ${inDir}`);
-  logger.info(`DESTINATION: ${outDir}`);
-  logger.info('MODE:        Copy MOV to MP4 container without re-encoding');
-  logger.log('=========================================================');
-  logger.break();
+  if (logger.getMode() !== 'json') {
+    logger.break();
+    logger.log('=========================================================');
+    logger.info(`SOURCE:      ${inDir}`);
+    logger.info(`DESTINATION: ${outDir}`);
+    logger.info('MODE:        Copy MOV to MP4 container without re-encoding');
+    logger.log('=========================================================');
+    logger.break();
+  }
 
   await validateTools();
 
@@ -110,14 +155,16 @@ async function processDirectory(dirPath: string): Promise<void> {
     outDir,
   );
 
-  logger.break();
-  logger.log('=========================================================');
-  logger.success(
-    `DONE. Processed ${processedCount} files, skipped ${skippedCount}.`,
-  );
-  logger.info(`Transfer this folder to your Pixel: ${outDir}`);
-  logger.log('=========================================================');
-  logger.break();
+  if (logger.getMode() !== 'json') {
+    logger.break();
+    logger.log('=========================================================');
+    logger.success(
+      `DONE. Processed ${processedCount} files, skipped ${skippedCount}.`,
+    );
+    logger.info(`Transfer this folder to your Pixel: ${outDir}`);
+    logger.log('=========================================================');
+    logger.break();
+  }
 }
 
 async function processIndividualFiles(filePaths: string[]): Promise<void> {
@@ -131,17 +178,27 @@ async function processIndividualFiles(filePaths: string[]): Promise<void> {
   });
 
   if (regularFiles.length === 0) {
-    logger.error('No supported media files provided.');
+    if (logger.getMode() === 'json') {
+      logger.emitUi({
+        v: 1,
+        kind: 'error',
+        code: 'no_supported_media',
+      });
+    } else {
+      logger.error('No supported media files provided.');
+    }
     process.exit(1);
   }
 
-  logger.break();
-  logger.log('=========================================================');
-  logger.info(`SOURCE:      ${regularFiles.length} file(s)`);
-  logger.info(`DESTINATION: In-place (Output files next to input files)`);
-  logger.info('MODE:        SPM-STYLE COPY/RENAME (Fake MP4)');
-  logger.log('=========================================================');
-  logger.break();
+  if (logger.getMode() !== 'json') {
+    logger.break();
+    logger.log('=========================================================');
+    logger.info(`SOURCE:      ${regularFiles.length} file(s)`);
+    logger.info(`DESTINATION: In-place (Output files next to input files)`);
+    logger.info('MODE:        SPM-STYLE COPY/RENAME (Fake MP4)');
+    logger.log('=========================================================');
+    logger.break();
+  }
 
   await validateTools();
 
@@ -150,13 +207,15 @@ async function processIndividualFiles(filePaths: string[]): Promise<void> {
     null,
   );
 
-  logger.break();
-  logger.log('=========================================================');
-  logger.success(
-    `DONE. Processed ${processedCount} files, skipped ${skippedCount}.`,
-  );
-  logger.log('=========================================================');
-  logger.break();
+  if (logger.getMode() !== 'json') {
+    logger.break();
+    logger.log('=========================================================');
+    logger.success(
+      `DONE. Processed ${processedCount} files, skipped ${skippedCount}.`,
+    );
+    logger.log('=========================================================');
+    logger.break();
+  }
 }
 
 async function processFiles(
@@ -165,36 +224,127 @@ async function processFiles(
 ): Promise<{ processedCount: number; skippedCount: number }> {
   let processedCount = 0;
   let skippedCount = 0;
+  let failedCount = 0;
+  const isJson = logger.getMode() === 'json';
+  const layout = outDir ? 'directory' : 'files';
 
-  for (const file of files) {
+  if (isJson) {
+    logger.emitUi({
+      v: 1,
+      kind: 'session',
+      phase: 'start',
+      command: 'convert',
+      layout,
+      outputDir: outDir ?? undefined,
+      total: files.length,
+    });
+  }
+
+  try {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const baseName = path.basename(file);
     const ext = path.extname(file).toLowerCase().slice(1);
-    // If outDir is null, use the file's own directory
     const outputDirectory = outDir ?? path.dirname(file);
+    const media = cliMediaKind(ext);
 
     if (IMAGE_EXTENSIONS.includes(ext)) {
       const outFile = path.join(outputDirectory, baseName);
 
-      // In in-place mode, if input and output are same, we skip (or overwrite? usually we want to skip if it's the exact same file, but here we might be converting format? No, image processor copies bit-for-bit if it's HEIC, or maybe converts? logic says: "Copies files bit-for-bit" for HEIC.
-      // If outFile === file, we should definitely skip or warn.
       if (outFile === file) {
-        // logger.warn(`Skipping ${baseName} (Output same as Input)`);
         skippedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'skipped',
+            media: 'image',
+            extIn: ext,
+            extOut: ext,
+            name: baseName,
+            reason: 'output_same_as_input',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
         continue;
       }
 
       try {
         await fs.access(outFile);
-        // Output already exists, but still fix its dates
         await fixDatesOnPhoto(outFile);
         skippedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'skipped',
+            media: 'image',
+            extIn: ext,
+            extOut: ext,
+            name: baseName,
+            reason: 'output_exists',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
         continue;
       } catch {
         // File doesn't exist, proceed
       }
 
-      await processImage(file, outFile);
-      processedCount++;
+      try {
+        await processImage(file, outFile);
+        processedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'done',
+            media: 'image',
+            extIn: ext,
+            extOut: ext,
+            name: baseName,
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
+      } catch (err) {
+        failedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'failed',
+            media: 'image',
+            extIn: ext,
+            extOut: ext,
+            name: baseName,
+            reason: 'processing_error',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
+        throw new ConversionFileError(
+          err instanceof Error ? err.message : String(err),
+        );
+      }
       continue;
     }
 
@@ -204,19 +354,115 @@ async function processFiles(
 
       if (outFile === file) {
         skippedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'skipped',
+            media,
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+            reason: 'output_same_as_input',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
         continue;
       }
 
       try {
         await fs.access(outFile);
         skippedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'skipped',
+            media,
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+            reason: 'output_exists',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
         continue;
       } catch {
         // File doesn't exist, proceed
       }
 
-      await processVideo(file, outFile);
-      processedCount++;
+      try {
+        const wrote = await processVideo(file, outFile);
+        if (!wrote) {
+          skippedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media,
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'unreadable_video',
+            });
+          }
+        } else {
+          processedCount++;
+          if (isJson) {
+            logger.emitUi({
+              v: 1,
+              kind: 'file',
+              status: 'done',
+              media,
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+            });
+          }
+        }
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
+      } catch (err) {
+        failedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'failed',
+            media,
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+            reason: 'processing_error',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
+        throw new ConversionFileError(
+          err instanceof Error ? err.message : String(err),
+        );
+      }
       continue;
     }
 
@@ -226,22 +472,125 @@ async function processFiles(
 
       if (outFile === file) {
         skippedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'skipped',
+            media: 'legacy_video',
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+            reason: 'output_same_as_input',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
         continue;
       }
 
       try {
         await fs.access(outFile);
         skippedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'skipped',
+            media: 'legacy_video',
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+            reason: 'output_exists',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
         continue;
       } catch {
         // File doesn't exist, proceed
       }
 
-      await processLegacyVideo(file, outFile);
-      processedCount++;
+      try {
+        await processLegacyVideo(file, outFile);
+        processedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'done',
+            media: 'legacy_video',
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
+      } catch (err) {
+        failedCount++;
+        if (isJson) {
+          logger.emitUi({
+            v: 1,
+            kind: 'file',
+            status: 'failed',
+            media: 'legacy_video',
+            extIn: ext,
+            extOut: 'mp4',
+            name: baseName,
+            reason: 'processing_error',
+          });
+          logger.emitUi({
+            v: 1,
+            kind: 'progress',
+            done: i + 1,
+            total: files.length,
+          });
+        }
+        throw new ConversionFileError(
+          err instanceof Error ? err.message : String(err),
+        );
+      }
       continue;
+    }
+
+    if (isJson) {
+      logger.emitUi({
+        v: 1,
+        kind: 'progress',
+        done: i + 1,
+        total: files.length,
+      });
     }
   }
 
   return { processedCount, skippedCount };
+  } finally {
+    if (isJson) {
+      logger.emitUi({
+        v: 1,
+        kind: 'session',
+        phase: 'end',
+        command: 'convert',
+        layout,
+        outputDir: outDir ?? undefined,
+        total: files.length,
+        processed: processedCount,
+        skipped: skippedCount,
+        failed: failedCount,
+      });
+    }
+  }
 }

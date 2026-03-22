@@ -27,16 +27,25 @@ export async function validateTools(
   }
 
   if (missing.length > 0) {
-    logger.error(`Error: Required tools not found: ${missing.join(', ')}`);
-    logger.info('');
-    logger.info('Install missing tools:');
-    if (missing.includes('ffmpeg') || missing.includes('ffprobe')) {
-      logger.info('  brew install ffmpeg');
+    if (logger.getMode() === 'json') {
+      logger.emitUi({
+        v: 1,
+        kind: 'blocked',
+        code: 'missing_tools',
+        tools: missing,
+      });
+    } else {
+      logger.error(`Error: Required tools not found: ${missing.join(', ')}`);
+      logger.info('');
+      logger.info('Install missing tools:');
+      if (missing.includes('ffmpeg') || missing.includes('ffprobe')) {
+        logger.info('  brew install ffmpeg');
+      }
+      if (missing.includes('exiftool')) {
+        logger.info('  brew install exiftool');
+      }
+      logger.info('');
     }
-    if (missing.includes('exiftool')) {
-      logger.info('  brew install exiftool');
-    }
-    logger.info('');
     process.exit(1);
   }
 }
