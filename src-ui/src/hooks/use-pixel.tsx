@@ -26,8 +26,7 @@ function usePixelProviderValue() {
     null,
   );
 
-  const { execute, isRunning, logs, activityEvents, clearLogs, logsEndRef } =
-    useCommand({
+  const { execute, isRunning, logs, activityEvents, clearLogs } = useCommand({
       sidecar: 'binaries/pb',
     });
 
@@ -215,7 +214,6 @@ function usePixelProviderValue() {
     logs,
     activityEvents,
     clearLogs: clearAll,
-    logsEndRef,
     checkConnection,
     pushFiles,
     pushFolder,

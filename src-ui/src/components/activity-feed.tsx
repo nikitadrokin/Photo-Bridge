@@ -20,7 +20,7 @@ interface ActivityFeedProps {
 const ActivityFeed: React.FC<ActivityFeedProps> = ({
   emptyMessage = 'Activity will appear here…',
 }) => {
-  const { activityEvents, logs, logsEndRef, clearLogs } = usePixel();
+  const { activityEvents, logs, clearLogs } = usePixel();
 
   const [showDetails, setShowDetails] = useState(true);
 
@@ -165,7 +165,6 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
               </div>
             </div>
           ) : null}
-          <div ref={logsEndRef} />
         </ScrollArea>
 
         <div

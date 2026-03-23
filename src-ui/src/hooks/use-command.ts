@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
 import { type EventV1, parseLineFromCLI } from '@cli-protocol';
 import type { LogMessage } from '@/lib/types';
@@ -22,8 +22,6 @@ interface UseCommandResult {
   activityEvents: Array<EventV1>;
   /** Clear logs and activity */
   clearLogs: () => void;
-  /** Ref for auto-scrolling */
-  logsEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -33,16 +31,7 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<Array<LogMessage>>([]);
   const [activityEvents, setActivityEvents] = useState<Array<EventV1>>([]);
-  const logsEndRef = useRef<HTMLDivElement>(null);
   const stdoutBufferRef = useRef('');
-
-  const scrollToBottom = useCallback(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [logs, activityEvents, scrollToBottom]);
 
   const clearLogs = useCallback(() => {
     setLogs([]);
@@ -164,6 +153,5 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
     logs,
     activityEvents,
     clearLogs,
-    logsEndRef,
   };
 }

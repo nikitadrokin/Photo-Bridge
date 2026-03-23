@@ -29,7 +29,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
 }) => {
   const {
     logs,
-    logsEndRef,
     transferPaths,
     openActiveInTerminal,
     terminalName,
@@ -157,7 +156,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
               {log.message}
             </div>
           ))}
-          <div ref={logsEndRef} />
         </ScrollArea>
 
         {/* Resize grip — bottom-right corner */}
