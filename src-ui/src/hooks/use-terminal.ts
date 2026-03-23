@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
 import { shJoin, shLines, shSingleQuote } from '@/lib/shell-formatters';
+import { useSettingsStore } from '@/stores/settings-store';
 
 type TerminalType = 'ghostty' | 'terminal' | null;
 
+interface TerminalMeta {
+  type: TerminalType;
+  path: string;
+  name: string;
+}
+
 interface UseTerminalResult {
-  /** Detected terminal app name */
+  /** Resolved terminal app name for display */
   terminalName: string | null;
   /** Whether detection is complete */
   isReady: boolean;
@@ -15,11 +22,7 @@ interface UseTerminalResult {
   getCommandString: (command: string, args: Array<string>) => string;
 }
 
-const TERMINAL_CHECKS: Array<{
-  type: TerminalType;
-  path: string;
-  name: string;
-}> = [
+const TERMINAL_CHECKS: Array<TerminalMeta> = [
   { type: 'ghostty', path: '/Applications/Ghostty.app', name: 'Ghostty' },
   {
     type: 'terminal',
@@ -28,47 +31,77 @@ const TERMINAL_CHECKS: Array<{
   },
 ];
 
+async function directoryExists(path: string): Promise<boolean> {
+  try {
+    const cmd = Command.create('exec-sh', [
+      '-c',
+      `test -d "${path}"`,
+    ]);
+    const result = await cmd.execute();
+    return result.code === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function firstInstalledTerminal(
+  preference: 'ghostty' | 'terminal',
+): Promise<TerminalMeta | null> {
+  const order: Array<'ghostty' | 'terminal'> =
+    preference === 'ghostty'
+      ? ['ghostty', 'terminal']
+      : ['terminal', 'ghostty'];
+
+  for (const type of order) {
+    const meta = TERMINAL_CHECKS.find((t) => t.type === type);
+    if (meta && (await directoryExists(meta.path))) {
+      return meta;
+    }
+  }
+
+  return null;
+}
+
 /**
- * Hook for detecting and launching the user's native terminal with commands.
+ * Detects the user’s terminal (respecting Settings) and opens commands in it.
  */
 export function useTerminal(): UseTerminalResult {
+  const preferredTerminal = useSettingsStore((s) => s.preferredTerminal);
   const [terminalType, setTerminalType] = useState<TerminalType>(null);
   const [terminalName, setTerminalName] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  // Detect installed terminal on mount
   useEffect(() => {
+    let cancelled = false;
+
     async function detectTerminal() {
-      for (const terminal of TERMINAL_CHECKS) {
-        try {
-          // Use 'test -d' to check if the app exists
-          const cmd = Command.create('exec-sh', [
-            '-c',
-            `test -d "${terminal.path}"`,
-          ]);
-          const result = await cmd.execute();
-          if (result.code === 0) {
-            setTerminalType(terminal.type);
-            setTerminalName(terminal.name);
-            setIsReady(true);
-            return;
-          }
-        } catch {
-          // Continue to next terminal
-        }
+      setIsReady(false);
+      const resolved = await firstInstalledTerminal(preferredTerminal);
+
+      if (cancelled) {
+        return;
       }
 
-      // No terminal found (shouldn't happen, Terminal.app is always there)
+      if (resolved) {
+        setTerminalType(resolved.type);
+        setTerminalName(resolved.name);
+      } else {
+        setTerminalType(null);
+        setTerminalName(null);
+      }
+
       setIsReady(true);
     }
 
-    detectTerminal();
-  }, []);
+    void detectTerminal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preferredTerminal]);
 
   const getCommandString = useCallback(
     (command: string, args: Array<string>): string => {
-      // Quote every token so the returned string is safe both for display and
-      // for execution via `sh -c`.
       return [
         shSingleQuote(command),
         ...args.map((arg) => shSingleQuote(arg)),
@@ -88,14 +121,6 @@ export function useTerminal(): UseTerminalResult {
 
       try {
         if (terminalType === 'ghostty') {
-          // Ghostty: use binary directly with -e flag.
-          //
-          // Important: the remote Android script must be passed to `adb shell -t`
-          // as ONE argument. Do not split it across `sh`, `-c`, and the script,
-          // because `adb shell` flattens argv before sending it to the device.
-          //
-          // NOTE: this branch is still intentionally hardcoded to the adb photo
-          // library session — command/args are ignored here.
           const introBanner = shLines`
             You are in the photo library path of your device.
 
@@ -121,7 +146,6 @@ export function useTerminal(): UseTerminalResult {
           const cmd = Command.create('exec-sh', ['-c', hostScript]);
           await cmd.execute();
         } else {
-          // Terminal.app: use AppleScript
           const script = `
                     tell application "Terminal"
                         activate

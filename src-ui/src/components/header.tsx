@@ -6,11 +6,10 @@ import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
   title: string;
-  description?: string;
   children?: ReactNode;
 }
 
-export function PageHeader({ title, description, children }: PageHeaderProps) {
+export function PageHeader({ title, children }: PageHeaderProps) {
   const { open: sidebarOpen } = useSidebar();
   const isMobile = useIsMobile();
   const isFullscreen = useIsFullscreen();
@@ -45,14 +44,6 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
               </div>
             ) : null}
           </div>
-          {description ? (
-            <p
-              className="mt-1 text-sm text-muted-foreground"
-              data-tauri-drag-region
-            >
-              {description}
-            </p>
-          ) : null}
         </div>
       </div>
     </header>
