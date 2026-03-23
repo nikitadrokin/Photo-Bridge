@@ -29,7 +29,7 @@ export interface ChoiceCardRadioGroupProps<T extends string> {
   /** Called when the user selects a different option. */
   onValueChange: (next: T) => void;
   /** Choices to render as bordered cards with radios. */
-  options: readonly ChoiceCardOption<T>[];
+  options: ReadonlyArray<ChoiceCardOption<T>>;
   /** Optional `name` for the underlying radio group. */
   name?: string;
   className?: string;
@@ -58,7 +58,10 @@ export function ChoiceCardRadioGroup<T extends string>({
         value={value}
         disabled={disabled}
         onValueChange={(next) => {
-          if (typeof next === 'string' && options.some((o) => o.value === next)) {
+          if (
+            typeof next === 'string' &&
+            options.some((o) => o.value === next)
+          ) {
             onValueChange(next as T);
           }
         }}
