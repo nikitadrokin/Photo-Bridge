@@ -18,8 +18,8 @@
     }
   },
   "scripts": {
-    "dev:cli": "tsup --watch",
-    "build:cli": "tsup",
+    "dev:cli": "bun run src-cli/index.ts",
+    "build:cli": "bun build ./src-cli/index.ts --outfile dist/index.js --target bun",
     "build:sidecar": "bun build ./src-cli/index.ts --compile --outfile src-tauri/binaries/pb-aarch64-apple-darwin",
     "dev:tauri": "tauri dev",
     "build:tauri": "tauri build",
