@@ -1,6 +1,6 @@
 # PhotoBridge
 
-Convert iOS photos and videos (HEIC, MOV, HEVC) into formats your Pixel can handle — without re-encoding, without losing metadata.
+Convert iOS photos and videos (HEIC, MOV, HEVC) into formats your Pixel can handle — without re-encoding or losing data.
 
 Requires `ffmpeg` and `exiftool` (`brew install ffmpeg exiftool`).
 
