@@ -17,7 +17,7 @@ function TransferPage() {
 
   return (
     <>
-      <main className="flex-1 px-6 py-6">
+      <main className="flex-1 p-2">
         <div className="mx-auto flex flex-col max-w-5xl gap-8 pb-6">
           {/* Connection Status */}
           <ConnectionStatus
