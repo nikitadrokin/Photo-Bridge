@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
+import { invoke } from '@tauri-apps/api/core';
 import {
+  ArrowCircleUp,
   ArrowsClockwise,
   DeviceMobile,
   FilmStrip,
@@ -68,6 +70,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   isRunning,
 }) => {
   const [version, setVersion] = useState<string>('');
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const isFullscreen = useIsFullscreen();
   const isMobile = useIsMobile();
   const matchRoute = useMatchRoute();
@@ -77,6 +80,12 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
     getVersion()
       .then(setVersion)
       .catch(() => setVersion('dev'));
+  }, []);
+
+  useEffect(() => {
+    invoke<string | null>('check_for_update')
+      .then(setUpdateVersion)
+      .catch(() => {});
   }, []);
 
   return (
@@ -161,7 +170,20 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
       <SidebarFooter className="p-4">
         <div className="flex flex-col gap-3 text-xs text-muted-foreground">
+          {updateVersion && (
+            <a
+              href="https://github.com/nikitadrokin/Photo-Bridge/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-primary hover:underline"
+            >
+              <ArrowCircleUp size={13} weight="duotone" />v{updateVersion}{' '}
+              available
+            </a>
+          )}
+
           <ThemeToggle />
+
           <div className="flex items-center justify-between">
             <span>
               Made with 🫶🏻 by{' '}
