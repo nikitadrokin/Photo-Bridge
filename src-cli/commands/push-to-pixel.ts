@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import * as Fs from 'fs';
 import * as Path from 'path';
-import Adb from '@devicefarmer/adbkit';
+import { Adb } from '@devicefarmer/adbkit';
 import { logger } from '../utils/logger.js';
 
 export const pushToPixel = new Command()
