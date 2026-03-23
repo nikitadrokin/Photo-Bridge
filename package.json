@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "src-cli",
-    "src-ui"
+    "src-ui",
+    "src-web"
   ],
   "files": [
     "dist"
@@ -23,6 +24,8 @@
     "dev:tauri": "tauri dev",
     "build:tauri": "tauri build",
     "release:tauri": "./release.sh",
+    "dev:web": "bun run --filter photo-bridge-web dev",
+    "build:web": "bun run --filter photo-bridge-web build",
     "start": "bun run dist/index.js",
     "typecheck": "tsc --noEmit"
   },
