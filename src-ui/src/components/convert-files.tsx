@@ -2,24 +2,33 @@ import { Clock, File, Play, Spinner, X } from '@phosphor-icons/react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
 import ActivityStatsPanel from './activity-stats-panel';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';
 
+const MEDIA_JOB_OPTIONS = [
+  {
+    value: 'convert' as const,
+    title: 'Remux to MP4',
+    description: 'Transcode or remux so files play cleanly on Pixel.',
+  },
+  {
+    value: 'copy' as const,
+    title: 'Copy as-is, replace extension',
+    description: 'Fast path: copy files and adjust extension only.',
+  },
+];
+
 interface ConvertFilesProps {
   mediaJob: MediaJobMode;
   setMediaJob: (mode: MediaJobMode) => void;
-  runMode: 'in-app' | 'terminal';
-  setRunMode: React.Dispatch<React.SetStateAction<'in-app' | 'terminal'>>;
 }
 
 const ConvertFiles: React.FC<ConvertFilesProps> = ({
   mediaJob,
   setMediaJob,
-  runMode,
-  setRunMode,
 }) => {
   const { selectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
@@ -56,35 +65,14 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium">Processing Mode</span>
-        <Tabs
-          value={mediaJob}
-          onValueChange={(val) => setMediaJob(val as MediaJobMode)}
-        >
-          <TabsList>
-            <TabsTrigger value="convert">Remux to MP4</TabsTrigger>
-            <TabsTrigger value="copy">
-              Copy as-is, replace extension
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* {pixel.terminalReady && pixel.terminalName && (
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">Run Mode</span>
-          <Tabs
-            value={runMode}
-            onValueChange={(val) => setRunMode(val as 'in-app' | 'terminal')}
-          >
-            <TabsList>
-              <TabsTrigger value="in-app">In-App</TabsTrigger>
-              <TabsTrigger value="terminal">Terminal</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      )} */}
+      <ChoiceCardRadioGroup
+        legend="Processing mode"
+        value={mediaJob}
+        onValueChange={setMediaJob}
+        options={MEDIA_JOB_OPTIONS}
+        disabled={pixel.isRunning}
+        name="media-job"
+      />
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
@@ -96,15 +84,11 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
           }
           onClick={() => {
             if (mediaJob === 'convert') {
-              return runMode === 'in-app'
-                ? pixel.convert(selectedPaths)
-                : pixel.convertInTerminal(selectedPaths);
+              return pixel.convert(selectedPaths);
             }
-            return runMode === 'in-app'
-              ? pixel.copy(selectedPaths)
-              : pixel.copyInTerminal(selectedPaths);
+            return pixel.copy(selectedPaths);
           }}
-          disabled={pixel.isRunning || runMode === 'terminal'}
+          disabled={pixel.isRunning}
           className="gap-2"
         >
           {pixel.isRunning ? (
@@ -124,12 +108,8 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
           type="button"
           variant="outline"
           title="Restore EXIF or Takeout timestamps"
-          onClick={() =>
-            runMode === 'in-app'
-              ? pixel.fixDates(selectedPaths)
-              : pixel.fixDatesInTerminal(selectedPaths)
-          }
-          disabled={pixel.isRunning || runMode === 'terminal'}
+          onClick={() => pixel.fixDates(selectedPaths)}
+          disabled={pixel.isRunning}
           className="gap-2"
         >
           <Clock size={18} weight="duotone" />
@@ -137,7 +117,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         </Button>
       </div>
 
-      {runMode === 'in-app' ? <ActivityStatsPanel /> : null}
+      <ActivityStatsPanel />
     </>
   );
 };

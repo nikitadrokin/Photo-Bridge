@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import ActivityFeed from '@/components/activity-feed';
 import ConvertFiles, {
   type MediaJobMode,
@@ -34,7 +34,6 @@ function ConvertPage() {
     },
     [navigate],
   );
-  const [runMode, setRunMode] = useState<'in-app' | 'terminal'>('in-app');
   const pixel = usePixel();
 
   const hasSelection = selectedPaths.length > 0;
@@ -59,37 +58,19 @@ function ConvertPage() {
             {!hasSelection ? (
               <SelectFiles />
             ) : (
-              <ConvertFiles
-                mediaJob={mediaJob}
-                setMediaJob={setMediaJob}
-                runMode={runMode}
-                setRunMode={setRunMode}
-              />
+              <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
             )}
           </div>
 
           {/* RIGHT PANEL: Log Viewer / Terminal Message */}
           <div className="flex flex-col min-h-0">
-            {runMode === 'terminal' ? (
-              <div className="flex-1 min-h-[400px] flex flex-col items-center justify-center rounded-xl border bg-muted/20 text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <p className="font-medium text-foreground">
-                    Commands will open in {pixel.terminalName || 'Terminal'}
-                  </p>
-                  <p className="text-sm opacity-70">
-                    Terminal execution coming soon
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <ActivityFeed
-                emptyMessage={
-                  mediaJob === 'copy'
-                    ? 'Activity will appear here after copy'
-                    : 'Activity will appear here after conversion'
-                }
-              />
-            )}
+            <ActivityFeed
+              emptyMessage={
+                mediaJob === 'copy'
+                  ? 'Activity will appear here after copy'
+                  : 'Activity will appear here after conversion'
+              }
+            />
           </div>
         </div>
       </main>
