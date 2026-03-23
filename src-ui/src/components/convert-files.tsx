@@ -71,8 +71,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         </Tabs>
       </div>
 
-      {/* Global Run Mode Toggle */}
-      {pixel.terminalReady && pixel.terminalName && (
+      {/* {pixel.terminalReady && pixel.terminalName && (
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">Run Mode</span>
           <Tabs
@@ -85,7 +84,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
             </TabsList>
           </Tabs>
         </div>
-      )}
+      )} */}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
