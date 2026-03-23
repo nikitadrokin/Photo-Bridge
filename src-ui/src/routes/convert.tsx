@@ -17,11 +17,7 @@ import ActivityFeed from '@/components/activity-feed';
 import ActivityStatsPanel from '@/components/activity-stats-panel';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
-import {
-  ALL_EXTENSIONS,
-  IMAGE_EXTENSIONS,
-  VIDEO_EXTENSIONS,
-} from '@/lib/constants';
+import { ALL_EXTENSIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useMediaStore } from '@/stores/media-store';
 import SelectFiles from '@/components/select-files';
