@@ -10,14 +10,16 @@ export type MediaJobMode = 'convert' | 'copy';
 
 const MEDIA_JOB_OPTIONS = [
   {
-    value: 'convert' as const,
-    title: 'Remux to MP4',
-    description: 'Transcode or remux so files play cleanly on Pixel.',
+    value: 'copy' as const,
+    title: 'Copy Bit-for-Bit',
+    description:
+      "Faster and preserves original quality, but won't always upload to Pixel.",
   },
   {
-    value: 'copy' as const,
-    title: 'Copy as-is, replace extension',
-    description: 'Fast path: copy files and adjust extension only.',
+    value: 'convert' as const,
+    title: 'Remux to MP4',
+    description:
+      "Transcode files so they are compatible with the Pixel. Use this when videos don't upload using the mode above.",
   },
 ];
 
