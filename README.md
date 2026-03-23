@@ -11,7 +11,7 @@ brew install nikitadrokin/tap/photo-bridge
 xattr -cr '/Applications/PhotoBridge.app'
 ```
 
-> The `xattr` line clears the macOS quarantine flag. You'll get an "app is damaged" error without it.
+> Since I don't have a paid Apple Developer account, macOS will flag the app as unsafe. The `xattr` line clears that macOS "quarantine" flag so it'll be safe to open.
 
 ## Contributing
 
