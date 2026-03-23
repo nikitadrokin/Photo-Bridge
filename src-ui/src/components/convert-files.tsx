@@ -5,12 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import ActivityStatsPanel from './activity-stats-panel';
 
+/** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
+export type MediaJobMode = 'convert' | 'copy';
+
 interface ConvertFilesProps {
+  mediaJob: MediaJobMode;
+  setMediaJob: (mode: MediaJobMode) => void;
   runMode: 'in-app' | 'terminal';
   setRunMode: React.Dispatch<React.SetStateAction<'in-app' | 'terminal'>>;
 }
 
-const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
+const ConvertFiles: React.FC<ConvertFilesProps> = ({
+  mediaJob,
+  setMediaJob,
+  runMode,
+  setRunMode,
+}) => {
   const { selectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
 
@@ -46,6 +56,21 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
         </Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <span className="text-sm font-medium">Processing Mode</span>
+        <Tabs
+          value={mediaJob}
+          onValueChange={(val) => setMediaJob(val as MediaJobMode)}
+        >
+          <TabsList>
+            <TabsTrigger value="convert">Remux to MP4</TabsTrigger>
+            <TabsTrigger value="copy">
+              Copy as-is, replace extension
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Global Run Mode Toggle */}
       {pixel.terminalReady && pixel.terminalName && (
         <div className="flex items-center gap-4">
@@ -65,12 +90,21 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
-          title="Make compatible with Pixel"
-          onClick={() =>
-            runMode === 'in-app'
-              ? pixel.convert(selectedPaths)
-              : pixel.convertInTerminal(selectedPaths)
+          title={
+            mediaJob === 'convert'
+              ? 'Make compatible with Pixel'
+              : 'Copy/rename for Pixel upload'
           }
+          onClick={() => {
+            if (mediaJob === 'convert') {
+              return runMode === 'in-app'
+                ? pixel.convert(selectedPaths)
+                : pixel.convertInTerminal(selectedPaths);
+            }
+            return runMode === 'in-app'
+              ? pixel.copy(selectedPaths)
+              : pixel.copyInTerminal(selectedPaths);
+          }}
           disabled={pixel.isRunning || runMode === 'terminal'}
           className="gap-2"
         >
@@ -79,7 +113,13 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
           ) : (
             <Play size={18} weight="fill" />
           )}
-          {pixel.isRunning ? 'Converting…' : 'Convert Media'}
+          {pixel.isRunning
+            ? mediaJob === 'convert'
+              ? 'Converting…'
+              : 'Copying…'
+            : mediaJob === 'convert'
+              ? 'Convert Media'
+              : 'Copy Media'}
         </Button>
         <Button
           type="button"

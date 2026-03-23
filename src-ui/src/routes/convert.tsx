@@ -1,7 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useCallback, useState } from 'react';
 import ActivityFeed from '@/components/activity-feed';
-import ConvertFiles from '@/components/convert-files';
+import ConvertFiles, {
+  type MediaJobMode,
+} from '@/components/convert-files';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import SelectFiles from '@/components/select-files';
 import { useDragDrop } from '@/hooks/use-drag-drop';
@@ -9,13 +11,29 @@ import { usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
 
+/** Search params for `/convert` — `mode=copy` selects the copy pipeline. */
+export type ConvertSearch = {
+  mode: MediaJobMode;
+};
+
 export const Route = createFileRoute('/convert')({
-  staticData: { pageTitle: 'Convert Media' },
+  validateSearch: (raw: Record<string, unknown>): ConvertSearch => ({
+    mode: raw.mode === 'copy' ? 'copy' : 'convert',
+  }),
+  staticData: { pageTitle: 'Convert & Copy' },
   component: ConvertPage,
 });
 
 function ConvertPage() {
   const { selectedPaths, setSelectedPaths } = useMediaStore();
+  const { mode: mediaJob } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const setMediaJob = useCallback(
+    (mode: MediaJobMode) => {
+      void navigate({ search: { mode }, replace: true });
+    },
+    [navigate],
+  );
   const [runMode, setRunMode] = useState<'in-app' | 'terminal'>('in-app');
   const pixel = usePixel();
 
@@ -41,7 +59,12 @@ function ConvertPage() {
             {!hasSelection ? (
               <SelectFiles />
             ) : (
-              <ConvertFiles runMode={runMode} setRunMode={setRunMode} />
+              <ConvertFiles
+                mediaJob={mediaJob}
+                setMediaJob={setMediaJob}
+                runMode={runMode}
+                setRunMode={setRunMode}
+              />
             )}
           </div>
 
@@ -59,7 +82,13 @@ function ConvertPage() {
                 </div>
               </div>
             ) : (
-              <ActivityFeed emptyMessage="Activity will appear here after conversion" />
+              <ActivityFeed
+                emptyMessage={
+                  mediaJob === 'copy'
+                    ? 'Activity will appear here after copy'
+                    : 'Activity will appear here after conversion'
+                }
+              />
             )}
           </div>
         </div>
