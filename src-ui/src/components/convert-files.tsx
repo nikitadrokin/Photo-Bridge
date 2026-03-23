@@ -2,7 +2,6 @@ import { Clock, File, Play, Spinner, X } from '@phosphor-icons/react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import ActivityStatsPanel from './activity-stats-panel';
 
@@ -63,74 +62,40 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Convert */}
-        <button
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          type="button"
+          title="Make compatible with Pixel"
           onClick={() =>
             runMode === 'in-app'
               ? pixel.convert(selectedPaths)
               : pixel.convertInTerminal(selectedPaths)
           }
           disabled={pixel.isRunning || runMode === 'terminal'}
-          className={cn(
-            'group flex items-center gap-4 rounded-xl border p-4 text-left transition-colors duration-150',
-            'hover:border-primary/50 hover:bg-primary/5',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-          )}
+          className="w-full gap-2 sm:flex-1"
         >
-          <div
-            className={cn(
-              'flex h-10 w-10 items-center justify-center rounded-xl shrink-0 transition-colors duration-200',
-              pixel.isRunning
-                ? 'bg-amber-500/10 text-amber-500'
-                : 'bg-primary/10 text-primary group-hover:bg-primary/20',
-            )}
-          >
-            {pixel.isRunning ? (
-              <Spinner size={20} className="animate-spin" />
-            ) : (
-              <Play size={20} weight="fill" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">
-              {pixel.isRunning ? 'Converting…' : 'Convert Media'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {pixel.isRunning
-                ? 'Processing your files…'
-                : 'Make compatible with Pixel'}
-            </p>
-          </div>
-        </button>
-
-        {/* Fix Dates */}
-        <button
+          {pixel.isRunning ? (
+            <Spinner size={18} className="animate-spin" />
+          ) : (
+            <Play size={18} weight="fill" />
+          )}
+          {pixel.isRunning ? 'Converting…' : 'Convert Media'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          title="Restore EXIF or Takeout timestamps"
           onClick={() =>
             runMode === 'in-app'
               ? pixel.fixDates(selectedPaths)
               : pixel.fixDatesInTerminal(selectedPaths)
           }
           disabled={pixel.isRunning || runMode === 'terminal'}
-          className={cn(
-            'group flex items-center gap-4 rounded-xl border p-4 text-left transition-colors duration-150',
-            'hover:border-foreground/20 hover:bg-muted/50',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-          )}
+          className="w-full gap-2 sm:flex-1"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground shrink-0 transition-colors duration-200 group-hover:bg-muted/80">
-            <Clock size={20} weight="duotone" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Fix Dates</p>
-            <p className="text-xs text-muted-foreground">
-              Restore EXIF or Takeout timestamps
-            </p>
-          </div>
-        </button>
+          <Clock size={18} weight="duotone" />
+          Fix Dates
+        </Button>
       </div>
 
       {runMode === 'in-app' ? <ActivityStatsPanel /> : null}

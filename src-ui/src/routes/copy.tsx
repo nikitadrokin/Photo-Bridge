@@ -23,7 +23,6 @@ import {
   IMAGE_EXTENSIONS,
   VIDEO_EXTENSIONS,
 } from '@/lib/constants';
-import { cn } from '@/lib/utils';
 import { useMediaStore } from '@/stores/media-store';
 
 export const Route = createFileRoute('/copy')({
@@ -146,66 +145,32 @@ function ConvertPage() {
                 </Button>
               </div>
 
-              {/* Action buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Convert */}
-                <button
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  title="Copy/rename for Pixel upload"
                   onClick={() => pixel.copy(selectedPaths)}
                   disabled={pixel.isRunning}
-                  className={cn(
-                    'group flex items-center gap-4 rounded-xl border p-4 text-left transition-colors duration-150',
-                    'hover:border-primary/50 hover:bg-primary/5',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                  )}
+                  className="w-full gap-2 sm:flex-1"
                 >
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-xl shrink-0 transition-colors duration-200',
-                      pixel.isRunning
-                        ? 'bg-amber-500/10 text-amber-500'
-                        : 'bg-primary/10 text-primary group-hover:bg-primary/20',
-                    )}
-                  >
-                    {pixel.isRunning ? (
-                      <Spinner size={20} className="animate-spin" />
-                    ) : (
-                      <Play size={20} weight="fill" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">
-                      {pixel.isRunning ? 'Copying…' : 'Copy Media'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {pixel.isRunning
-                        ? 'Processing your files…'
-                        : 'Copy/rename for Pixel upload'}
-                    </p>
-                  </div>
-                </button>
-
-                {/* Fix Dates */}
-                <button
+                  {pixel.isRunning ? (
+                    <Spinner size={18} className="animate-spin" />
+                  ) : (
+                    <Play size={18} weight="fill" />
+                  )}
+                  {pixel.isRunning ? 'Copying…' : 'Copy Media'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  title="Restore EXIF or Takeout timestamps"
                   onClick={() => pixel.fixDates(selectedPaths)}
                   disabled={pixel.isRunning}
-                  className={cn(
-                    'group flex items-center gap-4 rounded-xl border p-4 text-left transition-colors duration-150',
-                    'hover:border-foreground/20 hover:bg-muted/50',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                  )}
+                  className="w-full gap-2 sm:flex-1"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground shrink-0 transition-colors duration-200 group-hover:bg-muted/80">
-                    <Clock size={20} weight="duotone" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">Fix Dates</p>
-                    <p className="text-xs text-muted-foreground">
-                      Restore EXIF or Takeout timestamps
-                    </p>
-                  </div>
-                </button>
+                  <Clock size={18} weight="duotone" />
+                  Fix Dates
+                </Button>
               </div>
 
               <ActivityStatsPanel />
