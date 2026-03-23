@@ -38,9 +38,9 @@ const isDev = import.meta.env.DEV;
 const routes = [
   {
     to: '/convert',
-    label: 'Convert & Copy',
+    label: 'Convert Media',
     icon: FilmStrip,
-    tooltip: 'Convert or copy media for Pixel',
+    tooltip: 'Convert media for Pixel',
   },
   {
     to: '/transfer',

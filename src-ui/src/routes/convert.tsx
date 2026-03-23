@@ -1,9 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback } from 'react';
 import ActivityFeed from '@/components/activity-feed';
-import ConvertFiles, {
-  type MediaJobMode,
-} from '@/components/convert-files';
+import ConvertFiles, { type MediaJobMode } from '@/components/convert-files';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import SelectFiles from '@/components/select-files';
 import { useDragDrop } from '@/hooks/use-drag-drop';
@@ -20,7 +18,7 @@ export const Route = createFileRoute('/convert')({
   validateSearch: (raw: Record<string, unknown>): ConvertSearch => ({
     mode: raw.mode === 'copy' ? 'copy' : 'convert',
   }),
-  staticData: { pageTitle: 'Convert & Copy' },
+  staticData: { pageTitle: 'Convert Media' },
   component: ConvertPage,
 });
 
