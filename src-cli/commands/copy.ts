@@ -15,6 +15,8 @@ const copyOptionsSchema = z.object({
   jsonl: z.boolean().optional(),
 });
 
+type CopyOptions = z.infer<typeof copyOptionsSchema>;
+
 // prettier-ignore
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
@@ -36,7 +38,7 @@ export const copy = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'enable JSON output for UI integration')
-  .action(async (paths: string[], opts) => {
+  .action(async (paths: string[], opts: CopyOptions) => {
     try {
       const options = copyOptionsSchema.parse({
         cwd: path.resolve(opts.cwd),
