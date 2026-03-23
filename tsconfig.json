@@ -19,9 +19,9 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src-cli/*"]
     }
   },
-  "include": ["src/**/*", "cli-ui-protocol.ts"],
+  "include": ["src-cli/**/*", "cli-ui-protocol.ts"],
   "exclude": ["node_modules", "dist"]
 }
