@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
-import { parseCliUiLine, type EventV1 } from '@cli-protocol';
+import { type EventV1, parseLineFromCLI } from '@cli-protocol';
 import type { LogMessage } from '@/lib/types';
 
 interface UseCommandOptions {
@@ -65,7 +65,7 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
       const parts = buf.split('\n');
       stdoutBufferRef.current = parts.pop() ?? '';
       for (const line of parts) {
-        const parsed = parseCliUiLine(line);
+        const parsed = parseLineFromCLI(line);
         if (parsed.tag === 'ui') {
           addActivity(parsed.event);
         } else if (parsed.tag === 'legacy') {
@@ -73,7 +73,7 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
             type: parsed.log.type,
             message: parsed.log.message,
           });
-        } else if (parsed.tag === 'raw' && parsed.text.length > 0) {
+        } else if (parsed.text.length > 0) {
           addLog({ type: 'log', message: parsed.text });
         }
       }
@@ -112,7 +112,7 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
           const rest = stdoutBufferRef.current;
           stdoutBufferRef.current = '';
           if (rest.trim().length > 0) {
-            const parsed = parseCliUiLine(rest);
+            const parsed = parseLineFromCLI(rest);
             if (parsed.tag === 'ui') {
               addActivity(parsed.event);
             } else if (parsed.tag === 'legacy') {
@@ -120,7 +120,7 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
                 type: parsed.log.type,
                 message: parsed.log.message,
               });
-            } else if (parsed.tag === 'raw' && parsed.text.length > 0) {
+            } else if (parsed.text.length > 0) {
               addLog({ type: 'log', message: parsed.text });
             }
           }
