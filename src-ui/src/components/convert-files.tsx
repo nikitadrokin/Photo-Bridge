@@ -72,7 +72,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
               : pixel.convertInTerminal(selectedPaths)
           }
           disabled={pixel.isRunning || runMode === 'terminal'}
-          className="w-full gap-2 sm:flex-1"
+          className="gap-2"
         >
           {pixel.isRunning ? (
             <Spinner size={18} className="animate-spin" />
@@ -91,7 +91,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({ runMode, setRunMode }) => {
               : pixel.fixDatesInTerminal(selectedPaths)
           }
           disabled={pixel.isRunning || runMode === 'terminal'}
-          className="w-full gap-2 sm:flex-1"
+          className="gap-2"
         >
           <Clock size={18} weight="duotone" />
           Fix Dates
