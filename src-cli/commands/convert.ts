@@ -16,6 +16,8 @@ const convertOptionsSchema = z.object({
   jsonl: z.boolean().optional(),
 });
 
+type ConvertOptions = z.infer<typeof convertOptionsSchema>;
+
 // prettier-ignore
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
@@ -37,7 +39,7 @@ export const convert = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'enable JSON output for UI integration')
-  .action(async (paths: string[], opts) => {
+  .action(async (paths: string[], opts: ConvertOptions) => {
     try {
       const options = convertOptionsSchema.parse({
         cwd: path.resolve(opts.cwd),
