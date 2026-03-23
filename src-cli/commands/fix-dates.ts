@@ -18,6 +18,8 @@ const optionsSchema = z.object({
   jsonl: z.boolean().optional(),
 });
 
+type Options = z.infer<typeof optionsSchema>;
+
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v', 'mpg', 'mpeg'];
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng'];
 
@@ -60,7 +62,7 @@ export const fixDates = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'enable JSON output for UI integration')
-  .action(async (paths: string[], opts) => {
+  .action(async (paths: string[], opts: Options) => {
     try {
       const options = optionsSchema.parse({
         cwd: path.resolve(opts.cwd),
