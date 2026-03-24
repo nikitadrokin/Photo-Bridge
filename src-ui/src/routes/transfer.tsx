@@ -3,6 +3,7 @@ import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
 import ActivityFeed from '@/components/activity-feed';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
+import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
 import { Button } from '@/components/ui/button';
 
@@ -28,6 +29,14 @@ function TransferPage() {
               disableRefresh={pixel.isRunning}
               onRefresh={() => {
                 void pixel.checkConnection({ interactive: true });
+              }}
+            />
+
+            <AvailableStorageCard
+              storage={pixel.availableStorage}
+              disabled={!pixel.isConnected || pixel.isRunning}
+              onRefresh={() => {
+                void pixel.refreshAvailableStorage();
               }}
             />
 

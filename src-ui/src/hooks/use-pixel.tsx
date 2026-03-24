@@ -7,9 +7,12 @@ import {
 } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
+import { parseLineFromCLI } from '@cli-protocol';
+import type { ShellStorageEvent } from '@cli-protocol';
 import { useCommand } from '@/hooks/use-command';
 import { useTerminal } from '@/hooks/use-terminal';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '@/lib/constants';
+import type { AvailableStorageState } from '@/lib/types';
 
 export interface TransferPaths {
   source: string;
@@ -33,8 +36,11 @@ function usePixelProviderValue() {
   );
   const [isConnectionCheckPending, setIsConnectionCheckPending] =
     useState(false);
+  const [availableStorage, setAvailableStorage] =
+    useState<AvailableStorageState>({ status: 'idle' });
 
-  const { execute, isRunning, logs, activityEvents, clearLogs } = useCommand({
+  const { execute, captureStdout, isRunning, logs, activityEvents, clearLogs } =
+    useCommand({
       sidecar: 'binaries/pb',
     });
 
@@ -64,6 +70,66 @@ function usePixelProviderValue() {
   useEffect(() => {
     checkConnection();
   }, [checkConnection]);
+
+  const refreshAvailableStorage = useCallback(async () => {
+    if (!isConnected) {
+      setAvailableStorage({ status: 'idle' });
+      return;
+    }
+    setAvailableStorage((prev) => ({
+      ...prev,
+      status: 'loading',
+    }));
+    const { stdout, stderr, code } = await captureStdout([
+      'shell',
+      '--jsonl',
+      '--',
+      'df',
+      '-h',
+      '/sdcard/DCIM/Camera',
+    ]);
+
+    const lines = stdout
+      .split('\n')
+      .map((line) => line.replace(/\r$/, '').trim())
+      .filter((line) => line.length > 0);
+
+    let storage: ShellStorageEvent | null = null;
+    let errorDetail: string | null = null;
+
+    for (const line of lines) {
+      const parsed = parseLineFromCLI(line);
+      if (parsed.tag !== 'ui') {
+        continue;
+      }
+      if (parsed.event.kind === 'shell_storage') {
+        storage = parsed.event;
+      }
+      if (parsed.event.kind === 'error') {
+        errorDetail = parsed.event.detail ?? parsed.event.code;
+      }
+    }
+
+    if (storage !== null) {
+      setAvailableStorage({
+        status: 'ok',
+        availLabel: storage.availHuman,
+      });
+      return;
+    }
+
+    setAvailableStorage({
+      status: 'error',
+      errorMessage: errorDetail ?? 'Unknown error',
+    });
+    return;
+  }, [isConnected, captureStdout]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setAvailableStorage({ status: 'idle' });
+    }
+  }, [isConnected]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -233,6 +299,8 @@ function usePixelProviderValue() {
   return {
     isConnected,
     isConnectionCheckPending,
+    availableStorage,
+    refreshAvailableStorage,
     isRunning,
     logs,
     activityEvents,

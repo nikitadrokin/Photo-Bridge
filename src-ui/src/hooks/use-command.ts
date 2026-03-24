@@ -19,12 +19,26 @@ export interface ExecuteCommandOptions {
   trackRunning?: boolean;
 }
 
+interface SidecarCaptureResult {
+  /** Raw stdout from the sidecar process */
+  readonly stdout: string;
+  /** Raw stderr from the sidecar process */
+  readonly stderr: string;
+  /** Process exit code, or -1 if the process failed to run */
+  readonly code: number;
+}
+
 interface UseCommandResult {
   /** Execute the command with given args */
   execute: (
     args: Array<string>,
     options?: ExecuteCommandOptions,
   ) => Promise<void>;
+  /**
+   * Run the sidecar once and return full stdout/stderr without updating shared
+   * activity logs (for one-off reads like `pb shell df -h .`).
+   */
+  captureStdout: (args: Array<string>) => Promise<SidecarCaptureResult>;
   /** Whether the command is currently running */
   isRunning: boolean;
   /** Log messages from stdout/stderr (legacy JSON or non-JSON lines) */
@@ -168,8 +182,52 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
     [sidecar, addLog, addActivity, flushStdoutLines],
   );
 
+  const captureStdout = useCallback(
+    async (args: Array<string>): Promise<SidecarCaptureResult> => {
+      const outChunks: Array<string> = [];
+      const errChunks: Array<string> = [];
+
+      try {
+        const command = Command.sidecar(sidecar, args);
+        command.stdout.on('data', (line: string) => {
+          outChunks.push(line);
+        });
+        command.stderr.on('data', (line: string) => {
+          errChunks.push(line);
+        });
+
+        await command.spawn();
+
+        const result = await new Promise<SidecarCaptureResult>(
+          (resolve, reject) => {
+            command.on('close', (data) => {
+              resolve({
+                stdout: outChunks.join(''),
+                stderr: errChunks.join(''),
+                code: data.code ?? -1,
+              });
+            });
+            command.on('error', (error: string) => {
+              reject(new Error(error));
+            });
+          },
+        );
+        return result;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          stdout: '',
+          stderr: message,
+          code: -1,
+        };
+      }
+    },
+    [sidecar],
+  );
+
   return {
     execute,
+    captureStdout,
     isRunning,
     logs,
     activityEvents,

@@ -98,6 +98,15 @@ export interface MessageEvent {
   readonly message: string;
 }
 
+/** Result of `pb shell --jsonl -- df -h .` for the transfer UI storage card. */
+export interface ShellStorageEvent {
+  readonly v: 1;
+  readonly kind: 'shell_storage';
+  /** Display label (e.g. `17GB`) */
+  readonly availHuman: string;
+  readonly exitCode: number;
+}
+
 export type EventV1 =
   | SessionEvent
   | FileEvent
@@ -106,7 +115,8 @@ export type EventV1 =
   | PullBytesProgressEvent
   | BlockedEvent
   | SeverityEvent
-  | MessageEvent;
+  | MessageEvent
+  | ShellStorageEvent;
 
 /** Legacy stdout lines from `logger` before structured events. */
 export interface Log {
@@ -169,6 +179,12 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
     case 'success':
     case 'log':
       return typeof parsed.message === 'string';
+    case 'shell_storage':
+      return (
+        typeof parsed.availHuman === 'string' &&
+        typeof parsed.raw === 'string' &&
+        typeof parsed.exitCode === 'number'
+      );
     default:
       return false;
   }
@@ -193,11 +209,20 @@ export type ParsedCliLine =
  * Normalize the legacy binary format (uses `type` instead of `kind`, no `v`)
  * into the current EventV1 shape, so stale binaries still drive the UI.
  */
-function normalizeLegacyBinaryEvent(parsed: Record<string, unknown>): EventV1 | null {
+function normalizeLegacyBinaryEvent(
+  parsed: Record<string, unknown>,
+): EventV1 | null {
   const type = parsed['type'];
-  if (type === 'progress' && typeof parsed['completedFiles'] === 'number' && typeof parsed['totalFiles'] === 'number') {
+  if (
+    type === 'progress' &&
+    typeof parsed['completedFiles'] === 'number' &&
+    typeof parsed['totalFiles'] === 'number'
+  ) {
     // Byte-level push progress → push_bytes
-    if (typeof parsed['bytesTransferred'] === 'number' && typeof parsed['file'] === 'string') {
+    if (
+      typeof parsed['bytesTransferred'] === 'number' &&
+      typeof parsed['file'] === 'string'
+    ) {
       return {
         v: 1,
         kind: 'push_bytes',
@@ -208,7 +233,11 @@ function normalizeLegacyBinaryEvent(parsed: Record<string, unknown>): EventV1 | 
       };
     }
   }
-  if (type === 'file_complete' && typeof parsed['completedFiles'] === 'number' && typeof parsed['totalFiles'] === 'number') {
+  if (
+    type === 'file_complete' &&
+    typeof parsed['completedFiles'] === 'number' &&
+    typeof parsed['totalFiles'] === 'number'
+  ) {
     // File completed → progress
     return {
       v: 1,
