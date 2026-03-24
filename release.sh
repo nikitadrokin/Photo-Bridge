@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TAURI_CONF="$SCRIPT_DIR/src-tauri/tauri.conf.json"
 PACKAGE_JSON="$SCRIPT_DIR/package.json"
 CARGO_TOML="$SCRIPT_DIR/src-tauri/Cargo.toml"
-INDEX_TS="$SCRIPT_DIR/src/index.ts"
+INDEX_TS="$SCRIPT_DIR/src-cli/index.ts"
 
 # Check for jq
 if ! command -v jq &> /dev/null; then
@@ -65,9 +65,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     sed -i '' "s/version = \"$CURRENT_VERSION\"/version = \"$NEXT_VERSION\"/" "$CARGO_TOML"
     echo "  ✓ Updated Cargo.toml"
     
-    # 4. Update src/index.ts
+    # 4. Update src-cli/index.ts
     sed -i '' "s/.version('$CURRENT_VERSION')/.version('$NEXT_VERSION')/" "$INDEX_TS"
-    echo "  ✓ Updated src/index.ts"
+    echo "  ✓ Updated src-cli/index.ts"
     
 else
     VERSION_TO_BUILD="$CURRENT_VERSION"
