@@ -1,14 +1,8 @@
-import { ArrowsClockwise, HardDrives } from '@phosphor-icons/react';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import type { AvailableStorageState } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ArrowsClockwise, HardDrives } from '@phosphor-icons/react';
 
 interface AvailableStorageCardProps {
   readonly storage: AvailableStorageState;
@@ -71,19 +65,20 @@ export function AvailableStorageCard({
   );
 }
 
+/** Second row under the main row: hints, loading, or errors. Omitted when there is nothing to show. */
 const StatusMessage = ({
   storage,
   showValue,
   disabled,
   showError,
 }: {
-  storage: any;
-  showValue: boolean;
-  disabled: boolean;
-  showError: boolean;
-}) => (
-  <CardContent>
-    {storage.status === 'loading' && !showValue ? (
+  readonly storage: AvailableStorageState;
+  readonly showValue: boolean;
+  readonly disabled: boolean;
+  readonly showError: boolean;
+}) => {
+  const body =
+    storage.status === 'loading' && !showValue ? (
       <p className="text-xs text-muted-foreground">Checking…</p>
     ) : storage.status === 'idle' && !disabled ? (
       <p className="text-xs text-muted-foreground">
@@ -93,6 +88,11 @@ const StatusMessage = ({
       <p className="text-xs text-muted-foreground">Connect your Pixel.</p>
     ) : showError ? (
       <p className="text-xs text-destructive">{storage.errorMessage}</p>
-    ) : null}
-  </CardContent>
-);
+    ) : null;
+
+  if (body === null) {
+    return null;
+  }
+
+  return <CardContent>{body}</CardContent>;
+};
