@@ -178,8 +178,36 @@ export type ParsedCliLine =
   | { readonly tag: 'raw'; readonly text: string };
 
 /**
- * Parse one NDJSON line from sidecar stdout.
+ * Normalize the legacy binary format (uses `type` instead of `kind`, no `v`)
+ * into the current EventV1 shape, so stale binaries still drive the UI.
  */
+function normalizeLegacyBinaryEvent(parsed: Record<string, unknown>): EventV1 | null {
+  const type = parsed['type'];
+  if (type === 'progress' && typeof parsed['completedFiles'] === 'number' && typeof parsed['totalFiles'] === 'number') {
+    // Byte-level push progress → push_bytes
+    if (typeof parsed['bytesTransferred'] === 'number' && typeof parsed['file'] === 'string') {
+      return {
+        v: 1,
+        kind: 'push_bytes',
+        file: parsed['file'],
+        bytesTransferred: parsed['bytesTransferred'],
+        completedFiles: parsed['completedFiles'],
+        totalFiles: parsed['totalFiles'],
+      };
+    }
+  }
+  if (type === 'file_complete' && typeof parsed['completedFiles'] === 'number' && typeof parsed['totalFiles'] === 'number') {
+    // File completed → progress
+    return {
+      v: 1,
+      kind: 'progress',
+      done: parsed['completedFiles'],
+      total: parsed['totalFiles'],
+    };
+  }
+  return null;
+}
+
 export function parseLineFromCLI(line: string): ParsedCliLine {
   const trimmed = line.replace(/\r$/, '').trim();
   if (trimmed.length === 0) {
@@ -192,6 +220,12 @@ export function parseLineFromCLI(line: string): ParsedCliLine {
     }
     if (isLegacyCliLog(parsed)) {
       return { tag: 'legacy', log: parsed };
+    }
+    if (isRecord(parsed)) {
+      const normalized = normalizeLegacyBinaryEvent(parsed);
+      if (normalized) {
+        return { tag: 'ui', event: normalized };
+      }
     }
   } catch {
     // fall through

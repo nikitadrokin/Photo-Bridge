@@ -26,10 +26,7 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => (
   <Card
     size="sm"
-    className={cn(
-      'min-w-0 border bg-muted/20 py-2.5',
-      className,
-    )}
+    className={cn('min-w-0 border bg-muted/20 py-2.5', className)}
   >
     <CardContent className="px-3">
       <div className="flex items-center gap-1.5 text-muted-foreground mb-0.5">
@@ -48,6 +45,16 @@ const StatCard: React.FC<StatCardProps> = ({
 const TransferStatsPanel: React.FC = () => {
   const { activityEvents, isRunning, activeOperation } = usePixel();
 
+  const lastPushBytes = useMemo(() => {
+    for (let i = activityEvents.length - 1; i >= 0; i--) {
+      const event = activityEvents[i];
+      if (event.kind === 'push_bytes') {
+        return event;
+      }
+    }
+    return null;
+  }, [activityEvents]);
+
   const lastProgress = useMemo(() => {
     for (let i = activityEvents.length - 1; i >= 0; i--) {
       const event = activityEvents[i];
@@ -64,22 +71,57 @@ const TransferStatsPanel: React.FC = () => {
   );
 
   const stats = useMemo(() => {
-    let info = 0;
+    let items = 0;
     let success = 0;
     let failed = 0;
+    let lastCompletedFiles = 0;
+    let lastTotalFiles = 0;
+
     for (const event of activityEvents) {
-      if (event.kind === 'info') {
-        info++;
+      if (event.kind === 'progress') {
+        lastCompletedFiles = event.done;
+        lastTotalFiles = event.total;
       } else if (event.kind === 'success') {
         success++;
       } else if (event.kind === 'error') {
         failed++;
+      } else if (event.kind === 'push_bytes') {
+        lastCompletedFiles = event.completedFiles;
+        lastTotalFiles = event.totalFiles;
       }
     }
-    return { info, success, failed };
+
+    if (lastTotalFiles > 0) {
+      return {
+        items: lastCompletedFiles,
+        success: lastCompletedFiles,
+        failed,
+        total: lastTotalFiles,
+      };
+    }
+
+    return {
+      items,
+      success,
+      failed,
+      total: null,
+    };
   }, [activityEvents]);
 
-  const hasProgress = lastProgress != null && lastProgress.total > 0;
+  const hasProgressFromFiles = lastProgress != null && lastProgress.total > 0;
+  const hasProgressFromBytes =
+    lastPushBytes != null && lastPushBytes.totalFiles > 0;
+  const hasProgress = hasProgressFromFiles || hasProgressFromBytes;
+  const progressDone = hasProgressFromFiles
+    ? lastProgress.done
+    : hasProgressFromBytes
+      ? (lastPushBytes?.completedFiles ?? 0)
+      : 0;
+  const progressTotal = hasProgressFromFiles
+    ? lastProgress.total
+    : hasProgressFromBytes
+      ? (lastPushBytes?.totalFiles ?? 0)
+      : 0;
   const hasAlerts = alertRows.length > 0;
   const opLabel =
     activeOperation === 'push'
@@ -96,19 +138,18 @@ const TransferStatsPanel: React.FC = () => {
         </p>
         {hasProgress ? (
           <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-            {lastProgress.done}/{lastProgress.total}
+            {progressDone}/{progressTotal}
           </span>
         ) : null}
       </CardHeader>
 
       <CardContent className="space-y-3">
-
         {hasProgress ? (
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
             <div
               className="h-full bg-primary transition-[width] duration-300 ease-out"
               style={{
-                width: `${Math.min(100, Math.round((lastProgress.done / lastProgress.total) * 100))}%`,
+                width: `${Math.min(100, Math.round((progressDone / progressTotal) * 100))}%`,
               }}
             />
           </div>
@@ -137,17 +178,17 @@ const TransferStatsPanel: React.FC = () => {
           <StatCard
             label="Total"
             value={
-              hasProgress
-                ? String(lastProgress.total)
+              stats.total != null
+                ? String(stats.total)
                 : isRunning
                   ? '—'
-                  : String(stats.info + stats.success + stats.failed)
+                  : String(stats.items + stats.failed)
             }
             icon={<Stack size={13} weight="duotone" />}
           />
           <StatCard
             label="Items"
-            value={String(stats.info)}
+            value={String(stats.items)}
             icon={<Clock size={13} weight="duotone" className="text-primary" />}
           />
           <StatCard
