@@ -1,19 +1,15 @@
 import {
-  CheckCircle,
   Clock,
   File,
-  MinusCircle,
   Play,
   Spinner,
-  Stack,
   X,
-  XCircle,
 } from '@phosphor-icons/react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
-import ActivityStatsPanel from './activity-stats/panel';
+import ConversionStatsPanel from './conversion-stats/panel';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';
@@ -129,30 +125,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         </Button>
       </div>
 
-      <ActivityStatsPanel
-        states={[
-          {
-            title: 'Total',
-            icon: <Stack size={13} weight="duotone" />,
-            value: String(selectedPaths.length),
-          },
-          {
-            title: 'Added',
-            icon: <CheckCircle size={13} weight="duotone" />,
-            value: String(selectedPaths.length),
-          },
-          {
-            title: 'Skipped',
-            icon: <MinusCircle size={13} weight="duotone" />,
-            value: String(selectedPaths.length),
-          },
-          {
-            title: 'Failed',
-            icon: <XCircle size={13} weight="duotone" />,
-            value: String(selectedPaths.length),
-          },
-        ]}
-      />
+      <ConversionStatsPanel />
     </>
   );
 };

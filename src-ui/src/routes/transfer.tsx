@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
 import ActivityFeed from '@/components/activity-feed';
-import TransferStatsPanel from '@/components/transfer-stats-panel';
+import TransferStatsPanel from '@/components/transfer-stats/panel';
 import { usePixel } from '@/hooks/use-pixel';
 import { ConnectionStatus } from '@/components/connection-status';
 import { ActionCard } from '@/components/action-card';

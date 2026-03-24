@@ -8,23 +8,14 @@ import {
 import { buildAlertRows, deriveActivityStats } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
 import { usePixel } from '@/hooks/use-pixel';
+import StatsPanel from './stats-panel';
 import StatCard from './card';
 
-type State = {
-  title: string;
-  icon: React.ReactNode;
-  value: string;
-  className?: string;
-};
-
-interface ActivityStatsPanelProps {
-  states: Array<State>;
-}
-
 /**
- * Progress, stat cards, and warning/error banners for convert/copy — sits under action buttons.
+ * Progress, stat cards, and warning/error banners for the convert/copy page.
+ * Reads from usePixel() internally — no props needed.
  */
-const ActivityStatsPanel: React.FC<ActivityStatsPanelProps> = ({ states }) => {
+const ConversionStatsPanel: React.FC = () => {
   const { activityEvents, isRunning } = usePixel();
 
   const stats = useMemo(
@@ -50,10 +41,8 @@ const ActivityStatsPanel: React.FC<ActivityStatsPanelProps> = ({ states }) => {
   );
   const showStats =
     hasSession || stats.added + stats.skipped + stats.failed > 0;
-  const hasAlerts = alertRows.length > 0;
-  const hasProgress = lastProgress != null && lastProgress.total > 0;
 
-  if (!showStats && !hasAlerts && !hasProgress && !stats.subtitle) {
+  if (!showStats && alertRows.length === 0 && !lastProgress && !stats.subtitle) {
     return null;
   }
 
@@ -61,50 +50,13 @@ const ActivityStatsPanel: React.FC<ActivityStatsPanelProps> = ({ states }) => {
     stats.total != null ? String(stats.total) : isRunning ? '—' : '0';
 
   return (
-    <div className="flex flex-col gap-3 rounded-3xl border bg-card/50 p-4">
-      <div className="flex items-center justify-between gap-2 min-w-0">
-        <p className="text-xs font-medium text-muted-foreground truncate">
-          {stats.subtitle ?? 'Progress'}
-        </p>
-        {hasProgress ? (
-          <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-            {lastProgress.done}/{lastProgress.total}
-          </span>
-        ) : null}
-      </div>
-
-      {hasProgress ? (
-        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full bg-primary transition-[width] duration-300 ease-out"
-            style={{
-              width: `${Math.min(100, Math.round((lastProgress.done / lastProgress.total) * 100))}%`,
-            }}
-          />
-        </div>
-      ) : null}
-
-      {hasAlerts ? (
-        <div className="max-h-36 overflow-y-auto overscroll-y-none space-y-2 pr-1">
-          {alertRows.map((row) => (
-            <div
-              key={row.key}
-              className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-xs leading-snug',
-                row.tone === 'error' &&
-                  'border-destructive/30 bg-destructive/5 text-destructive',
-                row.tone === 'warn' &&
-                  'border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-400',
-              )}
-            >
-              {row.text}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
+    <StatsPanel
+      subtitle={stats.subtitle}
+      progress={lastProgress}
+      alertRows={alertRows}
+    >
       {showStats ? (
-        <div className="grid grid-cols-4 gap-2">
+        <>
           <StatCard
             label="Total"
             value={totalDisplay}
@@ -148,20 +100,10 @@ const ActivityStatsPanel: React.FC<ActivityStatsPanelProps> = ({ states }) => {
               stats.failed > 0 && 'border-destructive/20 bg-destructive/5',
             )}
           />
-        </div>
+        </>
       ) : null}
-
-      {states?.map((state) => (
-        <StatCard
-          key={state.title}
-          label={state.title}
-          value={state.value}
-          icon={state.icon}
-          className={state.className}
-        />
-      ))}
-    </div>
+    </StatsPanel>
   );
 };
 
-export default ActivityStatsPanel;
+export default ConversionStatsPanel;
