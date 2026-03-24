@@ -67,7 +67,9 @@ const StatsPanel: React.FC<StatsPanelProps> = ({
       ) : null}
 
       {children ? (
-        <div className="grid grid-cols-4 gap-2">{children}</div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2">
+          {children}
+        </div>
       ) : null}
     </div>
   );
