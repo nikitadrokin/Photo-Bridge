@@ -20,35 +20,57 @@ export const logger = {
   },
   error(...args: unknown[]) {
     if (mode === 'json') {
-      console.log(JSON.stringify({ type: 'error', message: args.join(' ') }));
+      logger.emitJSON({
+        v: 1,
+        kind: 'error',
+        code: 'log_error',
+        detail: args.join(' '),
+      });
     } else {
       console.log(kleur.red(args.join(' ')));
     }
   },
   warn(...args: unknown[]) {
     if (mode === 'json') {
-      console.log(JSON.stringify({ type: 'warn', message: args.join(' ') }));
+      logger.emitJSON({
+        v: 1,
+        kind: 'warn',
+        code: 'log_warn',
+        detail: args.join(' '),
+      });
     } else {
       console.log(kleur.yellow(args.join(' ')));
     }
   },
   info(...args: unknown[]) {
     if (mode === 'json') {
-      console.log(JSON.stringify({ type: 'info', message: args.join(' ') }));
+      logger.emitJSON({
+        v: 1,
+        kind: 'info',
+        message: args.join(' '),
+      });
     } else {
       console.log(kleur.cyan(args.join(' ')));
     }
   },
   success(...args: unknown[]) {
     if (mode === 'json') {
-      console.log(JSON.stringify({ type: 'success', message: args.join(' ') }));
+      logger.emitJSON({
+        v: 1,
+        kind: 'success',
+        message: args.join(' '),
+      });
     } else {
       console.log(kleur.green(args.join(' ')));
     }
   },
   log(...args: unknown[]) {
     if (mode === 'json') {
-      console.log(JSON.stringify({ type: 'log', message: args.join(' ') }));
+      logger.emitJSON({
+        v: 1,
+        kind: 'log',
+        message: args.join(' '),
+      });
     } else {
       console.log(args.join(' '));
     }

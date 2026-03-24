@@ -58,6 +58,16 @@ export interface ProgressEvent {
   readonly total: number;
 }
 
+/** Byte-level ADB sync progress for `push-to-pixel` (one line per progress tick). */
+export interface PushBytesProgressEvent {
+  readonly v: 1;
+  readonly kind: 'push_bytes';
+  readonly file: string;
+  readonly bytesTransferred: number;
+  readonly completedFiles: number;
+  readonly totalFiles: number;
+}
+
 export interface BlockedEvent {
   readonly v: 1;
   readonly kind: 'blocked';
@@ -72,12 +82,20 @@ export interface SeverityEvent {
   readonly detail?: string;
 }
 
+export interface MessageEvent {
+  readonly v: 1;
+  readonly kind: 'info' | 'success' | 'log';
+  readonly message: string;
+}
+
 export type EventV1 =
   | SessionEvent
   | FileEvent
   | ProgressEvent
+  | PushBytesProgressEvent
   | BlockedEvent
-  | SeverityEvent;
+  | SeverityEvent
+  | MessageEvent;
 
 /** Legacy stdout lines from `logger` before structured events. */
 export interface Log {
@@ -123,11 +141,22 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
       return (
         typeof parsed.done === 'number' && typeof parsed.total === 'number'
       );
+    case 'push_bytes':
+      return (
+        typeof parsed.file === 'string' &&
+        typeof parsed.bytesTransferred === 'number' &&
+        typeof parsed.completedFiles === 'number' &&
+        typeof parsed.totalFiles === 'number'
+      );
     case 'blocked':
       return typeof parsed.code === 'string';
     case 'warn':
     case 'error':
       return typeof parsed.code === 'string';
+    case 'info':
+    case 'success':
+    case 'log':
+      return typeof parsed.message === 'string';
     default:
       return false;
   }

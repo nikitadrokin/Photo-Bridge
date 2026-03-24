@@ -189,7 +189,15 @@ export function formatActivityLine(event: EventV1): {
         text: event.detail ?? event.code,
       };
     }
+    case 'info':
+      return { tone: 'muted', text: event.message };
+    case 'success':
+      return { tone: 'success', text: event.message };
+    case 'log':
+      return { tone: 'default', text: event.message };
     case 'progress':
+      return null;
+    case 'push_bytes':
       return null;
     default:
       return null;
@@ -202,7 +210,7 @@ export type ActivityRow = { key: string; tone: string; text: string };
 export function buildDetailRows(events: Array<EventV1>): Array<ActivityRow> {
   const rows: Array<ActivityRow> = [];
   events.forEach((event, i) => {
-    if (event.kind === 'progress') return;
+    if (event.kind === 'progress' || event.kind === 'push_bytes') return;
     if (
       event.kind === 'warn' ||
       event.kind === 'error' ||

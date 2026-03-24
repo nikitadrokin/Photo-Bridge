@@ -51,6 +51,7 @@ async function pushDirectory(sync: any, sourceDir: string, targetDir: string) {
   const files = await readDirectoryRecursively(sourceDir);
   let totalFiles = files.length;
   let completedFiles = 0;
+  const isJson = logger.getMode() === 'json';
 
   for (const file of files) {
     const relativePath = Path.relative(sourceDir, file);
@@ -63,34 +64,42 @@ async function pushDirectory(sync: any, sourceDir: string, targetDir: string) {
 
       // Track progress for each file
       transfer.on('progress', (stats: any) => {
-        const progressData = {
-          type: 'progress',
+        if (!isJson) {
+          return;
+        }
+        logger.emitJSON({
+          v: 1,
+          kind: 'push_bytes',
           file: relativePath,
           bytesTransferred: stats.bytesTransferred,
           completedFiles,
           totalFiles,
-        };
-        logger.log(JSON.stringify(progressData));
+        });
       });
 
       transfer.on('error', (err: Error) => {
-        const errorData = {
-          type: 'error',
-          file: relativePath,
-          error: err.message,
-        };
-        logger.error(JSON.stringify(errorData));
+        if (isJson) {
+          logger.emitJSON({
+            v: 1,
+            kind: 'error',
+            code: 'push_transfer_failed',
+            detail: `${relativePath}: ${err.message}`,
+          });
+        } else {
+          logger.error(`Push failed (${relativePath}): ${err.message}`);
+        }
       });
 
       transfer.on('end', () => {
         completedFiles++;
-        const completeData = {
-          type: 'file_complete',
-          file: relativePath,
-          completedFiles,
-          totalFiles,
-        };
-        logger.log(JSON.stringify(completeData));
+        if (isJson) {
+          logger.emitJSON({
+            v: 1,
+            kind: 'progress',
+            done: completedFiles,
+            total: totalFiles,
+          });
+        }
       });
 
       await new Promise((resolve, reject) => {
