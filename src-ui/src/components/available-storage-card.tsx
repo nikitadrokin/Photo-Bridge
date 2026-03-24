@@ -38,7 +38,7 @@ export function AvailableStorageCard({
           type="button"
           variant="outline"
           size="icon"
-          className="size-8 shrink-0"
+          className="size-8 shrink-0 rounded-sm"
           disabled={disabled || storage.status === 'loading'}
           onClick={() => {
             onRefresh();
