@@ -32,14 +32,6 @@ function TransferPage() {
               }}
             />
 
-            <AvailableStorageCard
-              storage={pixel.availableStorage}
-              disabled={!pixel.isConnected || pixel.isRunning}
-              onRefresh={() => {
-                void pixel.refreshAvailableStorage();
-              }}
-            />
-
             <section className="space-y-4">
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 Transfer
@@ -139,7 +131,15 @@ function TransferPage() {
             <TransferStatsPanel />
           </div>
 
-          <div className="flex flex-col min-h-0">
+          <div className="flex flex-col min-h-0 gap-4">
+            <AvailableStorageCard
+              storage={pixel.availableStorage}
+              disabled={!pixel.isConnected || pixel.isRunning}
+              onRefresh={() => {
+                void pixel.refreshAvailableStorage();
+              }}
+            />
+
             <ActivityFeed emptyMessage="Connect your Pixel to get started" />
           </div>
         </div>
