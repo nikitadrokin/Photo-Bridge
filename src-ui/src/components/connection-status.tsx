@@ -52,7 +52,7 @@ export function ConnectionStatus({
       </AlertDescription>
       <AlertAction>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={onRefresh}
           disabled={isRunning}
