@@ -198,6 +198,7 @@ export function formatActivityLine(event: EventV1): {
     case 'progress':
       return null;
     case 'push_bytes':
+    case 'pull_bytes':
       return null;
     default:
       return null;
@@ -210,7 +211,13 @@ export type ActivityRow = { key: string; tone: string; text: string };
 export function buildDetailRows(events: Array<EventV1>): Array<ActivityRow> {
   const rows: Array<ActivityRow> = [];
   events.forEach((event, i) => {
-    if (event.kind === 'progress' || event.kind === 'push_bytes') return;
+    if (
+      event.kind === 'progress' ||
+      event.kind === 'push_bytes' ||
+      event.kind === 'pull_bytes'
+    ) {
+      return;
+    }
     if (
       event.kind === 'warn' ||
       event.kind === 'error' ||

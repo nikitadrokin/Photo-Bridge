@@ -68,6 +68,16 @@ export interface PushBytesProgressEvent {
   readonly totalFiles: number;
 }
 
+/** Byte-level ADB sync progress for `pull-from-pixel` (same shape as `push_bytes`). */
+export interface PullBytesProgressEvent {
+  readonly v: 1;
+  readonly kind: 'pull_bytes';
+  readonly file: string;
+  readonly bytesTransferred: number;
+  readonly completedFiles: number;
+  readonly totalFiles: number;
+}
+
 export interface BlockedEvent {
   readonly v: 1;
   readonly kind: 'blocked';
@@ -93,6 +103,7 @@ export type EventV1 =
   | FileEvent
   | ProgressEvent
   | PushBytesProgressEvent
+  | PullBytesProgressEvent
   | BlockedEvent
   | SeverityEvent
   | MessageEvent;
@@ -142,6 +153,7 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
         typeof parsed.done === 'number' && typeof parsed.total === 'number'
       );
     case 'push_bytes':
+    case 'pull_bytes':
       return (
         typeof parsed.file === 'string' &&
         typeof parsed.bytesTransferred === 'number' &&

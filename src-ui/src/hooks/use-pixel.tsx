@@ -186,10 +186,9 @@ function usePixelProviderValue() {
     if (!transferPaths) return;
 
     if (activeOperation === 'pull') {
-      // adb pull /sdcard/DCIM/Camera/ <destination>
-      await terminal.openInTerminal('adb', [
-        'pull',
-        transferPaths.source + '/',
+      await terminal.openInTerminal('pb', [
+        'pull-from-pixel',
+        '--jsonl',
         transferPaths.destination,
       ]);
     } else if (activeOperation === 'push') {

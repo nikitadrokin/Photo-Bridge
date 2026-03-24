@@ -13,13 +13,18 @@ import StatCard from '@/components/activity-stats/card';
 const TransferStatsPanel: React.FC = () => {
   const { activityEvents, isRunning, activeOperation } = usePixel();
 
-  const lastPushBytes = useMemo(() => {
+  const lastTransferBytes = useMemo(() => {
     for (let i = activityEvents.length - 1; i >= 0; i--) {
       const event = activityEvents[i];
-      if (event.kind === 'push_bytes') return event;
+      if (event.kind === 'push_bytes' || event.kind === 'pull_bytes') {
+        return event;
+      }
     }
     return null;
   }, [activityEvents]);
+
+  const pushedVsPulledLabel =
+    lastTransferBytes?.kind === 'pull_bytes' ? 'Pulled' : 'Pushed';
 
   const lastProgress = useMemo(() => {
     for (let i = activityEvents.length - 1; i >= 0; i--) {
@@ -48,7 +53,7 @@ const TransferStatsPanel: React.FC = () => {
         success++;
       } else if (event.kind === 'error') {
         failed++;
-      } else if (event.kind === 'push_bytes') {
+      } else if (event.kind === 'push_bytes' || event.kind === 'pull_bytes') {
         lastCompletedFiles = event.completedFiles;
         lastTotalFiles = event.totalFiles;
       }
@@ -67,16 +72,16 @@ const TransferStatsPanel: React.FC = () => {
 
   const hasProgressFromFiles = lastProgress != null && lastProgress.total > 0;
   const hasProgressFromBytes =
-    lastPushBytes != null && lastPushBytes.totalFiles > 0;
+    lastTransferBytes != null && lastTransferBytes.totalFiles > 0;
   const progressDone = hasProgressFromFiles
     ? lastProgress.done
     : hasProgressFromBytes
-      ? (lastPushBytes?.completedFiles ?? 0)
+      ? (lastTransferBytes?.completedFiles ?? 0)
       : 0;
   const progressTotal = hasProgressFromFiles
     ? lastProgress.total
     : hasProgressFromBytes
-      ? (lastPushBytes?.totalFiles ?? 0)
+      ? (lastTransferBytes?.totalFiles ?? 0)
       : 0;
 
   const subtitle =
@@ -107,7 +112,7 @@ const TransferStatsPanel: React.FC = () => {
         icon={<Stack size={13} weight="duotone" />}
       />
       <StatCard
-        label="Pushed"
+        label={pushedVsPulledLabel}
         value={String(stats.success)}
         icon={
           <CheckCircle
