@@ -1,76 +1,114 @@
-import { type ReactNode } from 'react';
+import { useMemo } from 'react';
+import {
+  CheckCircle,
+  MinusCircle,
+  Stack,
+  XCircle,
+} from '@phosphor-icons/react';
+import { buildAlertRows, deriveActivityStats } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
-import type { ActivityRow } from '@/lib/activity-format';
-
-interface StatsPanelProps {
-  subtitle?: string | null;
-  progress?: { done: number; total: number } | null;
-  alertRows?: ActivityRow[];
-  children?: ReactNode;
-}
+import { usePixel } from '@/hooks/use-pixel';
+import StatsPanel from './panel';
+import StatCard from './card';
 
 /**
- * Shared layout shell for activity/transfer stat panels.
- * Renders the card wrapper, subtitle header, progress bar, alert rows,
- * and a 4-column grid for whatever StatCard children you pass in.
+ * Progress, stat cards, and warning/error banners for the convert/copy page.
+ * Reads from usePixel() internally — no props needed.
  */
-const StatsPanel: React.FC<StatsPanelProps> = ({
-  subtitle,
-  progress,
-  alertRows = [],
-  children,
-}) => {
-  const hasProgress = progress != null && progress.total > 0;
-  const hasAlerts = alertRows.length > 0;
+const ConversionStatsPanel: React.FC = () => {
+  const { activityEvents, isRunning } = usePixel();
+
+  const stats = useMemo(
+    () => deriveActivityStats(activityEvents),
+    [activityEvents],
+  );
+
+  const lastProgress = useMemo(() => {
+    for (let i = activityEvents.length - 1; i >= 0; i--) {
+      const e = activityEvents[i];
+      if (e.kind === 'progress') return e;
+    }
+    return null;
+  }, [activityEvents]);
+
+  const alertRows = useMemo(
+    () => buildAlertRows(activityEvents),
+    [activityEvents],
+  );
+
+  const hasSession = activityEvents.some(
+    (e) => e.kind === 'session' && e.phase === 'start',
+  );
+  const showStats =
+    hasSession || stats.added + stats.skipped + stats.failed > 0;
+
+  if (
+    !showStats &&
+    alertRows.length === 0 &&
+    !lastProgress &&
+    !stats.subtitle
+  ) {
+    return null;
+  }
+
+  const totalDisplay =
+    stats.total != null ? String(stats.total) : isRunning ? '—' : '0';
 
   return (
-    <div className="flex flex-col gap-3 rounded-3xl border bg-card/50 p-4">
-      <div className="flex items-center justify-between gap-2 min-w-0">
-        <p className="text-xs font-medium text-muted-foreground truncate">
-          {subtitle ?? 'Progress'}
-        </p>
-        {hasProgress ? (
-          <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-            {progress.done}/{progress.total}
-          </span>
-        ) : null}
-      </div>
-
-      {hasProgress ? (
-        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full bg-primary transition-[width] duration-300 ease-out"
-            style={{
-              width: `${Math.min(100, Math.round((progress.done / progress.total) * 100))}%`,
-            }}
+    <StatsPanel
+      subtitle={stats.subtitle}
+      progress={lastProgress}
+      alertRows={alertRows}
+    >
+      {showStats ? (
+        <>
+          <StatCard
+            label="Total"
+            value={totalDisplay}
+            icon={<Stack size={13} weight="duotone" />}
           />
-        </div>
+          <StatCard
+            label="Added"
+            value={String(stats.added)}
+            icon={
+              <CheckCircle
+                size={13}
+                weight="duotone"
+                className="text-emerald-600 dark:text-emerald-400"
+              />
+            }
+            className="border-emerald-500/15"
+          />
+          <StatCard
+            label="Skipped"
+            value={String(stats.skipped)}
+            icon={
+              <MinusCircle
+                size={13}
+                weight="duotone"
+                className="text-muted-foreground"
+              />
+            }
+          />
+          <StatCard
+            label="Failed"
+            value={String(stats.failed)}
+            icon={
+              <XCircle
+                size={13}
+                weight="duotone"
+                className="text-destructive"
+              />
+            }
+            className={cn(
+              stats.failed === 0 && 'opacity-70',
+              stats.failed > 0 && 'border-destructive/20 bg-destructive/5',
+            )}
+          />
+        </>
       ) : null}
-
-      {hasAlerts ? (
-        <div className="max-h-36 overflow-y-auto overscroll-y-none space-y-2 pr-1">
-          {alertRows.map((row) => (
-            <div
-              key={row.key}
-              className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-xs leading-snug',
-                row.tone === 'error' &&
-                  'border-destructive/30 bg-destructive/5 text-destructive',
-                row.tone === 'warn' &&
-                  'border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-400',
-              )}
-            >
-              {row.text}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {children ? (
-        <div className="grid grid-cols-4 gap-2">{children}</div>
-      ) : null}
-    </div>
+    </StatsPanel>
   );
 };
 
-export default StatsPanel;
+export default ConversionStatsPanel;

@@ -1,15 +1,9 @@
 import { useMemo } from 'react';
-import {
-  CheckCircle,
-  Clock,
-  MinusCircle,
-  Stack,
-  XCircle,
-} from '@phosphor-icons/react';
+import { CheckCircle, Stack, XCircle } from '@phosphor-icons/react';
 import { buildAlertRows } from '@/lib/activity-format';
-import { cn } from '@/lib/utils';
 import { usePixel } from '@/hooks/use-pixel';
-import StatsPanel from '@/components/activity-stats/conversion-panel';
+import { cn } from '@/lib/utils';
+import StatsPanel from '@/components/activity-stats/panel';
 import StatCard from '@/components/activity-stats/card';
 
 /**
@@ -41,7 +35,6 @@ const TransferStatsPanel: React.FC = () => {
   );
 
   const stats = useMemo(() => {
-    let items = 0;
     let success = 0;
     let failed = 0;
     let lastCompletedFiles = 0;
@@ -63,14 +56,13 @@ const TransferStatsPanel: React.FC = () => {
 
     if (lastTotalFiles > 0) {
       return {
-        items: lastCompletedFiles,
         success: lastCompletedFiles,
         failed,
         total: lastTotalFiles,
       };
     }
 
-    return { items, success, failed, total: null };
+    return { success, failed, total: null };
   }, [activityEvents]);
 
   const hasProgressFromFiles = lastProgress != null && lastProgress.total > 0;
@@ -99,7 +91,7 @@ const TransferStatsPanel: React.FC = () => {
       ? String(stats.total)
       : isRunning
         ? '—'
-        : String(stats.items + stats.failed);
+        : String(stats.success + stats.failed);
 
   return (
     <StatsPanel
@@ -115,12 +107,7 @@ const TransferStatsPanel: React.FC = () => {
         icon={<Stack size={13} weight="duotone" />}
       />
       <StatCard
-        label="Items"
-        value={String(stats.items)}
-        icon={<Clock size={13} weight="duotone" className="text-primary" />}
-      />
-      <StatCard
-        label="Done"
+        label="Pushed"
         value={String(stats.success)}
         icon={
           <CheckCircle
@@ -129,25 +116,24 @@ const TransferStatsPanel: React.FC = () => {
             className="text-emerald-600 dark:text-emerald-400"
           />
         }
-        className="border-emerald-500/15"
+        className="border-emerald-500/15 bg-emerald-500/5"
       />
       <StatCard
         label="Failed"
         value={String(stats.failed)}
         icon={
-          stats.failed > 0 ? (
-            <XCircle size={13} weight="duotone" className="text-destructive" />
-          ) : (
-            <MinusCircle
-              size={13}
-              weight="duotone"
-              className="text-muted-foreground"
-            />
-          )
+          <XCircle
+            size={13}
+            weight="duotone"
+            className={cn(
+              stats.failed > 0 ? 'text-destructive' : 'text-muted-foreground',
+            )}
+          />
         }
         className={cn(
-          stats.failed === 0 && 'opacity-70',
-          stats.failed > 0 && 'border-destructive/20 bg-destructive/5',
+          stats.failed > 0
+            ? 'border-destructive/20 bg-destructive/5'
+            : 'opacity-70',
         )}
       />
     </StatsPanel>

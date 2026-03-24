@@ -3,7 +3,7 @@ import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
-import ConversionStatsPanel from './activity-stats/panel';
+import ConversionStatsPanel from './activity-stats/conversion-panel';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';
