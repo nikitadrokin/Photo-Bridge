@@ -1,15 +1,9 @@
-import {
-  Clock,
-  File,
-  Play,
-  Spinner,
-  X,
-} from '@phosphor-icons/react';
+import { Clock, File, Play, Spinner, X } from '@phosphor-icons/react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
-import ConversionStatsPanel from './conversion-stats/panel';
+import ConversionStatsPanel from './activity-stats/panel';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';

@@ -8,7 +8,7 @@ import {
 import { buildAlertRows, deriveActivityStats } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
 import { usePixel } from '@/hooks/use-pixel';
-import StatsPanel from './stats-panel';
+import StatsPanel from './conversion-panel';
 import StatCard from './card';
 
 /**
@@ -42,7 +42,12 @@ const ConversionStatsPanel: React.FC = () => {
   const showStats =
     hasSession || stats.added + stats.skipped + stats.failed > 0;
 
-  if (!showStats && alertRows.length === 0 && !lastProgress && !stats.subtitle) {
+  if (
+    !showStats &&
+    alertRows.length === 0 &&
+    !lastProgress &&
+    !stats.subtitle
+  ) {
     return null;
   }
 

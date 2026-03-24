@@ -9,8 +9,8 @@ import {
 import { buildAlertRows } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
 import { usePixel } from '@/hooks/use-pixel';
-import StatsPanel from '@/components/conversion-stats/stats-panel';
-import StatCard from '@/components/conversion-stats/card';
+import StatsPanel from '@/components/activity-stats/conversion-panel';
+import StatCard from '@/components/activity-stats/card';
 
 /**
  * Progress, stat cards, and warning/error banners for the transfer page.
@@ -62,14 +62,20 @@ const TransferStatsPanel: React.FC = () => {
     }
 
     if (lastTotalFiles > 0) {
-      return { items: lastCompletedFiles, success: lastCompletedFiles, failed, total: lastTotalFiles };
+      return {
+        items: lastCompletedFiles,
+        success: lastCompletedFiles,
+        failed,
+        total: lastTotalFiles,
+      };
     }
 
     return { items, success, failed, total: null };
   }, [activityEvents]);
 
   const hasProgressFromFiles = lastProgress != null && lastProgress.total > 0;
-  const hasProgressFromBytes = lastPushBytes != null && lastPushBytes.totalFiles > 0;
+  const hasProgressFromBytes =
+    lastPushBytes != null && lastPushBytes.totalFiles > 0;
   const progressDone = hasProgressFromFiles
     ? lastProgress.done
     : hasProgressFromBytes
@@ -98,7 +104,9 @@ const TransferStatsPanel: React.FC = () => {
   return (
     <StatsPanel
       subtitle={subtitle}
-      progress={progressTotal > 0 ? { done: progressDone, total: progressTotal } : null}
+      progress={
+        progressTotal > 0 ? { done: progressDone, total: progressTotal } : null
+      }
       alertRows={alertRows}
     >
       <StatCard
@@ -130,7 +138,11 @@ const TransferStatsPanel: React.FC = () => {
           stats.failed > 0 ? (
             <XCircle size={13} weight="duotone" className="text-destructive" />
           ) : (
-            <MinusCircle size={13} weight="duotone" className="text-muted-foreground" />
+            <MinusCircle
+              size={13}
+              weight="duotone"
+              className="text-muted-foreground"
+            />
           )
         }
         className={cn(
