@@ -66,7 +66,7 @@ export const convert = new Command()
       const existingPaths = pathStats.filter((p) => p.exists);
       if (existingPaths.length === 0) {
         if (options.jsonl) {
-          logger.emitUi({
+          logger.emitJSON({
             v: 1,
             kind: 'error',
             code: 'no_valid_paths',
@@ -82,7 +82,7 @@ export const convert = new Command()
 
       if (directories.length > 1) {
         if (options.jsonl) {
-          logger.emitUi({
+          logger.emitJSON({
             v: 1,
             kind: 'error',
             code: 'multiple_directories',
@@ -101,7 +101,7 @@ export const convert = new Command()
         await processIndividualFiles(files.map((f) => f.path));
       } else {
         if (options.jsonl) {
-          logger.emitUi({
+          logger.emitJSON({
             v: 1,
             kind: 'error',
             code: 'no_valid_inputs',
@@ -114,7 +114,7 @@ export const convert = new Command()
     } catch (error) {
       if (logger.getMode() === 'json') {
         if (!(error instanceof ConversionFileError)) {
-          logger.emitUi({
+          logger.emitJSON({
             v: 1,
             kind: 'error',
             code: 'uncaught',
@@ -181,7 +181,7 @@ async function processIndividualFiles(filePaths: string[]): Promise<void> {
 
   if (regularFiles.length === 0) {
     if (logger.getMode() === 'json') {
-      logger.emitUi({
+      logger.emitJSON({
         v: 1,
         kind: 'error',
         code: 'no_supported_media',
@@ -231,7 +231,7 @@ async function processFiles(
   const layout = outDir ? 'directory' : 'files';
 
   if (isJson) {
-    logger.emitUi({
+    logger.emitJSON({
       v: 1,
       kind: 'session',
       phase: 'start',
@@ -256,7 +256,7 @@ async function processFiles(
         if (outFile === file) {
           skippedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'skipped',
@@ -266,7 +266,7 @@ async function processFiles(
               name: baseName,
               reason: 'output_same_as_input',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -281,7 +281,7 @@ async function processFiles(
           await fixDatesOnPhoto(outFile);
           skippedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'skipped',
@@ -291,7 +291,7 @@ async function processFiles(
               name: baseName,
               reason: 'output_exists',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -307,7 +307,7 @@ async function processFiles(
           await processImage(file, outFile);
           processedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'done',
@@ -316,7 +316,7 @@ async function processFiles(
               extOut: ext,
               name: baseName,
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -326,7 +326,7 @@ async function processFiles(
         } catch (err) {
           failedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'failed',
@@ -336,7 +336,7 @@ async function processFiles(
               name: baseName,
               reason: 'processing_error',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -357,7 +357,7 @@ async function processFiles(
         if (outFile === file) {
           skippedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'skipped',
@@ -367,7 +367,7 @@ async function processFiles(
               name: baseName,
               reason: 'output_same_as_input',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -381,7 +381,7 @@ async function processFiles(
           await fs.access(outFile);
           skippedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'skipped',
@@ -391,7 +391,7 @@ async function processFiles(
               name: baseName,
               reason: 'output_exists',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -408,7 +408,7 @@ async function processFiles(
           if (!wrote) {
             skippedCount++;
             if (isJson) {
-              logger.emitUi({
+              logger.emitJSON({
                 v: 1,
                 kind: 'file',
                 status: 'skipped',
@@ -422,7 +422,7 @@ async function processFiles(
           } else {
             processedCount++;
             if (isJson) {
-              logger.emitUi({
+              logger.emitJSON({
                 v: 1,
                 kind: 'file',
                 status: 'done',
@@ -434,7 +434,7 @@ async function processFiles(
             }
           }
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -444,7 +444,7 @@ async function processFiles(
         } catch (err) {
           failedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'failed',
@@ -454,7 +454,7 @@ async function processFiles(
               name: baseName,
               reason: 'processing_error',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -475,7 +475,7 @@ async function processFiles(
         if (outFile === file) {
           skippedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'skipped',
@@ -485,7 +485,7 @@ async function processFiles(
               name: baseName,
               reason: 'output_same_as_input',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -499,7 +499,7 @@ async function processFiles(
           await fs.access(outFile);
           skippedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'skipped',
@@ -509,7 +509,7 @@ async function processFiles(
               name: baseName,
               reason: 'output_exists',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -525,7 +525,7 @@ async function processFiles(
           await processLegacyVideo(file, outFile);
           processedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'done',
@@ -534,7 +534,7 @@ async function processFiles(
               extOut: 'mp4',
               name: baseName,
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -544,7 +544,7 @@ async function processFiles(
         } catch (err) {
           failedCount++;
           if (isJson) {
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'file',
               status: 'failed',
@@ -554,7 +554,7 @@ async function processFiles(
               name: baseName,
               reason: 'processing_error',
             });
-            logger.emitUi({
+            logger.emitJSON({
               v: 1,
               kind: 'progress',
               done: i + 1,
@@ -569,7 +569,7 @@ async function processFiles(
       }
 
       if (isJson) {
-        logger.emitUi({
+        logger.emitJSON({
           v: 1,
           kind: 'progress',
           done: i + 1,
@@ -581,7 +581,7 @@ async function processFiles(
     return { processedCount, skippedCount };
   } finally {
     if (isJson) {
-      logger.emitUi({
+      logger.emitJSON({
         v: 1,
         kind: 'session',
         phase: 'end',

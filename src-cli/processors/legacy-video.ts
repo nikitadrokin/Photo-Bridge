@@ -65,7 +65,7 @@ export async function processLegacyVideo(
     // Verify that dates were successfully recovered
     if (!(await hasValidCreateDate(outputPath))) {
       if (jsonUi) {
-        logger.emitUi({
+        logger.emitJSON({
           v: 1,
           kind: 'warn',
           code: 'date_not_recovered',

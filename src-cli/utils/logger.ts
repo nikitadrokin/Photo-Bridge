@@ -13,7 +13,7 @@ export const logger = {
   /**
    * Emit one structured UI event (NDJSON). No-op in text mode.
    */
-  emitUi(event: EventV1) {
+  emitJSON(event: EventV1) {
     if (mode === 'json') {
       console.log(JSON.stringify(event));
     }

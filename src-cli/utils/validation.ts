@@ -28,7 +28,7 @@ export async function validateTools(
 
   if (missing.length > 0) {
     if (logger.getMode() === 'json') {
-      logger.emitUi({
+      logger.emitJSON({
         v: 1,
         kind: 'blocked',
         code: 'missing_tools',
