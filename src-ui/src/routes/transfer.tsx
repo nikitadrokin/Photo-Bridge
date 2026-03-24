@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
-import LogViewer from '@/components/log-viewer';
+import ActivityFeed from '@/components/activity-feed';
+import TransferStatsPanel from '@/components/transfer-stats-panel';
 import { usePixel } from '@/hooks/use-pixel';
 import { ConnectionStatus } from '@/components/connection-status';
 import { ActionCard } from '@/components/action-card';
@@ -17,58 +18,57 @@ function TransferPage() {
 
   return (
     <>
-      <main className="flex-1 p-2">
-        <div className="mx-auto flex flex-col max-w-5xl gap-8 pb-6">
+      <main className="flex-1 p-2 lg:p-4">
+        <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
           {/* Connection Status */}
-          <ConnectionStatus
-            isConnected={pixel.isConnected}
-            isRunning={pixel.isRunning}
-            onRefresh={pixel.checkConnection}
-          />
+          <div className="flex flex-col gap-6">
+            <ConnectionStatus
+              isConnected={pixel.isConnected}
+              isRunning={pixel.isRunning}
+              onRefresh={pixel.checkConnection}
+            />
 
-          {/* Quick Actions */}
-          <section>
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-              Actions
-            </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <ActionCard
-                icon={<Folder size={24} weight="duotone" />}
-                title="Push Folder"
-                description="Upload a folder to /sdcard/DCIM/Camera"
-                onClick={pixel.pushFolder}
-                disabled={isDisabled}
-              />
-              <ActionCard
-                icon={<File size={24} weight="duotone" />}
-                title="Push Files"
-                description="Upload specific files to your device"
-                onClick={pixel.pushFiles}
-                disabled={isDisabled}
-              />
-              <ActionCard
-                icon={<DownloadSimple size={24} weight="duotone" />}
-                title="Pull Camera"
-                description="Download all media from Camera folder"
-                onClick={pixel.pull}
-                disabled={isDisabled}
-              />
-              <ActionCard
-                icon={<Terminal size={24} weight="duotone" />}
-                title="Open Shell"
-                description="Launch an interactive ADB shell"
-                onClick={pixel.shell}
-              />
-            </div>
-          </section>
+            <section>
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+                Actions
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <ActionCard
+                  icon={<Folder size={24} weight="duotone" />}
+                  title="Push Folder"
+                  description="Upload a folder to /sdcard/DCIM/Camera"
+                  onClick={pixel.pushFolder}
+                  disabled={isDisabled}
+                />
+                <ActionCard
+                  icon={<File size={24} weight="duotone" />}
+                  title="Push Files"
+                  description="Upload specific files to your device"
+                  onClick={pixel.pushFiles}
+                  disabled={isDisabled}
+                />
+                <ActionCard
+                  icon={<DownloadSimple size={24} weight="duotone" />}
+                  title="Pull Camera"
+                  description="Download all media from Camera folder"
+                  onClick={pixel.pull}
+                  disabled={isDisabled}
+                />
+                <ActionCard
+                  icon={<Terminal size={24} weight="duotone" />}
+                  title="Open Shell"
+                  description="Launch an interactive ADB shell"
+                  onClick={pixel.shell}
+                />
+              </div>
+            </section>
 
-          {/* Transfer Logs */}
-          <section className="flex flex-col min-h-0">
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-              Transfer Logs
-            </h2>
-            <LogViewer emptyMessage="Connect your Pixel to get started" />
-          </section>
+            <TransferStatsPanel />
+          </div>
+
+          <div className="flex flex-col min-h-0">
+            <ActivityFeed emptyMessage="Connect your Pixel to get started" />
+          </div>
         </div>
       </main>
     </>
