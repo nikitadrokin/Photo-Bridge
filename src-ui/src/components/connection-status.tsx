@@ -14,13 +14,17 @@ import { cn } from '@/lib/utils';
 
 interface ConnectionStatusProps {
   isConnected: boolean;
-  isRunning: boolean;
+  /** User-triggered ADB check in flight (not background / transfer busy). */
+  isConnectionCheckPending: boolean;
+  /** Transfer or other sidecar work — disables refresh without showing "Checking…". */
+  disableRefresh: boolean;
   onRefresh: () => void;
 }
 
 export function ConnectionStatus({
   isConnected,
-  isRunning,
+  isConnectionCheckPending,
+  disableRefresh,
   onRefresh,
 }: ConnectionStatusProps) {
   return (
@@ -55,14 +59,17 @@ export function ConnectionStatus({
           variant="secondary"
           size="sm"
           onClick={onRefresh}
-          disabled={isRunning}
+          disabled={disableRefresh || isConnectionCheckPending}
           className="gap-2"
         >
           <ArrowsClockwise
-            className={cn('size-3.5', isRunning && 'animate-spin')}
+            className={cn(
+              'size-3.5',
+              isConnectionCheckPending && 'animate-spin',
+            )}
             weight="bold"
           />
-          {isRunning ? 'Checking…' : 'Refresh'}
+          {isConnectionCheckPending ? 'Checking…' : 'Refresh'}
         </Button>
       </AlertAction>
     </Alert>

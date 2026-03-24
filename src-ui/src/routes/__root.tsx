@@ -38,6 +38,7 @@ function AppSidebarWithContext() {
       isPixelConnected={pixel.isConnected}
       onCheckConnection={pixel.checkConnection}
       isRunning={pixel.isRunning}
+      isConnectionCheckPending={pixel.isConnectionCheckPending}
     />
   );
 }

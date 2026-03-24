@@ -24,8 +24,11 @@ function TransferPage() {
           <div className="flex flex-col gap-6">
             <ConnectionStatus
               isConnected={pixel.isConnected}
-              isRunning={pixel.isRunning}
-              onRefresh={pixel.checkConnection}
+              isConnectionCheckPending={pixel.isConnectionCheckPending}
+              disableRefresh={pixel.isRunning}
+              onRefresh={() => {
+                void pixel.checkConnection({ interactive: true });
+              }}
             />
 
             <section className="space-y-4">

@@ -19,12 +19,20 @@ export interface TransferPaths {
 // prettier-ignore
 export type ActiveOperation = 'pull' | 'push' | 'convert' | 'copy' | 'fix-dates' | null;
 
+/** Arguments for `checkConnection` (initial probe vs user refresh). */
+export interface CheckConnectionOptions {
+  /** When true, shows progress on manual refresh controls only (not global busy). */
+  interactive?: boolean;
+}
+
 function usePixelProviderValue() {
   const [isConnected, setIsConnected] = useState(false);
   const [activeOperation, setActiveOperation] = useState<ActiveOperation>(null);
   const [transferPaths, setTransferPaths] = useState<TransferPaths | null>(
     null,
   );
+  const [isConnectionCheckPending, setIsConnectionCheckPending] =
+    useState(false);
 
   const { execute, isRunning, logs, activityEvents, clearLogs } = useCommand({
       sidecar: 'binaries/pb',
@@ -32,11 +40,26 @@ function usePixelProviderValue() {
 
   const terminal = useTerminal();
 
-  const checkConnection = useCallback(async () => {
-    await execute(['check-adb'], {
-      onFinish: (code) => setIsConnected(code === 0),
-    });
-  }, [execute]);
+  const checkConnection = useCallback(
+    async ({ interactive = false }: CheckConnectionOptions = {}) => {
+      if (interactive && isRunning) {
+        return;
+      }
+      if (interactive) {
+        setIsConnectionCheckPending(true);
+      }
+      await execute(['check-adb'], {
+        trackRunning: false,
+        onFinish: (code) => {
+          setIsConnected(code === 0);
+          if (interactive) {
+            setIsConnectionCheckPending(false);
+          }
+        },
+      });
+    },
+    [execute, isRunning],
+  );
 
   useEffect(() => {
     checkConnection();
@@ -209,6 +232,7 @@ function usePixelProviderValue() {
 
   return {
     isConnected,
+    isConnectionCheckPending,
     isRunning,
     logs,
     activityEvents,

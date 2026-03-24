@@ -31,8 +31,9 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 interface AppSidebarProps {
   isPixelConnected: boolean;
-  onCheckConnection: () => void;
+  onCheckConnection: (opts?: { interactive?: boolean }) => void;
   isRunning: boolean;
+  isConnectionCheckPending: boolean;
 }
 
 const isDev = import.meta.env.DEV;
@@ -68,6 +69,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   isPixelConnected,
   onCheckConnection,
   isRunning,
+  isConnectionCheckPending,
 }) => {
   const [version, setVersion] = useState<string>('');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
@@ -140,8 +142,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={onCheckConnection}
-                  disabled={isRunning}
+                  onClick={() => {
+                    onCheckConnection({ interactive: true });
+                  }}
+                  disabled={isRunning || isConnectionCheckPending}
                   tooltip="Check Pixel connection via ADB"
                 >
                   <DeviceMobile
@@ -158,7 +162,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   <ArrowsClockwise
                     className={cn(
                       'ml-auto h-4 w-4',
-                      isRunning && 'animate-spin',
+                      isConnectionCheckPending && 'animate-spin',
                     )}
                   />
                 </SidebarMenuButton>

@@ -8,11 +8,22 @@ interface UseCommandOptions {
   sidecar: string;
 }
 
+/** Options for {@link UseCommandResult.execute}. */
+export interface ExecuteCommandOptions {
+  /** Called once when the process exits, errors, or fails to start. */
+  onFinish?: (code: number) => void;
+  /**
+   * When false, does not set global {@link UseCommandResult.isRunning}.
+   * Use for lightweight background checks so the UI stays available.
+   */
+  trackRunning?: boolean;
+}
+
 interface UseCommandResult {
   /** Execute the command with given args */
   execute: (
     args: Array<string>,
-    options?: { onFinish?: (code: number) => void },
+    options?: ExecuteCommandOptions,
   ) => Promise<void>;
   /** Whether the command is currently running */
   isRunning: boolean;
@@ -71,12 +82,25 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
   );
 
   const execute = useCallback(
-    async (
-      args: Array<string>,
-      options?: { onFinish?: (code: number) => void },
-    ) => {
+    async (args: Array<string>, options?: ExecuteCommandOptions) => {
+      const trackRunning = options?.trackRunning !== false;
       const isJsonl = args.includes('--jsonl');
-      setIsRunning(true);
+      let completed = false;
+
+      const complete = (code: number) => {
+        if (completed) {
+          return;
+        }
+        completed = true;
+        if (trackRunning) {
+          setIsRunning(false);
+        }
+        options?.onFinish?.(code);
+      };
+
+      if (trackRunning) {
+        setIsRunning(true);
+      }
       stdoutBufferRef.current = '';
 
       if (!isJsonl) {
@@ -97,7 +121,6 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
         await command.spawn();
 
         command.on('close', (data) => {
-          setIsRunning(false);
           const rest = stdoutBufferRef.current;
           stdoutBufferRef.current = '';
           if (rest.trim().length > 0) {
@@ -126,22 +149,20 @@ export function useCommand({ sidecar }: UseCommandOptions): UseCommandResult {
               });
             }
           }
-          if (options?.onFinish) {
-            options.onFinish(data.code ?? -1);
-          }
+          complete(data.code ?? -1);
         });
 
         command.on('error', (error) => {
-          setIsRunning(false);
           addLog({ type: 'error', message: `Process error: ${error}` });
+          complete(-1);
         });
       } catch (err) {
         console.error(err);
-        setIsRunning(false);
         addLog({
           type: 'error',
           message: `Failed to start process: ${String(err)}`,
         });
+        complete(-1);
       }
     },
     [sidecar, addLog, addActivity, flushStdoutLines],
