@@ -1,4 +1,14 @@
-import { Clock, File, Play, Spinner, X } from '@phosphor-icons/react';
+import {
+  CheckCircle,
+  Clock,
+  File,
+  MinusCircle,
+  Play,
+  Spinner,
+  Stack,
+  X,
+  XCircle,
+} from '@phosphor-icons/react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
@@ -119,7 +129,30 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         </Button>
       </div>
 
-      <ActivityStatsPanel />
+      <ActivityStatsPanel
+        states={[
+          {
+            title: 'Total',
+            icon: <Stack size={13} weight="duotone" />,
+            value: String(selectedPaths.length),
+          },
+          {
+            title: 'Added',
+            icon: <CheckCircle size={13} weight="duotone" />,
+            value: String(selectedPaths.length),
+          },
+          {
+            title: 'Skipped',
+            icon: <MinusCircle size={13} weight="duotone" />,
+            value: String(selectedPaths.length),
+          },
+          {
+            title: 'Failed',
+            icon: <XCircle size={13} weight="duotone" />,
+            value: String(selectedPaths.length),
+          },
+        ]}
+      />
     </>
   );
 };

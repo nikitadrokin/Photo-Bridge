@@ -10,10 +10,21 @@ import { cn } from '@/lib/utils';
 import { usePixel } from '@/hooks/use-pixel';
 import StatCard from './card';
 
+type State = {
+  title: string;
+  icon: React.ReactNode;
+  value: string;
+  className?: string;
+};
+
+interface ActivityStatsPanelProps {
+  states: Array<State>;
+}
+
 /**
  * Progress, stat cards, and warning/error banners for convert/copy — sits under action buttons.
  */
-const ActivityStatsPanel: React.FC = () => {
+const ActivityStatsPanel: React.FC<ActivityStatsPanelProps> = ({ states }) => {
   const { activityEvents, isRunning } = usePixel();
 
   const stats = useMemo(
@@ -139,6 +150,16 @@ const ActivityStatsPanel: React.FC = () => {
           />
         </div>
       ) : null}
+
+      {states?.map((state) => (
+        <StatCard
+          key={state.title}
+          label={state.title}
+          value={state.value}
+          icon={state.icon}
+          className={state.className}
+        />
+      ))}
     </div>
   );
 };
