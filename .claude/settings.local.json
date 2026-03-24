@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(tree -L 2 /Users/dna/Developer/Projects/Homebrew/photo-bridge/src-cli -o /tmp/src-cli-tree.txt)",
-      "Read(//tmp/**)",
-      "Bash(grep:*)"
-    ]
-  }
-}
