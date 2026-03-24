@@ -107,6 +107,8 @@ function TransferPage() {
                   variant="ghost"
                   size="xs"
                   className="h-auto min-h-6 w-full items-start justify-start gap-2 px-2 py-1.5 whitespace-normal"
+                  // this can be used even when transferring to the device
+                  disabled={!pixel.isConnected}
                   onClick={pixel.shell}
                 >
                   <Terminal
