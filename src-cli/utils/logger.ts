@@ -1,5 +1,5 @@
 import kleur from 'kleur';
-import type { EventV1 } from '../../cli-ui-protocol.js';
+import type { EventV1 } from '../../types/protocol.js';
 
 let mode: 'text' | 'json' = 'text';
 

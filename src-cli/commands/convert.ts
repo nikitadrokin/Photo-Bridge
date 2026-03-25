@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js';
 import { validateTools } from '../utils/validation.js';
 import { fixDatesOnPhoto } from '../utils/dates.js';
 import { ConversionFileError } from '../utils/conversion-file-error.js';
-import type { MediaType } from '../../cli-ui-protocol.js';
+import type { MediaType } from '../../types/protocol.js';
 
 const convertOptionsSchema = z.object({
   cwd: z.string(),

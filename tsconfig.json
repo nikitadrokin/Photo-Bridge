@@ -22,6 +22,6 @@
       "@/*": ["src-cli/*"]
     }
   },
-  "include": ["src-cli/**/*", "cli-ui-protocol.ts"],
+  "include": ["src-cli/**/*", "types/protocol.ts"],
   "exclude": ["node_modules", "dist"]
 }

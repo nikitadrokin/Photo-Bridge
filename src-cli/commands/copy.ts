@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import type { MediaType } from '../../cli-ui-protocol.js';
+import type { MediaType } from '../../types/protocol.js';
 import { processImage } from '../processors/image.js';
 import { copyVideo } from '../processors/video.js';
 import { logger } from '../utils/logger.js';
