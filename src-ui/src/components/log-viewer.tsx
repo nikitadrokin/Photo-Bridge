@@ -27,13 +27,7 @@ const truncatePath = (path: string, segments: number = 2): string => {
 const LogViewer: React.FC<LogViewerProps> = ({
   emptyMessage = 'Logs will appear here…',
 }) => {
-  const {
-    logs,
-    transferPaths,
-    openActiveInTerminal,
-    terminalName,
-    clearLogs,
-  } = usePixel();
+  const { logs, transferPaths, clearLogs } = usePixel();
 
   const { logViewerHeight, setLogViewerHeight } = useUiStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,23 +95,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {terminalName ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                // onClick={openActiveInTerminal}
-                onClick={() =>
-                  alert(
-                    'This is bugged right now. The code says "openActiveInTerminal", which confuses agents into thinking this is a generic function. The function is hardcoded to make one action, and we need to update that function to be generic. Until then, this button shows future behavior, not what I have right now.',
-                  )
-                }
-                className="h-6 text-xs text-white/40 hover:text-white/70 hover:bg-white/5"
-              >
-                <Terminal size={12} />
-                {terminalName}
-              </Button>
-            ) : null}
-
             {logs.length > 0 ? (
               <Button
                 variant="ghost"
