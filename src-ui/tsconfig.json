@@ -30,7 +30,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@cli-protocol": ["../cli-ui-protocol.ts"]
+      "@cli-protocol": ["../types/protocol.ts"]
     }
   }
 }
