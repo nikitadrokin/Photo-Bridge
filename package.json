@@ -23,7 +23,7 @@
     "build:sidecar": "bun build ./src-cli/index.ts --compile --outfile src-tauri/binaries/pb-aarch64-apple-darwin",
     "dev:tauri": "tauri dev",
     "build:tauri": "tauri build",
-    "release:tauri": "./release.sh",
+    "release:tauri": "bun run scripts/release.ts",
     "dev:web": "bun run --filter photo-bridge-web dev",
     "build:web": "bun run --filter photo-bridge-web build",
     "start": "bun run dist/index.js",
