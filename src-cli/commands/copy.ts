@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { MediaType } from '../../types/protocol.js';
 import { processImage } from '../processors/image.js';
 import { copyVideo } from '../processors/video.js';
+import { copyAudio } from '../processors/audio.js';
 import { logger } from '../utils/logger.js';
 import { validateTools } from '../utils/validation.js';
 import { fixDatesOnPhoto } from '../utils/dates.js';
@@ -20,9 +21,12 @@ type CopyOptions = z.infer<typeof copyOptionsSchema>;
 // prettier-ignore
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
+// prettier-ignore
+const AUDIO_EXTENSIONS = ['mp3', 'aac', 'm4a', 'wav', 'flac', 'ogg', 'opus', 'aiff', 'aif'];
 
 function cliMediaKind(ext: string): MediaType {
   if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
+  if (AUDIO_EXTENSIONS.includes(ext)) return 'audio';
   return 'video';
 }
 
@@ -171,7 +175,11 @@ async function processDirectory(dirPath: string): Promise<void> {
 async function processIndividualFiles(filePaths: string[]): Promise<void> {
   const regularFiles = filePaths.filter((f) => {
     const ext = path.extname(f).toLowerCase().slice(1);
-    return IMAGE_EXTENSIONS.includes(ext) || VIDEO_EXTENSIONS.includes(ext);
+    return (
+      IMAGE_EXTENSIONS.includes(ext) ||
+      VIDEO_EXTENSIONS.includes(ext) ||
+      AUDIO_EXTENSIONS.includes(ext)
+    );
   });
 
   if (regularFiles.length === 0) {
@@ -426,6 +434,106 @@ async function processFiles(
               kind: 'file',
               status: 'failed',
               media,
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'processing_error',
+            });
+            logger.emitJSON({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          throw new ConversionFileError(
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+        continue;
+      }
+
+      if (AUDIO_EXTENSIONS.includes(ext)) {
+        const stem = path.basename(file, path.extname(file));
+        const outFile = path.join(outputDirectory, `${stem}.mp4`);
+
+        if (outFile === file) {
+          skippedCount++;
+          if (isJson) {
+            logger.emitJSON({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media: 'audio',
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'output_same_as_input',
+            });
+            logger.emitJSON({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        }
+
+        try {
+          await fs.access(outFile);
+          skippedCount++;
+          if (isJson) {
+            logger.emitJSON({
+              v: 1,
+              kind: 'file',
+              status: 'skipped',
+              media: 'audio',
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+              reason: 'output_exists',
+            });
+            logger.emitJSON({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+          continue;
+        } catch {
+          // File doesn't exist, proceed
+        }
+
+        try {
+          await copyAudio(file, outFile);
+          processedCount++;
+          if (isJson) {
+            logger.emitJSON({
+              v: 1,
+              kind: 'file',
+              status: 'done',
+              media: 'audio',
+              extIn: ext,
+              extOut: 'mp4',
+              name: baseName,
+            });
+            logger.emitJSON({
+              v: 1,
+              kind: 'progress',
+              done: i + 1,
+              total: files.length,
+            });
+          }
+        } catch (err) {
+          failedCount++;
+          if (isJson) {
+            logger.emitJSON({
+              v: 1,
+              kind: 'file',
+              status: 'failed',
+              media: 'audio',
               extIn: ext,
               extOut: 'mp4',
               name: baseName,

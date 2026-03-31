@@ -9,7 +9,7 @@ export type Command = 'convert' | 'copy';
 export type SessionLayout = 'directory' | 'files';
 
 /** High-level media bucket for a single input file. */
-export type MediaType = 'image' | 'video' | 'legacy_video';
+export type MediaType = 'image' | 'video' | 'legacy_video' | 'audio';
 
 /** Outcome for one file row in the activity feed. */
 export type FileStatus = 'done' | 'skipped' | 'failed';
@@ -154,7 +154,8 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
           parsed.status === 'failed') &&
         (parsed.media === 'image' ||
           parsed.media === 'video' ||
-          parsed.media === 'legacy_video') &&
+          parsed.media === 'legacy_video' ||
+          parsed.media === 'audio') &&
         typeof parsed.extIn === 'string' &&
         typeof parsed.extOut === 'string'
       );
