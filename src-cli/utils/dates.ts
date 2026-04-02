@@ -1,4 +1,5 @@
 import { execa } from 'execa';
+import { utimesSync } from 'fs';
 
 /**
  * Date tag priority chain (later tags override earlier ones):
@@ -36,6 +37,12 @@ const DATE_COPY_ARGS = [
   '-FileCreateDate<CreationDate',
   '-FileModifyDate<CreationDate',
 ];
+
+export interface GpsCoordinates {
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+}
 
 /**
  * Check if a file has a valid CreateDate
@@ -125,10 +132,15 @@ export async function hasValidPhotoDate(filePath: string): Promise<boolean> {
 /**
  * Fix dates on a file using a specific Unix timestamp (from JSON sidecar).
  * Writes the timestamp to all relevant date tags.
+ *
+ * When `gps` is provided the GPS coordinates are also written to the file.
+ * After writing EXIF/QuickTime metadata the function syncs the filesystem
+ * birth/modify timestamps so that Finder and Photos.app see the correct date.
  */
 export async function fixDatesFromTimestamp(
   filePath: string,
   timestamp: number,
+  gps?: GpsCoordinates,
 ): Promise<void> {
   // Convert Unix seconds to exiftool datetime format: "YYYY:MM:DD HH:MM:SS"
   const date = new Date(timestamp * 1000);
@@ -140,7 +152,7 @@ export async function fixDatesFromTimestamp(
   const seconds = String(date.getUTCSeconds()).padStart(2, '0');
   const exifDate = `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`;
 
-  await execa('exiftool', [
+  const args: string[] = [
     '-overwrite_original',
     '-api',
     'QuickTimeUTC',
@@ -150,6 +162,43 @@ export async function fixDatesFromTimestamp(
     `-ModifyDate=${exifDate}`,
     `-FileCreateDate=${exifDate}`,
     `-FileModifyDate=${exifDate}`,
-    filePath,
-  ]);
+  ];
+
+  // Write GPS coordinates when available
+  if (gps) {
+    const absLat = Math.abs(gps.latitude);
+    const absLon = Math.abs(gps.longitude);
+    const latRef = gps.latitude >= 0 ? 'N' : 'S';
+    const lonRef = gps.longitude >= 0 ? 'E' : 'W';
+
+    args.push(
+      `-GPSLatitude=${absLat}`,
+      `-GPSLatitudeRef=${latRef}`,
+      `-GPSLongitude=${absLon}`,
+      `-GPSLongitudeRef=${lonRef}`,
+    );
+
+    if (gps.altitude !== null) {
+      const absAlt = Math.abs(gps.altitude);
+      const altRef = gps.altitude >= 0 ? 0 : 1; // 0 = above sea level, 1 = below
+      args.push(
+        `-GPSAltitude=${absAlt}`,
+        `-GPSAltitudeRef=${altRef}`,
+      );
+    }
+  }
+
+  args.push(filePath);
+
+  await execa('exiftool', args);
+
+  // Sync filesystem birth/modify timestamps to match the metadata date.
+  // utimesSync sets atime and mtime; on macOS the kernel will also update
+  // the birth time (ctime) if the new mtime is earlier than the current one.
+  const fsDate = new Date(timestamp * 1000);
+  try {
+    utimesSync(filePath, fsDate, fsDate);
+  } catch {
+    // Non-fatal: the EXIF metadata was already written successfully.
+  }
 }

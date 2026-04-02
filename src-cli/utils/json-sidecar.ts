@@ -22,6 +22,38 @@ export interface GooglePhotosJSON {
   title?: string;
 }
 
+export interface GeoData {
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+}
+
+/**
+ * Extract GPS coordinates from the geoData field in the Takeout JSON.
+ * Returns null if geoData is absent or all coordinates are zero (no fix).
+ */
+export async function readGeoData(jsonPath: string): Promise<GeoData | null> {
+  try {
+    const content = await fs.readFile(jsonPath, 'utf-8');
+    const json: GooglePhotosJSON = JSON.parse(content);
+
+    if (!json.geoData) return null;
+
+    const { latitude, longitude, altitude } = json.geoData;
+
+    // Google Takeout uses 0,0 to signal "no location data"
+    if (latitude === 0 && longitude === 0) return null;
+
+    return {
+      latitude,
+      longitude,
+      altitude: altitude !== undefined ? altitude : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Find the JSON sidecar file for a media file.
  * Google Takeout creates sidecars with various naming patterns:
@@ -30,6 +62,13 @@ export interface GooglePhotosJSON {
  * - photo.jpg → photo.jpg.supplemental.json (another variant)
  * - photo.jpg → photo.jpg.json (less common, older exports)
  * - photo.jpg → photo.json (rare, filename without extension)
+ *
+ * Takeout sometimes truncates long filenames. When the full-name patterns
+ * fail this function falls back to a prefix-match scan of the directory so
+ * that files like "very-long-name(1).jpg" still find their
+ * "very-long-name(1).jpg.supplemental-metadata.json" sidecar even if
+ * Takeout shortened the base name to ~46 characters before appending the
+ * sidecar suffix.
  */
 export async function findJsonSidecar(
   mediaPath: string,
@@ -37,7 +76,7 @@ export async function findJsonSidecar(
   const dir = path.dirname(mediaPath);
   const basename = path.basename(mediaPath);
 
-  // Check patterns in order of likelihood
+  // Check patterns in order of likelihood (exact match)
   const patterns = [
     `${basename}.supplemental-metadata.json`, // Most common Google Takeout format
     `${basename}.suppl.json`, // Shortened variant
@@ -62,7 +101,29 @@ export async function findJsonSidecar(
     await fs.access(altSidecar);
     return altSidecar;
   } catch {
-    // No sidecar found
+    // No sidecar found via exact patterns; try truncation-aware scan
+  }
+
+  // Truncation-aware fallback: scan the directory for JSON files whose name
+  // starts with a prefix of the media basename. Google Takeout caps sidecar
+  // filenames at ~51 characters (before the ".json" suffix), so a 51-char
+  // prefix of the media filename should be a reliable match.
+  const TRUNCATION_PREFIX_LEN = 46;
+  if (basename.length > TRUNCATION_PREFIX_LEN) {
+    const prefix = basename.slice(0, TRUNCATION_PREFIX_LEN);
+    try {
+      const entries = await fs.readdir(dir);
+      for (const entry of entries) {
+        if (
+          entry.endsWith('.json') &&
+          entry.startsWith(prefix)
+        ) {
+          return path.join(dir, entry);
+        }
+      }
+    } catch {
+      // readdir failed; give up
+    }
   }
 
   return null;

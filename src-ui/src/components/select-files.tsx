@@ -6,9 +6,7 @@ import { usePixel } from '@/hooks/use-pixel';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
 
-interface SelectFilesProps {}
-
-const SelectFiles: React.FC<SelectFilesProps> = () => {
+const SelectFiles: React.FC = () => {
   const { setSelectedPaths } = useMediaStore();
   const pixel = usePixel();
 

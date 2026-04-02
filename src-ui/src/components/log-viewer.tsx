@@ -27,10 +27,21 @@ const truncatePath = (path: string, segments: number = 2): string => {
 const LogViewer: React.FC<LogViewerProps> = ({
   emptyMessage = 'Logs will appear here…',
 }) => {
-  const { logs, transferPaths, clearLogs } = usePixel();
+  const {
+    logs,
+    transferPaths,
+    openActiveInTerminal,
+    terminalName,
+    clearLogs,
+    activeOperation,
+  } = usePixel();
 
   const { logViewerHeight, setLogViewerHeight } = useUiStore();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const canOpenActiveInTerminal =
+    transferPaths !== null &&
+    (activeOperation === 'pull' || activeOperation === 'push');
 
   const handleDragStart = useCallback(
     (e: React.MouseEvent) => {

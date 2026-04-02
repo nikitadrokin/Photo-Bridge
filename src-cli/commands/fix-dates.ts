@@ -11,11 +11,16 @@ import {
   hasValidCreateDate,
   hasValidPhotoDate,
 } from '../utils/dates.js';
-import { findJsonSidecar, readPhotoTakenTime } from '../utils/json-sidecar.js';
+import {
+  findJsonSidecar,
+  readPhotoTakenTime,
+  readGeoData,
+} from '../utils/json-sidecar.js';
 
 const optionsSchema = z.object({
   cwd: z.string(),
   jsonl: z.boolean().optional(),
+  googleTakeout: z.boolean().optional(),
 });
 
 type Options = z.infer<typeof optionsSchema>;
@@ -62,11 +67,16 @@ export const fixDates = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'enable JSON output for UI integration')
+  .option(
+    '--google-takeout',
+    'enable Google Takeout mode: write GPS coordinates from JSON sidecars and sync filesystem timestamps',
+  )
   .action(async (paths: string[], opts: Options) => {
     try {
       const options = optionsSchema.parse({
         cwd: path.resolve(opts.cwd),
         jsonl: opts.jsonl,
+        googleTakeout: opts.googleTakeout,
       });
 
       if (options.jsonl) {
@@ -132,6 +142,11 @@ export const fixDates = new Command()
       logger.log('=========================================================');
       logger.break();
 
+      if (options.googleTakeout) {
+        logger.warn('Warning: Google Takeout mode is experimental.');
+        logger.break();
+      }
+
       await validateTools(['exiftool']);
 
       let fixedCount = 0;
@@ -145,6 +160,27 @@ export const fixDates = new Command()
         try {
           // Check if already has valid date
           if (await hasValidCreateDate(file)) {
+            // In Google Takeout mode, still enrich with GPS + filesystem sync
+            // even if the embedded date is already correct.
+            if (options.googleTakeout) {
+              const jsonPath = await findJsonSidecar(file);
+              if (jsonPath) {
+                const timestamp = await readPhotoTakenTime(jsonPath);
+                const gps = await readGeoData(jsonPath);
+                if (timestamp && (gps || true)) {
+                  // Re-apply with GPS and filesystem sync
+                  try {
+                    await fixDatesFromTimestamp(
+                      file,
+                      timestamp,
+                      gps ?? undefined,
+                    );
+                  } catch {
+                    // Non-fatal
+                  }
+                }
+              }
+            }
             logger.log(`${baseName}`);
             alreadyOkCount++;
             continue;
@@ -155,8 +191,11 @@ export const fixDates = new Command()
           if (jsonPath) {
             const timestamp = await readPhotoTakenTime(jsonPath);
             if (timestamp) {
+              const gps = options.googleTakeout
+                ? (await readGeoData(jsonPath)) ?? undefined
+                : undefined;
               try {
-                await fixDatesFromTimestamp(file, timestamp);
+                await fixDatesFromTimestamp(file, timestamp, gps);
                 if (await hasValidCreateDate(file)) {
                   logger.success(`Fixed (from JSON): ${baseName}`);
                   fixedCount++;
@@ -203,6 +242,25 @@ export const fixDates = new Command()
         try {
           // Check if already has valid date
           if (await hasValidPhotoDate(file)) {
+            // In Google Takeout mode, still enrich with GPS + filesystem sync
+            if (options.googleTakeout) {
+              const jsonPath = await findJsonSidecar(file);
+              if (jsonPath) {
+                const timestamp = await readPhotoTakenTime(jsonPath);
+                const gps = await readGeoData(jsonPath);
+                if (timestamp) {
+                  try {
+                    await fixDatesFromTimestamp(
+                      file,
+                      timestamp,
+                      gps ?? undefined,
+                    );
+                  } catch {
+                    // Non-fatal
+                  }
+                }
+              }
+            }
             logger.log(`${baseName}`);
             alreadyOkCount++;
             continue;
@@ -213,8 +271,11 @@ export const fixDates = new Command()
           if (jsonPath) {
             const timestamp = await readPhotoTakenTime(jsonPath);
             if (timestamp) {
+              const gps = options.googleTakeout
+                ? (await readGeoData(jsonPath)) ?? undefined
+                : undefined;
               try {
-                await fixDatesFromTimestamp(file, timestamp);
+                await fixDatesFromTimestamp(file, timestamp, gps);
                 if (await hasValidPhotoDate(file)) {
                   logger.success(`Fixed (from JSON): ${baseName}`);
                   fixedCount++;
