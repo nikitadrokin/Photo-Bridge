@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "PhotoBridge",
+  "productName": "Photo Bridge",
   "mainBinaryName": "photo-bridge",
   "version": "0.0.12",
   "identifier": "me.nkdr.photo-bridge",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "PhotoBridge",
+        "title": "Photo Bridge",
         "width": 800,
         "height": 600,
         "minWidth": 420,
