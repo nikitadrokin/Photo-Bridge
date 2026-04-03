@@ -16,6 +16,7 @@ import {
   type MediaDateInspectResult,
   parseMediaDateInspectStdout,
 } from '@/lib/media-date-inspect';
+import { shJoin, shLines } from '@/lib/shell-formatters';
 import type { AvailableStorageState } from '@/lib/types';
 
 export interface TransferPaths {
@@ -48,7 +49,11 @@ function usePixelProviderValue() {
       sidecar: 'binaries/pb',
     });
 
-  const terminal = useTerminal();
+  const {
+    openInTerminal,
+    terminalName,
+    isReady: terminalReady,
+  } = useTerminal();
 
   const checkConnection = useCallback(
     async ({ interactive = false }: CheckConnectionOptions = {}) => {
@@ -90,7 +95,7 @@ function usePixelProviderValue() {
       '--',
       'df',
       '-h',
-      '/sdcard/DCIM/Camera',
+      PIXEL_CAMERA_DIR,
     ]);
 
     const lines = stdout
@@ -165,7 +170,7 @@ function usePixelProviderValue() {
       setActiveOperation('push');
       setTransferPaths({
         source: paths[0],
-        destination: '/sdcard/DCIM/Camera',
+        destination: PIXEL_CAMERA_DIR,
       });
       await execute(['push-to-pixel', '--jsonl', ...paths], {
         onFinish: () => setActiveOperation(null),
@@ -201,7 +206,7 @@ function usePixelProviderValue() {
     });
     if (destination && typeof destination === 'string') {
       setActiveOperation('pull');
-      setTransferPaths({ source: '/sdcard/DCIM/Camera', destination });
+      setTransferPaths({ source: PIXEL_CAMERA_DIR, destination });
       await execute(['pull-from-pixel', '--jsonl', destination], {
         onFinish: () => setActiveOperation(null),
       });
