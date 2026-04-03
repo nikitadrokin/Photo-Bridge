@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransferRouteImport } from './routes/transfer'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
+import { Route as FixDatesRouteImport } from './routes/fix-dates'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -30,6 +31,11 @@ const RoadmapRoute = RoadmapRouteImport.update({
   path: '/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FixDatesRoute = FixDatesRouteImport.update({
+  id: '/fix-dates',
+  path: '/fix-dates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConvertRoute = ConvertRouteImport.update({
   id: '/convert',
   path: '/convert',
@@ -44,6 +50,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/transfer': typeof TransferRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/transfer': typeof TransferRoute
@@ -59,21 +67,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/convert' | '/roadmap' | '/settings' | '/transfer'
+  fullPaths:
+    | '/'
+    | '/convert'
+    | '/fix-dates'
+    | '/roadmap'
+    | '/settings'
+    | '/transfer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/convert' | '/roadmap' | '/settings' | '/transfer'
-  id: '__root__' | '/' | '/convert' | '/roadmap' | '/settings' | '/transfer'
+  to: '/' | '/convert' | '/fix-dates' | '/roadmap' | '/settings' | '/transfer'
+  id:
+    | '__root__'
+    | '/'
+    | '/convert'
+    | '/fix-dates'
+    | '/roadmap'
+    | '/settings'
+    | '/transfer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConvertRoute: typeof ConvertRoute
+  FixDatesRoute: typeof FixDatesRoute
   RoadmapRoute: typeof RoadmapRoute
   SettingsRoute: typeof SettingsRoute
   TransferRoute: typeof TransferRoute
@@ -102,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fix-dates': {
+      id: '/fix-dates'
+      path: '/fix-dates'
+      fullPath: '/fix-dates'
+      preLoaderRoute: typeof FixDatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/convert': {
       id: '/convert'
       path: '/convert'
@@ -122,6 +152,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConvertRoute: ConvertRoute,
+  FixDatesRoute: FixDatesRoute,
   RoadmapRoute: RoadmapRoute,
   SettingsRoute: SettingsRoute,
   TransferRoute: TransferRoute,

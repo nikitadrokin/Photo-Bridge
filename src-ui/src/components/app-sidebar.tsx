@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowCircleUp,
   ArrowsClockwise,
+  CalendarBlank,
   DeviceMobile,
   FilmStrip,
   Gear,
@@ -44,6 +45,12 @@ const routes = [
     label: 'Convert Media',
     icon: FilmStrip,
     tooltip: 'Convert media for Pixel',
+  },
+  {
+    to: '/fix-dates',
+    label: 'Fix Dates',
+    icon: CalendarBlank,
+    tooltip: 'Experimental: inspect dates and apply overrides',
   },
   {
     to: '/transfer',

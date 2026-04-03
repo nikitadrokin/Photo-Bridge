@@ -2,20 +2,22 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import { logger } from '../utils/logger.js';
-import { validateTools } from '../utils/validation.js';
+import { logger } from '../../utils/logger.js';
+import { validateTools } from '../../utils/validation.js';
 import {
   fixDatesInPlace,
   fixDatesOnPhoto,
   fixDatesFromTimestamp,
   hasValidCreateDate,
   hasValidPhotoDate,
-} from '../utils/dates.js';
+} from '../../utils/dates.js';
 import {
   findJsonSidecar,
   readPhotoTakenTime,
   readGeoData,
-} from '../utils/json-sidecar.js';
+} from '../../utils/json-sidecar.js';
+import { inspectDatesCmd } from './inspect.js';
+import { applyDateCmd } from './apply.js';
 
 const optionsSchema = z.object({
   cwd: z.string(),
@@ -60,6 +62,8 @@ async function collectMediaFilesRecursive(
 export const fixDates = new Command()
   .name('fix-dates')
   .description('recover/fix creation dates on media files (photos and videos)')
+  .addCommand(inspectDatesCmd)
+  .addCommand(applyDateCmd)
   .argument('[paths...]', 'directories or files to fix', ['.'])
   .option(
     '-c, --cwd <cwd>',

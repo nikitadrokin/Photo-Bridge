@@ -7,7 +7,7 @@ import { checkAdb } from './commands/check-adb.js';
 import { pushToPixel } from './commands/push-to-pixel.js';
 import { pullFromPixel } from './commands/pull-from-pixel.js';
 import { shell } from './commands/shell.js';
-import { fixDates } from './commands/fix-dates.js';
+import { fixDates } from './commands/fix-dates/index.js';
 import { fixSnapchatDates } from './commands/fix-snapchat-dates.js';
 
 // Fix for macOS sidecar process not having access to Homebrew paths
