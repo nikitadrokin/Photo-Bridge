@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
-import { shJoin, shSingleQuote } from '@/lib/shell-formatters';
+import {
+  NATIVE_TERMINALS,
+  type NativeTerminal,
+  type TerminalCommand,
+} from '@/lib/native-terminals';
+import { shSingleQuote } from '@/lib/shell-formatters';
 import { useSettingsStore } from '@/stores/settings-store';
-
-type TerminalType = 'ghostty' | 'terminal' | null;
-
-interface TerminalMeta {
-  type: TerminalType;
-  path: string;
-  name: string;
-}
-
-interface TerminalCommand {
-  command: string;
-  args?: Array<string>;
-}
 
 interface UseTerminalResult {
   /** Resolved terminal app name for display */
@@ -27,18 +19,12 @@ interface UseTerminalResult {
   getCommandString: (command: string, args?: Array<string>) => string;
 }
 
-const TERMINAL_CHECKS: Array<TerminalMeta> = [
-  { type: 'ghostty', path: '/Applications/Ghostty.app', name: 'Ghostty' },
-  {
-    type: 'terminal',
-    path: '/System/Applications/Utilities/Terminal.app',
-    name: 'Terminal',
-  },
-];
-
 async function directoryExists(path: string): Promise<boolean> {
   try {
-    const cmd = Command.create('exec-sh', ['-c', `test -d "${path}"`]);
+    const cmd = Command.create('exec-sh', [
+      '-c',
+      `test -d ${shSingleQuote(path)}`,
+    ]);
     const result = await cmd.execute();
     return result.code === 0;
   } catch {
@@ -48,15 +34,15 @@ async function directoryExists(path: string): Promise<boolean> {
 
 async function firstInstalledTerminal(
   preference: 'ghostty' | 'terminal',
-): Promise<TerminalMeta | null> {
+): Promise<NativeTerminal | null> {
   const order: Array<'ghostty' | 'terminal'> =
     preference === 'ghostty'
       ? ['ghostty', 'terminal']
       : ['terminal', 'ghostty'];
 
   for (const type of order) {
-    const meta = TERMINAL_CHECKS.find((t) => t.type === type);
-    if (meta && (await directoryExists(meta.path))) {
+    const meta = NATIVE_TERMINALS.find((terminal) => terminal.type === type);
+    if (meta && (await directoryExists(meta.appPath))) {
       return meta;
     }
   }
@@ -69,8 +55,7 @@ async function firstInstalledTerminal(
  */
 export function useTerminal(): UseTerminalResult {
   const preferredTerminal = useSettingsStore((s) => s.preferredTerminal);
-  const [terminalType, setTerminalType] = useState<TerminalType>(null);
-  const [terminalName, setTerminalName] = useState<string | null>(null);
+  const [terminal, setTerminal] = useState<NativeTerminal | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -85,11 +70,9 @@ export function useTerminal(): UseTerminalResult {
       }
 
       if (resolved) {
-        setTerminalType(resolved.type);
-        setTerminalName(resolved.name);
+        setTerminal(resolved);
       } else {
-        setTerminalType(null);
-        setTerminalName(null);
+        setTerminal(null);
       }
 
       setIsReady(true);
@@ -114,7 +97,7 @@ export function useTerminal(): UseTerminalResult {
 
   const openInTerminal = useCallback(
     async (target: TerminalCommand) => {
-      if (!terminalType) {
+      if (!terminal) {
         console.error('No terminal detected');
         return;
       }
@@ -125,46 +108,22 @@ export function useTerminal(): UseTerminalResult {
       );
 
       try {
-        const hostScript =
-          terminalType === 'ghostty'
-            ? getCommandString(
-                '/Applications/Ghostty.app/Contents/MacOS/ghostty',
-                [
-                  '-e',
-                  '/bin/zsh',
-                  '-lc',
-                  shJoin([terminalScript, 'exec "${SHELL:-/bin/zsh}" -l']),
-                ],
-              )
-            : getCommandString('osascript', [
-                '-e',
-                'on run argv',
-                '-e',
-                'set shellCommand to item 1 of argv',
-                '-e',
-                'tell application "Terminal"',
-                '-e',
-                'activate',
-                '-e',
-                'do script shellCommand',
-                '-e',
-                'end tell',
-                '-e',
-                'end run',
-                terminalScript,
-              ]);
-
+        const launchCommand = terminal.buildLaunchCommand(terminalScript);
+        const hostScript = getCommandString(
+          launchCommand.command,
+          launchCommand.args ?? [],
+        );
         const cmd = Command.create('exec-sh', ['-c', hostScript]);
         await cmd.execute();
       } catch (error) {
         console.error('Failed to open terminal:', error);
       }
     },
-    [terminalType, getCommandString],
+    [terminal, getCommandString],
   );
 
   return {
-    terminalName,
+    terminalName: terminal?.name ?? null,
     isReady,
     openInTerminal,
     getCommandString,
