@@ -23,7 +23,7 @@ const PixelActionItems: React.FC = () => {
         title="Push to Pixel"
         description={
           pixel.isConnected
-            ? 'Push files to /sdcard/DCIM/Camera'
+            ? `Push files to ${PIXEL_CAMERA_DIR}`
             : 'Connect a Pixel device first'
         }
         disabled={!pixel.isConnected}
@@ -69,16 +69,16 @@ const PixelActionItems: React.FC = () => {
         </Button>
       </ActionItem>
 
-      {/* Launch Shell */}
+      {/* Open Camera Shell */}
       <ActionItem
         icon={<Terminal size={24} weight="bold" />}
         iconClass={
           pixel.isConnected ? 'text-purple-500' : 'text-muted-foreground'
         }
-        title="Launch Shell"
+        title="Open Camera Shell"
         description={
           pixel.isConnected
-            ? 'Open an interactive ADB shell session'
+            ? `Open an ADB shell in ${PIXEL_CAMERA_DIR}`
             : 'Connect a Pixel device first'
         }
         disabled={!pixel.isConnected}
