@@ -3,6 +3,7 @@ import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
 import ActivityFeed from '@/components/activity-feed';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
+import { PIXEL_CAMERA_DIR } from '@/lib/constants';
 import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ function TransferPage() {
                       Push Folder
                     </span>
                     <span className="text-[11px] font-normal leading-snug text-muted-foreground">
-                      Upload a folder to /sdcard/DCIM/Camera
+                      Upload a folder to {PIXEL_CAMERA_DIR}
                     </span>
                   </span>
                 </Button>
@@ -110,7 +111,7 @@ function TransferPage() {
                   className="h-auto min-h-6 w-full items-start justify-start gap-2 px-2 py-1.5 whitespace-normal"
                   // this can be used even when transferring to the device
                   disabled={!pixel.isConnected}
-                  onClick={pixel.shell}
+                  onClick={pixel.openCameraShellInTerminal}
                 >
                   <Terminal
                     className="size-3 shrink-0 text-muted-foreground"
@@ -118,10 +119,10 @@ function TransferPage() {
                   />
                   <span className="flex min-w-0 flex-col items-start gap-px text-left">
                     <span className="font-medium leading-tight">
-                      Open Shell
+                      Open Camera Shell
                     </span>
                     <span className="text-[10px] font-normal leading-snug text-muted-foreground/80">
-                      Launch an interactive ADB shell
+                      Launch an ADB shell in {PIXEL_CAMERA_DIR}
                     </span>
                   </span>
                 </Button>

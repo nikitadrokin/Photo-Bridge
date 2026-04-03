@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import ActionItem from '@/components/action-item';
 import { usePixel } from '@/hooks/use-pixel';
+import { PIXEL_CAMERA_DIR } from '@/lib/constants';
 
 const PixelActionItems: React.FC = () => {
   const pixel = usePixel();
@@ -85,7 +86,7 @@ const PixelActionItems: React.FC = () => {
       >
         <Button
           variant="outline"
-          onClick={pixel.shell}
+          onClick={pixel.openCameraShellInTerminal}
           disabled={pixel.isRunning || !pixel.isConnected}
         >
           Open

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Command } from '@tauri-apps/plugin-shell';
-import { shJoin, shLines, shSingleQuote } from '@/lib/shell-formatters';
+import { shJoin, shSingleQuote } from '@/lib/shell-formatters';
 import { useSettingsStore } from '@/stores/settings-store';
 
 type TerminalType = 'ghostty' | 'terminal' | null;
@@ -11,15 +11,20 @@ interface TerminalMeta {
   name: string;
 }
 
+interface TerminalCommand {
+  command: string;
+  args?: Array<string>;
+}
+
 interface UseTerminalResult {
   /** Resolved terminal app name for display */
   terminalName: string | null;
   /** Whether detection is complete */
   isReady: boolean;
-  /** Open native terminal with a command */
-  openInTerminal: (command: string, args: Array<string>) => Promise<void>;
+  /** Open native terminal with shell code or a command/arg pair */
+  openInTerminal: (target: TerminalCommand) => Promise<void>;
   /** Get the full CLI command string for display */
-  getCommandString: (command: string, args: Array<string>) => string;
+  getCommandString: (command: string, args?: Array<string>) => string;
 }
 
 const TERMINAL_CHECKS: Array<TerminalMeta> = [
@@ -33,10 +38,7 @@ const TERMINAL_CHECKS: Array<TerminalMeta> = [
 
 async function directoryExists(path: string): Promise<boolean> {
   try {
-    const cmd = Command.create('exec-sh', [
-      '-c',
-      `test -d "${path}"`,
-    ]);
+    const cmd = Command.create('exec-sh', ['-c', `test -d "${path}"`]);
     const result = await cmd.execute();
     return result.code === 0;
   } catch {
@@ -101,7 +103,7 @@ export function useTerminal(): UseTerminalResult {
   }, [preferredTerminal]);
 
   const getCommandString = useCallback(
-    (command: string, args: Array<string>): string => {
+    (command: string, args: Array<string> = []): string => {
       return [
         shSingleQuote(command),
         ...args.map((arg) => shSingleQuote(arg)),
@@ -111,54 +113,49 @@ export function useTerminal(): UseTerminalResult {
   );
 
   const openInTerminal = useCallback(
-    async (command: string, args: Array<string>) => {
+    async (target: TerminalCommand) => {
       if (!terminalType) {
         console.error('No terminal detected');
         return;
       }
 
-      const fullCommand = getCommandString(command, args);
+      const terminalScript = getCommandString(
+        target.command,
+        target.args ?? [],
+      );
 
       try {
-        if (terminalType === 'ghostty') {
-          const introBanner = shLines`
-            You are in the photo library path of your device.
+        const hostScript =
+          terminalType === 'ghostty'
+            ? getCommandString(
+                '/Applications/Ghostty.app/Contents/MacOS/ghostty',
+                [
+                  '-e',
+                  '/bin/zsh',
+                  '-lc',
+                  shJoin([terminalScript, 'exec "${SHELL:-/bin/zsh}" -l']),
+                ],
+              )
+            : getCommandString('osascript', [
+                '-e',
+                'on run argv',
+                '-e',
+                'set shellCommand to item 1 of argv',
+                '-e',
+                'tell application "Terminal"',
+                '-e',
+                'activate',
+                '-e',
+                'do script shellCommand',
+                '-e',
+                'end tell',
+                '-e',
+                'end run',
+                terminalScript,
+              ]);
 
-              ls                      - View your photos and videos
-              df -h .                 - View "disk free" available storage
-              du -sh .                - View "disk usage" of the photo library
-              find . -type f | wc -l  - Count the number of files in the photo library
-              exit                    - Close the session
-
-          `;
-
-          const adbRemoteScript = shJoin([
-            'cd /sdcard/DCIM/Camera',
-            introBanner,
-            'exec /system/bin/sh',
-          ]);
-
-          const hostScript = getCommandString(
-            '/Applications/Ghostty.app/Contents/MacOS/ghostty',
-            ['-e', '/opt/homebrew/bin/adb', 'shell', '-t', adbRemoteScript],
-          );
-
-          const cmd = Command.create('exec-sh', ['-c', hostScript]);
-          await cmd.execute();
-        } else {
-          const script = `
-                    tell application "Terminal"
-                        activate
-                        do script "${fullCommand.replace(/"/g, '\\"')}"
-                    end tell
-                `;
-
-          const cmd = Command.create('exec-sh', [
-            '-c',
-            `osascript -e '${script.replace(/'/g, "'\\''")}'`,
-          ]);
-          await cmd.execute();
-        }
+        const cmd = Command.create('exec-sh', ['-c', hostScript]);
+        await cmd.execute();
       } catch (error) {
         console.error('Failed to open terminal:', error);
       }
