@@ -324,6 +324,13 @@ async function writeFilesystemDateTags(
   ]);
 }
 
+/**
+ * This function does NOT use JSON sidecar files from Google Takeout exported images.
+ * It only edits the "created" OS-level date of the file based on what date it recovers from the image's own metadata.
+ * @param filePath - The path to the media file.
+ * @param mediaKind - The kind of media file ("photo" or "video").
+ * @returns True if the filesystem date was synced, false otherwise.
+ */
 export async function syncFilesystemDatesFromMetadata(
   filePath: string,
   mediaKind: 'video' | 'photo',
