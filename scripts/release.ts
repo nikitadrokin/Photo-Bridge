@@ -118,10 +118,28 @@ async function findDmgForVersion(version: string): Promise<string | undefined> {
   return undefined;
 }
 
-async function updateCaskFile(version: string, sha256: string): Promise<void> {
+/**
+ * Rewrites cask `version`, `sha256`, and `url` so the DMG filename matches the
+ * artifact Tauri produced (e.g. `Photo.Bridge` vs spaces or legacy `PhotoBridge`).
+ */
+async function updateCaskFile(
+  version: string,
+  sha256: string,
+  dmgPath: string,
+): Promise<void> {
+  const segments = dmgPath.split(/[/\\]/);
+  const basename = segments[segments.length - 1];
+  if (!basename) {
+    throw new Error(`Could not get DMG basename from: ${dmgPath}`);
+  }
+  const urlFilename = basename.replace(version, '#{version}');
   let content = await Bun.file(caskFilePath).text();
   content = content.replace(/^(\s*version\s+")[^"]*(")/m, `$1${version}$2`);
   content = content.replace(/^(\s*sha256\s+")[^"]*(")/m, `$1${sha256}$2`);
+  content = content.replace(
+    /^(\s*url\s+")[^"]+(")/m,
+    `$1https://github.com/nikitadrokin/photo-bridge/releases/download/v#{version}/${urlFilename}$2`,
+  );
   await Bun.write(caskFilePath, content);
 }
 
@@ -286,7 +304,7 @@ async function main(): Promise<void> {
 
   if (await Bun.file(caskFilePath).exists()) {
     console.log(`${CYAN}Updating Homebrew cask...${NC}`);
-    await updateCaskFile(versionToBuild, sha256);
+    await updateCaskFile(versionToBuild, sha256, dmgPath);
     console.log(`${GREEN}Cask file updated!${NC}`);
   } else {
     console.log(`${RED}Warning: Cask file not found at ${caskFilePath}${NC}`);
