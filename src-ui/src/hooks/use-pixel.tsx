@@ -44,6 +44,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Returns the last structured warn/error detail emitted by the CLI. */
+function findLastStructuredDetail(stdoutLines: Array<string>): string | null {
+  for (let i = stdoutLines.length - 1; i >= 0; i -= 1) {
+    const parsed = parseLineFromCLI(stdoutLines[i]);
+    if (
+      parsed.tag === 'ui' &&
+      (parsed.event.kind === 'error' || parsed.event.kind === 'warn')
+    ) {
+      return parsed.event.detail ?? parsed.event.code;
+    }
+  }
+
+  return null;
+}
+
 /** Parses `pb fix-dates apply --jsonl` output into a typed success payload. */
 function parseApplyMediaDateStdout(
   stdout: string,
@@ -85,8 +100,8 @@ function parseApplyMediaDateStdout(
     targetPath: parsed.targetPath,
     copiedDirectory: copiedDirectory
       ? {
-          sourcePath: copiedDirectory.sourcePath,
-          destinationPath: copiedDirectory.destinationPath,
+          sourcePath: copiedDirectory.sourcePath as string,
+          destinationPath: copiedDirectory.destinationPath as string,
         }
       : undefined,
   };
@@ -443,17 +458,8 @@ function usePixelProviderValue() {
         .split('\n')
         .map((line) => line.replace(/\r$/, '').trim())
         .filter((line) => line.length > 0);
-      const structuredDetail = stdoutLines
-        .map((line) => parseLineFromCLI(line))
-        .findLast(
-          (parsed) =>
-            parsed.tag === 'ui' &&
-            (parsed.event.kind === 'error' || parsed.event.kind === 'warn'),
-        );
       const detail =
-        (structuredDetail?.tag === 'ui'
-          ? (structuredDetail.event.detail ?? structuredDetail.event.code)
-          : null) ||
+        findLastStructuredDetail(stdoutLines) ||
         stderr.trim() ||
         stdout.trim() ||
         `Exit code ${code}`;
