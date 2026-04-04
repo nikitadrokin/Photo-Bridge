@@ -20,7 +20,7 @@ function RootComponent() {
         <PageHeaderActionsProvider>
           <SidebarProvider>
             <AppSidebarWithContext />
-            <SidebarInset className="flex flex-col">
+            <SidebarInset className="flex flex-col select-none [-webkit-user-select:none] [-webkit-touch-callout:none]">
               <AppPageChrome />
               <Toaster position="bottom-center" richColors />
             </SidebarInset>
