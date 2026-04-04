@@ -119,8 +119,16 @@ async function findDmgForVersion(version: string): Promise<string | undefined> {
 }
 
 /**
- * Rewrites cask `version`, `sha256`, and `url` so the DMG filename matches the
- * artifact Tauri produced (e.g. `Photo.Bridge` vs spaces or legacy `PhotoBridge`).
+ * GitHub normalizes DMG asset names by replacing spaces with dots (local
+ * `Photo Bridge_0.0.13_…` → `Photo.Bridge_0.0.13_…` on the release).
+ */
+function githubReleaseDmgBasename(localBasename: string): string {
+  return localBasename.replace(/ /g, '.');
+}
+
+/**
+ * Rewrites cask `version`, `sha256`, and `url` to match the built DMG and the
+ * filename GitHub serves after upload.
  */
 async function updateCaskFile(
   version: string,
@@ -132,7 +140,10 @@ async function updateCaskFile(
   if (!basename) {
     throw new Error(`Could not get DMG basename from: ${dmgPath}`);
   }
-  const urlFilename = basename.replace(version, '#{version}');
+  const urlFilename = githubReleaseDmgBasename(basename).replace(
+    version,
+    '#{version}',
+  );
   let content = await Bun.file(caskFilePath).text();
   content = content.replace(/^(\s*version\s+")[^"]*(")/m, `$1${version}$2`);
   content = content.replace(/^(\s*sha256\s+")[^"]*(")/m, `$1${sha256}$2`);
