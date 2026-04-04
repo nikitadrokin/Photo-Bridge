@@ -28,6 +28,70 @@ export interface TransferPaths {
   destination: string;
 }
 
+export type FixDatesWriteMode = 'overwrite' | 'copy-directory';
+
+interface ApplyMediaDateSuccess {
+  readonly ok: true;
+  readonly targetPath: string;
+  readonly copiedDirectory?: {
+    readonly sourcePath: string;
+    readonly destinationPath: string;
+  };
+}
+
+/** Narrow helper for validating JSON emitted by the sidecar binary. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Parses `pb fix-dates apply --jsonl` output into a typed success payload. */
+function parseApplyMediaDateStdout(
+  stdout: string,
+): ApplyMediaDateSuccess | null {
+  const trimmed = stdout.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+
+  if (!isRecord(parsed) || parsed.ok !== true) {
+    return null;
+  }
+
+  const copiedDirectory = isRecord(parsed.copiedDirectory)
+    ? parsed.copiedDirectory
+    : undefined;
+
+  if (typeof parsed.targetPath !== 'string') {
+    return null;
+  }
+
+  if (
+    copiedDirectory &&
+    (typeof copiedDirectory.sourcePath !== 'string' ||
+      typeof copiedDirectory.destinationPath !== 'string')
+  ) {
+    return null;
+  }
+
+  return {
+    ok: true,
+    targetPath: parsed.targetPath,
+    copiedDirectory: copiedDirectory
+      ? {
+          sourcePath: copiedDirectory.sourcePath,
+          destinationPath: copiedDirectory.destinationPath,
+        }
+      : undefined,
+  };
+}
+
 // prettier-ignore
 export type ActiveOperation = 'pull' | 'push' | 'convert' | 'copy' | 'fix-dates' | null;
 
@@ -287,10 +351,17 @@ function usePixelProviderValue() {
   );
 
   const fixDates = useCallback(
-    async (paths: Array<string>) => {
+    async (
+      paths: Array<string>,
+      options: { writeMode?: FixDatesWriteMode } = {},
+    ) => {
       if (paths.length === 0) return;
       setActiveOperation('fix-dates');
-      await execute(['fix-dates', ...paths], {
+      const args = ['fix-dates', ...paths];
+      if (options.writeMode === 'overwrite') {
+        args.push('--overwrite-original');
+      }
+      await execute(args, {
         onFinish: () => setActiveOperation(null),
       });
     },
@@ -298,9 +369,16 @@ function usePixelProviderValue() {
   );
 
   const fixDatesInTerminal = useCallback(
-    async (paths: Array<string>) => {
+    async (
+      paths: Array<string>,
+      options: { writeMode?: FixDatesWriteMode } = {},
+    ) => {
       if (paths.length === 0) return;
-      await openSidecarInTerminal(['fix-dates', ...paths]);
+      const args = ['fix-dates', ...paths];
+      if (options.writeMode === 'overwrite') {
+        args.push('--overwrite-original');
+      }
+      await openSidecarInTerminal(args);
     },
     [openSidecarInTerminal],
   );
@@ -337,22 +415,48 @@ function usePixelProviderValue() {
       filePath: string,
       unixSeconds: number,
       googleTakeout: boolean,
-    ): Promise<{ ok: true } | { ok: false; detail: string }> => {
+      writeMode: FixDatesWriteMode = 'overwrite',
+    ): Promise<ApplyMediaDateSuccess | { ok: false; detail: string }> => {
       const args = [
         'fix-dates',
         'apply',
         filePath,
         '--unix',
         String(unixSeconds),
+        '--jsonl',
       ];
       if (googleTakeout) {
         args.push('--google-takeout');
       }
+      if (writeMode === 'overwrite') {
+        args.push('--overwrite-original');
+      }
       const { stdout, stderr, code } = await captureStdout(args);
       if (code === 0) {
-        return { ok: true };
+        const parsed = parseApplyMediaDateStdout(stdout);
+        if (!parsed) {
+          return { ok: false, detail: 'Apply output was not valid JSON.' };
+        }
+        return parsed;
       }
-      const detail = stderr.trim() || stdout.trim() || `Exit code ${code}`;
+      const stdoutLines = stdout
+        .split('\n')
+        .map((line) => line.replace(/\r$/, '').trim())
+        .filter((line) => line.length > 0);
+      const structuredDetail = stdoutLines
+        .map((line) => parseLineFromCLI(line))
+        .findLast(
+          (parsed) =>
+            parsed.tag === 'ui' &&
+            (parsed.event.kind === 'error' || parsed.event.kind === 'warn'),
+        );
+      const detail =
+        (structuredDetail?.tag === 'ui'
+          ? (structuredDetail.event.detail ?? structuredDetail.event.code)
+          : null) ||
+        stderr.trim() ||
+        stdout.trim() ||
+        `Exit code ${code}`;
       return { ok: false, detail };
     },
     [captureStdout],
