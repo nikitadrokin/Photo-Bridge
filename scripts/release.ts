@@ -5,6 +5,7 @@
  */
 
 import { Glob } from 'bun';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import readline from 'node:readline/promises';
 
@@ -101,7 +102,12 @@ async function sha256File(filePath: string): Promise<string> {
 }
 
 async function findDmgForVersion(version: string): Promise<string | undefined> {
-  if (!(await Bun.file(dmgDir).exists())) {
+  try {
+    const st = await stat(dmgDir);
+    if (!st.isDirectory()) {
+      return undefined;
+    }
+  } catch {
     return undefined;
   }
   const pattern = `*_${version}_*.dmg`;
