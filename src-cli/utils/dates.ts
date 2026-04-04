@@ -261,6 +261,12 @@ export function parseExifToolDateToUnixSeconds(raw: string): number | null {
   return Math.floor(ms / 1000);
 }
 
+/**
+ * Reads the date tag values from the given file and tags.
+ * @param filePath - The path to the media file.
+ * @param tags - The tags to read the date values from.
+ * @returns A record of tag names and their values.
+ */
 async function readExifDateTagMap(
   filePath: string,
   tags: readonly string[],
