@@ -88,7 +88,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
         </header>
 
         <ScrollArea
-          className="grow p-4 text-sm leading-relaxed"
+          className="grow p-4 text-sm leading-relaxed select-auto [-webkit-user-select:auto] [-webkit-touch-callout:auto]"
           gradientHeightTop="0"
           gradientHeightBottom="0"
         >
