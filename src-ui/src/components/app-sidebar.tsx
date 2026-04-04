@@ -48,7 +48,7 @@ const routes = [
   },
   {
     to: '/fix-dates',
-    label: 'Fix Dates',
+    label: 'Fix Dates (Google Photos only)',
     icon: CalendarBlank,
     tooltip: 'Experimental: inspect dates and apply overrides',
   },
