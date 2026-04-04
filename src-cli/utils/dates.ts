@@ -89,6 +89,7 @@ export async function fixDatesInPlace(filePath: string): Promise<void> {
     ...DATE_COPY_ARGS,
     filePath,
   ]);
+  await syncFilesystemDatesFromMetadata(filePath, 'video');
 }
 
 /**
@@ -110,6 +111,26 @@ const PHOTO_DATE_COPY_ARGS = [
   '-FileModifyDate<DateTimeOriginal',
 ];
 
+function formatUnixTimestampAsExifToolDate(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  return `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`;
+}
+
+function applyOsFileTimes(filePath: string, timestamp: number): void {
+  const fsDate = new Date(timestamp * 1000);
+  try {
+    utimesSync(filePath, fsDate, fsDate);
+  } catch {
+    // Non-fatal: metadata writes already succeeded.
+  }
+}
+
 /**
  * Fix dates on a photo file in-place using photo-specific metadata tags.
  */
@@ -121,6 +142,7 @@ export async function fixDatesOnPhoto(filePath: string): Promise<void> {
     ...PHOTO_DATE_COPY_ARGS,
     filePath,
   ]);
+  await syncFilesystemDatesFromMetadata(filePath, 'photo');
 }
 
 /**
@@ -148,16 +170,10 @@ export async function fixDatesFromTimestamp(
   timestamp: number,
   gps?: GpsCoordinates,
 ): Promise<void> {
-  // Convert Unix seconds to exiftool datetime format: "YYYY:MM:DD HH:MM:SS"
-  const date = new Date(timestamp * 1000);
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-  const exifDate = `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`;
+  const exifDate = formatUnixTimestampAsExifToolDate(timestamp);
 
+  // overwrite as many of the date tags as possible
+  // to strengthen the date recovery from the sidecar files
   const args: string[] = [
     '-overwrite_original',
     '-api',
@@ -166,6 +182,12 @@ export async function fixDatesFromTimestamp(
     `-DateTimeOriginal=${exifDate}`,
     `-CreateDate=${exifDate}`,
     `-ModifyDate=${exifDate}`,
+    `-ContentCreateDate=${exifDate}`,
+    `-CreationDate=${exifDate}`,
+    `-MediaCreateDate=${exifDate}`,
+    `-MediaModifyDate=${exifDate}`,
+    `-TrackCreateDate=${exifDate}`,
+    `-TrackModifyDate=${exifDate}`,
     `-FileCreateDate=${exifDate}`,
     `-FileModifyDate=${exifDate}`,
   ];
@@ -196,14 +218,7 @@ export async function fixDatesFromTimestamp(
   await execa('exiftool', args);
 
   // Sync filesystem birth/modify timestamps to match the metadata date.
-  // utimesSync sets atime and mtime; on macOS the kernel will also update
-  // the birth time (ctime) if the new mtime is earlier than the current one.
-  const fsDate = new Date(timestamp * 1000);
-  try {
-    utimesSync(filePath, fsDate, fsDate);
-  } catch {
-    // Non-fatal: the EXIF metadata was already written successfully.
-  }
+  applyOsFileTimes(filePath, timestamp);
 }
 
 /** Video tags consulted for date recovery (later entries win in the exiftool copy chain). */
@@ -274,6 +289,59 @@ async function readExifDateTagMap(
     }
   }
   return out;
+}
+
+function resolvePreferredMetadataDate(
+  tagValues: Record<string, string>,
+  tags: readonly string[],
+): number | null {
+  for (let i = tags.length - 1; i >= 0; i -= 1) {
+    const tag = tags[i];
+    const raw = tagValues[tag];
+    if (!raw) {
+      continue;
+    }
+    const unixSeconds = parseExifToolDateToUnixSeconds(raw);
+    if (unixSeconds !== null) {
+      return unixSeconds;
+    }
+  }
+  return null;
+}
+
+async function writeFilesystemDateTags(
+  filePath: string,
+  timestamp: number,
+): Promise<void> {
+  const exifDate = formatUnixTimestampAsExifToolDate(timestamp);
+  await execa('exiftool', [
+    '-overwrite_original',
+    '-api',
+    'QuickTimeUTC',
+    `-FileCreateDate=${exifDate}`,
+    `-FileModifyDate=${exifDate}`,
+    filePath,
+  ]);
+}
+
+export async function syncFilesystemDatesFromMetadata(
+  filePath: string,
+  mediaKind: 'video' | 'photo',
+): Promise<boolean> {
+  const sourceTags =
+    mediaKind === 'video' ? VIDEO_DATE_SOURCE_TAGS : PHOTO_DATE_SOURCE_TAGS;
+  const tagValues = await readExifDateTagMap(filePath, sourceTags);
+  const preferredUnixSeconds = resolvePreferredMetadataDate(
+    tagValues,
+    sourceTags,
+  );
+  if (preferredUnixSeconds === null) {
+    return false;
+  }
+
+  await writeFilesystemDateTags(filePath, preferredUnixSeconds);
+  applyOsFileTimes(filePath, preferredUnixSeconds);
+  return true;
 }
 
 /** One recoverable date source for a single media file (EXIF or Takeout JSON). */

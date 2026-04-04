@@ -10,6 +10,7 @@ import {
   fixDatesFromTimestamp,
   hasValidCreateDate,
   hasValidPhotoDate,
+  syncFilesystemDatesFromMetadata,
 } from '../../utils/dates.js';
 import {
   findJsonSidecar,
@@ -211,6 +212,18 @@ export const fixDates = new Command()
             }
           }
 
+          // Check if already has valid date
+          if (await hasValidCreateDate(file)) {
+            try {
+              await syncFilesystemDatesFromMetadata(file, 'video');
+            } catch {
+              // Non-fatal: keep treating the file as already OK.
+            }
+            logger.log(`${baseName}`);
+            alreadyOkCount++;
+            continue;
+          }
+
           // Priority 2: Try EXIF metadata
           try {
             await fixDatesInPlace(file);
@@ -289,6 +302,18 @@ export const fixDates = new Command()
                 // Writing not supported for this format, try next method
               }
             }
+          }
+
+          // Check if already has valid date
+          if (await hasValidPhotoDate(file)) {
+            try {
+              await syncFilesystemDatesFromMetadata(file, 'photo');
+            } catch {
+              // Non-fatal: keep treating the file as already OK.
+            }
+            logger.log(`${baseName}`);
+            alreadyOkCount++;
+            continue;
           }
 
           // Priority 2: Try EXIF metadata
