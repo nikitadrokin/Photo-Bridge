@@ -24,12 +24,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import SelectFiles from '@/components/select-files';
 import { useDragDrop } from '@/hooks/use-drag-drop';
-import { usePixel } from '@/hooks/use-pixel';
+import { type FixDatesWriteMode, usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import type { MediaDateInspectResult } from '@/lib/media-date-inspect';
 import { useMediaStore } from '@/stores/media-store';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 export const Route = createFileRoute('/fix-dates')({
   staticData: {
@@ -40,11 +40,13 @@ export const Route = createFileRoute('/fix-dates')({
   component: FixDatesPage,
 });
 
+/** Returns the trailing path segment for a POSIX-style absolute path. */
 function basenameOf(p: string): string {
   const parts = p.split('/');
   return parts[parts.length - 1] ?? p;
 }
 
+/** Manual date recovery screen for inspecting and applying metadata candidates. */
 function FixDatesPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
@@ -53,6 +55,8 @@ function FixDatesPage() {
     useState<MediaDateInspectResult | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
   const [googleTakeoutApply, setGoogleTakeoutApply] = useState(false);
+  const [writeMode, setWriteMode] =
+    useState<FixDatesWriteMode>('copy-directory');
   const [inspectBusy, setInspectBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
 
@@ -115,9 +119,17 @@ function FixDatesPage() {
         activePath,
         c.unixSeconds,
         googleTakeoutApply,
+        writeMode,
       );
       if (!res.ok) {
         toast.error(res.detail);
+        return;
+      }
+      if (writeMode === 'copy-directory') {
+        const copiedFolderName = basenameOf(
+          res.copiedDirectory?.destinationPath ?? res.targetPath,
+        );
+        toast.success(`Date written to copied folder: ${copiedFolderName}`);
         return;
       }
       toast.success('Date written.');
@@ -130,6 +142,7 @@ function FixDatesPage() {
     selectedCandidateId,
     inspectResult,
     googleTakeoutApply,
+    writeMode,
     pixel,
     loadInspect,
   ]);
@@ -148,6 +161,7 @@ function FixDatesPage() {
   }, [inspectResult]);
 
   const hasSelection = selectedPaths.length > 0;
+  const isCopyMode = writeMode === 'copy-directory';
 
   return (
     <>
@@ -215,6 +229,36 @@ function FixDatesPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+                <FieldSet className="w-full rounded-lg border bg-card p-3 gap-3">
+                  <FieldLegend variant="label">Write mode</FieldLegend>
+                  <FieldLabel
+                    htmlFor="fix-dates-overwrite-original"
+                    className="w-full"
+                  >
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <FieldTitle className="text-sm">
+                          Overwrite original files
+                        </FieldTitle>
+                        <FieldDescription className="text-xs">
+                          Off by default. Photo Bridge creates a sibling
+                          `_FixedDates` folder first. If you selected individual
+                          files, each parent folder is copied before metadata is
+                          written.
+                        </FieldDescription>
+                      </FieldContent>
+                      <Switch
+                        id="fix-dates-overwrite-original"
+                        checked={!isCopyMode}
+                        onCheckedChange={(checked) =>
+                          setWriteMode(checked ? 'overwrite' : 'copy-directory')
+                        }
+                        disabled={pixel.isRunning || applyBusy || inspectBusy}
+                      />
+                    </Field>
+                  </FieldLabel>
+                </FieldSet>
+
                 <Button
                   type="button"
                   variant="default"
@@ -234,14 +278,18 @@ function FixDatesPage() {
                   variant="outline"
                   className="gap-2"
                   disabled={pixel.isRunning || autoBusy}
-                  onClick={() => pixel.fixDates(selectedPaths)}
+                  onClick={() =>
+                    pixel.fixDates(selectedPaths, {
+                      writeMode,
+                    })
+                  }
                 >
                   {autoBusy ? (
                     <Spinner size={18} className="animate-spin" />
                   ) : (
                     <Clock size={18} weight="duotone" />
                   )}
-                  Run automatic fix-dates
+                  Automatically fix dates
                 </Button>
               </div>
 
@@ -310,23 +358,30 @@ function FixDatesPage() {
                       </RadioGroup>
                     </FieldSet>
 
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="fix-dates-takeout-apply"
-                        checked={googleTakeoutApply}
-                        onChange={(e) =>
-                          setGoogleTakeoutApply(e.target.checked)
-                        }
-                        className="rounded border-input"
-                      />
-                      <Label
-                        htmlFor="fix-dates-takeout-apply"
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        Also write GPS from Takeout JSON (if present)
-                      </Label>
-                    </div>
+                    <FieldLabel
+                      htmlFor="fix-dates-takeout-apply"
+                      className="w-full"
+                    >
+                      <Field orientation="horizontal">
+                        <FieldContent>
+                          <FieldTitle className="text-sm">
+                            Also write GPS from Takeout JSON
+                          </FieldTitle>
+                          <FieldDescription className="text-xs">
+                            Uses `geoData` from the sidecar when Google Takeout
+                            exported location metadata.
+                          </FieldDescription>
+                        </FieldContent>
+                        <Switch
+                          id="fix-dates-takeout-apply"
+                          checked={googleTakeoutApply}
+                          onCheckedChange={(checked) =>
+                            setGoogleTakeoutApply(checked)
+                          }
+                          disabled={applyBusy}
+                        />
+                      </Field>
+                    </FieldLabel>
 
                     <Button
                       type="button"
@@ -345,7 +400,9 @@ function FixDatesPage() {
                       ) : (
                         <Play size={18} weight="fill" />
                       )}
-                      Apply selected date
+                      {isCopyMode
+                        ? 'Apply selected date to copy'
+                        : 'Apply selected date'}
                     </Button>
                   </CardContent>
                 </Card>

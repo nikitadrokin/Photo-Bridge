@@ -6,6 +6,7 @@ import type { MediaType } from '../../types/protocol.js';
 import { processImage } from '../processors/image.js';
 import { copyVideo } from '../processors/video.js';
 import { logger } from '../utils/logger.js';
+import { prepareSiblingDirectory } from '../utils/sibling-directory.js';
 import { validateTools } from '../utils/validation.js';
 import { fixDatesOnPhoto } from '../utils/dates.js';
 import { ConversionFileError } from '../utils/conversion-file-error.js';
@@ -128,11 +129,12 @@ export const copy = new Command()
     }
   });
 
+/** Prepares the sibling output directory used for directory-mode copy runs. */
 async function processDirectory(dirPath: string): Promise<void> {
   const inDir = path.resolve(dirPath);
-  const outDir = `${inDir}_Copied`;
-
-  await fs.mkdir(outDir, { recursive: true });
+  const outDir = await prepareSiblingDirectory(inDir, '_Copied', {
+    create: true,
+  });
 
   if (logger.getMode() !== 'json') {
     logger.break();

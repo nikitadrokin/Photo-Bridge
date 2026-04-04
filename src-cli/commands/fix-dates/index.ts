@@ -3,6 +3,8 @@ import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
 import { logger } from '../../utils/logger.js';
+import type { SiblingDirectoryMapping } from '../../utils/sibling-directory.js';
+import { copyPathsToSiblingDirectories } from '../../utils/sibling-directory.js';
 import { validateTools } from '../../utils/validation.js';
 import {
   fixDatesInPlace,
@@ -24,6 +26,7 @@ const optionsSchema = z.object({
   cwd: z.string(),
   jsonl: z.boolean().optional(),
   googleTakeout: z.boolean().optional(),
+  overwriteOriginal: z.boolean().optional(),
 });
 
 type Options = z.infer<typeof optionsSchema>;
@@ -76,12 +79,17 @@ export const fixDates = new Command()
     '--google-takeout',
     'enable Google Takeout mode: write GPS coordinates from JSON sidecars and sync filesystem timestamps',
   )
+  .option(
+    '--overwrite-original',
+    'write metadata into the original files instead of copying source folders first',
+  )
   .action(async (paths: string[], opts: Options) => {
     try {
       const options = optionsSchema.parse({
         cwd: path.resolve(opts.cwd),
         jsonl: opts.jsonl,
         googleTakeout: opts.googleTakeout,
+        overwriteOriginal: opts.overwriteOriginal,
       });
 
       if (options.jsonl) {
@@ -105,14 +113,42 @@ export const fixDates = new Command()
       );
 
       // filter out nonexistent paths
-      const existingPaths = pathStats.filter((p) => p.exists);
+      const existingPaths = pathStats.filter(
+        (
+          p,
+        ): p is {
+          path: string;
+          stat: NonNullable<(typeof pathStats)[number]['stat']>;
+          exists: true;
+        } => p.exists && p.stat !== null,
+      );
       if (existingPaths.length === 0) {
         logger.error('No valid paths provided.');
         process.exit(1);
       }
 
-      const files = existingPaths.filter((p) => p.stat?.isFile());
-      const directories = existingPaths.filter((p) => p.stat?.isDirectory());
+      await validateTools(['exiftool']);
+
+      let processingPaths = existingPaths;
+      let copyRoots: Array<SiblingDirectoryMapping> = [];
+
+      if (!options.overwriteOriginal) {
+        const workingCopy = await copyPathsToSiblingDirectories(
+          existingPaths,
+          '_FixedDates',
+        );
+        processingPaths = await Promise.all(
+          workingCopy.processingPaths.map(async (processingPath) => ({
+            path: processingPath,
+            stat: await fs.stat(processingPath),
+            exists: true as const,
+          })),
+        );
+        copyRoots = workingCopy.roots;
+      }
+
+      const files = processingPaths.filter((p) => p.stat.isFile());
+      const directories = processingPaths.filter((p) => p.stat.isDirectory());
 
       // Collect all media files
       let videoFiles: string[] = [];
@@ -133,6 +169,10 @@ export const fixDates = new Command()
         }
       }
 
+      // remove duplicates by having a set in an array
+      videoFiles = [...new Set(videoFiles)];
+      imageFiles = [...new Set(imageFiles)];
+
       const totalFiles = videoFiles.length + imageFiles.length;
       if (totalFiles === 0) {
         logger.error('No media files found.');
@@ -144,6 +184,16 @@ export const fixDates = new Command()
       logger.info(
         `Fixing dates on ${videoFiles.length} video(s) and ${imageFiles.length} photo(s)`,
       );
+      logger.info(
+        options.overwriteOriginal
+          ? 'Write mode: overwrite original files'
+          : 'Write mode: edit copies of original files',
+      );
+      for (const copyRoot of copyRoots) {
+        logger.info(
+          `Copy: ${copyRoot.sourcePath} -> ${copyRoot.destinationPath}`,
+        );
+      }
       logger.log('=========================================================');
       logger.break();
 
@@ -151,8 +201,6 @@ export const fixDates = new Command()
         logger.warn('Warning: Google Takeout mode is experimental.');
         logger.break();
       }
-
-      await validateTools(['exiftool']);
 
       let fixedCount = 0;
       let alreadyOkCount = 0;
@@ -349,6 +397,9 @@ export const fixDates = new Command()
       logger.success(
         `DONE. Fixed: ${fixedCount}, Already OK: ${alreadyOkCount}, Failed: ${failedCount}`,
       );
+      for (const copyRoot of copyRoots) {
+        logger.info(`Updated copy: ${copyRoot.destinationPath}`);
+      }
       logger.log('=========================================================');
       logger.break();
     } catch (error) {
