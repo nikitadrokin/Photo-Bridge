@@ -244,7 +244,9 @@ export const FILESYSTEM_DATE_TAGS = [
 ] as const;
 
 /**
- * Parses common ExifTool datetime strings into Unix seconds (local wall time).
+ * Parses common ExifTool datetime strings into the Unix seconds format (local wall time).
+ * @param raw - The ExifTool datetime string to parse.
+ * @returns The Unix seconds, or null if the string is not a valid datetime.
  */
 export function parseExifToolDateToUnixSeconds(raw: string): number | null {
   const s = raw.trim();
@@ -291,10 +293,18 @@ async function readExifDateTagMap(
   return out;
 }
 
+/**
+ * Resolves the preferred date from metadata tag values, prioritizing the last valid tag in the provided tag list.
+ * @param tagValues - The tag values to resolve the date from.
+ * @param tags - The tags to resolve the date from.
+ * @returns The preferred metadata date as Unix seconds, or null if no date was found.
+ */
 function resolvePreferredMetadataDate(
   tagValues: Record<string, string>,
   tags: readonly string[],
 ): number | null {
+  // Iterate over the tags in reverse order;
+  // the last tag with a valid value takes priority.
   for (let i = tags.length - 1; i >= 0; i -= 1) {
     const tag = tags[i];
     const raw = tagValues[tag];
