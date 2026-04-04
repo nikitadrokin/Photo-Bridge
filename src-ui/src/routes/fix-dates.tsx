@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/fix-dates')({
   staticData: {
-    pageTitle: 'Fix Dates',
+    pageTitle: 'Fix Dates (Google Photos only)',
     pageDescription:
       'Experimental: inspect metadata sources and override the automatic date.',
   },
@@ -294,7 +294,9 @@ function FixDatesPage() {
                                 </FieldTitle>
                                 <FieldDescription className="font-mono text-xs break-all">
                                   {opt.description}
-                                  {opt.disabled ? ' · no parseable timestamp' : ''}
+                                  {opt.disabled
+                                    ? ' · no parseable timestamp'
+                                    : ''}
                                 </FieldDescription>
                               </FieldContent>
                               <RadioGroupItem
@@ -332,8 +334,9 @@ function FixDatesPage() {
                       disabled={
                         applyBusy ||
                         !selectedCandidateId ||
-                        candidateOptions.find((o) => o.value === selectedCandidateId)
-                          ?.disabled
+                        candidateOptions.find(
+                          (o) => o.value === selectedCandidateId,
+                        )?.disabled
                       }
                       onClick={() => void applySelected()}
                     >
