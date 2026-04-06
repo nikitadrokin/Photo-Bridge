@@ -3,4 +3,5 @@ export const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'd
 export const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
 // prettier-ignore
 export const LEGACY_VIDEO_EXTENSIONS = ['avi', 'wmv', 'mpeg', 'mpg', 'm4v', 'm4a'];
-export const ALL_EXTENSIONS = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS];
+// prettier-ignore
+export const ALL_EXTENSIONS = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, ...LEGACY_VIDEO_EXTENSIONS];
