@@ -51,5 +51,7 @@ export const copy = new Command()
       continue;
     }
 
-    console.log(`\nDone! Copied files to ${newFolderPath}.`);
+    console.log(
+      `\nDone! Copied files to ${newFolderPath}. Note to self: I will need to fix dates in this command in the future.`,
+    );
   });
