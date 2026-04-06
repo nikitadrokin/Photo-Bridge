@@ -1,9 +1,10 @@
 import { Command } from 'commander';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import { ALL_EXTENSIONS } from '../utils/constants';
+import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../utils/constants';
 
 const SUFFIX = '_Copied';
+const VIDEO_EXT = '.mp4';
 
 export const copy = new Command()
   .name('copy')
@@ -26,20 +27,29 @@ export const copy = new Command()
       .map((e) => e.name);
 
     const total = files.length;
-    console.log(`Found ${total} files`);
+    console.log(`Found ${total} files\n`);
 
     for (const file of files) {
       const ext = path.extname(file).slice(1);
-
-      if (!ALL_EXTENSIONS.includes(ext)) {
-        continue;
-      }
-
-      const baseName = path.basename(file, ext);
       const initialPath = path.join(initialFolder, file);
-      const newPath = path.join(newFolderPath, `${baseName}.${ext}`);
 
-      // await fs.copyFile(initialPath, newPath);
-      console.log(`copied ${file} from ${initialPath} to ${newPath}`);
+      if (IMAGE_EXTENSIONS.includes(ext)) {
+        // Pixel 1 understands HEIC filetypes, so we don't need to convert them
+        const newPath = path.join(newFolderPath, file);
+        await fs.copyFile(initialPath, newPath);
+        console.log(`Copied ${file}`);
+      } else if (VIDEO_EXTENSIONS.includes(ext)) {
+        // Pixel 1 understands MP4 filetypes, so we just move all videos to that container
+        const basename = path.basename(file, ext);
+
+        const newPath = path.join(newFolderPath, `${basename}.${VIDEO_EXT}`);
+        await fs.copyFile(initialPath, newPath);
+        console.log(`Copied ${file}`);
+      } else {
+        console.log(`Skipped ${file}`);
+      }
+      continue;
     }
+
+    console.log(`\nDone! Copied files to ${newFolderPath}.`);
   });
