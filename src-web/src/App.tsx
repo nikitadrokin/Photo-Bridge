@@ -74,7 +74,7 @@ export default function App() {
 
       {/* Hero */}
       <main className='mx-auto max-w-5xl px-6 pb-32 pt-20 text-center'>
-        <h1 className='mx-auto mb-6 max-w-2xl text-5xl font-semibold tracking-tight text-white sm:text-6xl'>
+        <h1 className='mx-auto mb-6 text-5xl font-semibold tracking-tight text-white sm:text-6xl'>
           Free Unlimited Google Photos
         </h1>
 
