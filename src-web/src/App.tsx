@@ -4,22 +4,22 @@ const features = [
   {
     title: 'Photos',
     description:
-      'Converts HEIC to JPG while preserving all EXIF metadata — location, timestamps, camera info.',
+      'HEIC to JPG with EXIF intact: GPS, timestamps, camera fields.',
   },
   {
     title: 'Videos',
     description:
-      'Remuxes MOV/HEVC to MP4 without re-encoding. No quality loss, HDR preserved, audio converted to AAC.',
+      'Remux MOV/HEVC to MP4 (no re-encode). HDR and picture quality stay as-is; audio becomes AAC where the container needs it.',
   },
   {
     title: 'Metadata',
     description:
-      'Fixes file creation dates to match the original capture time so your library stays in order.',
+      'Creation dates follow the real capture time so sorting matches when you actually shot things.',
   },
   {
     title: 'Batch',
     description:
-      'Process entire folders at once. Converted files land in a _Remuxed subdirectory, originals untouched.',
+      'Point it at a folder. New files go under _Remuxed; nothing overwrites your originals.',
   },
 ];
 
@@ -84,9 +84,9 @@ export default function App() {
         </h1>
 
         <p className='mx-auto mb-12 max-w-xl text-lg text-white/50'>
-          PhotoBridge converts HEIC photos and MOV videos into formats your
-          Pixel can handle — without re-encoding, without losing metadata,
-          without the headache.
+          PhotoBridge turns HEIC stills and MOV clips into formats Pixel will
+          import. Video gets remuxed, not re-encoded, and the metadata survives
+          the trip.
         </p>
 
         <div className='mx-auto mb-4 max-w-md'>
