@@ -74,19 +74,14 @@ export default function App() {
 
       {/* Hero */}
       <main className='mx-auto max-w-5xl px-6 pb-32 pt-20 text-center'>
-        <div className='mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/50'>
-          macOS · Free · Open Source
-        </div>
-
         <h1 className='mx-auto mb-6 max-w-2xl text-5xl font-semibold tracking-tight text-white sm:text-6xl'>
-          Move your iOS photos to Pixel,{' '}
-          <span className='text-white/40'>without the mess.</span>
+          Free Unlimited Google Photos
         </h1>
 
         <p className='mx-auto mb-12 max-w-xl text-lg text-white/50'>
-          PhotoBridge turns HEIC stills and MOV clips into formats Pixel will
-          import. Video gets remuxed, not re-encoded, and the metadata survives
-          the trip.
+          PhotoBridge leverages Google's policy for free unlimited storage of
+          photos and videos at original quality. Simply convert your photos to
+          an Android format and upload them at no cost!
         </p>
 
         <div className='mx-auto mb-4 max-w-md'>
