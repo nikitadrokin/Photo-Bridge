@@ -48,7 +48,6 @@ export const copy = new Command()
       } else {
         console.log(`Skipped ${file}`);
       }
-      continue;
     }
 
     console.log(
