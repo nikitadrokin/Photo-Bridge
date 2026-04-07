@@ -4,7 +4,6 @@ import { promises as fs } from 'node:fs';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../utils/constants';
 
 const SUFFIX = '_Copied';
-const VIDEO_EXT = '.mp4';
 
 export const copy = new Command()
   .name('copy')
@@ -42,7 +41,7 @@ export const copy = new Command()
         // Pixel 1 understands MP4 filetypes, so we just move all videos to that container
         const basename = path.basename(file, ext);
 
-        const newPath = path.join(newFolderPath, `${basename}.${VIDEO_EXT}`);
+        const newPath = path.join(newFolderPath, `${basename}.mp4`);
         await fs.copyFile(initialPath, newPath);
         console.log(`Copied ${file}`);
       } else {
