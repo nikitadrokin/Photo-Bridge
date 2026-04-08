@@ -99,7 +99,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <Sidebar
-      variant="floating"
+      variant="inset"
       className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none]"
     >
       <SidebarHeader className="px-4 pt-2.5" data-tauri-drag-region>
