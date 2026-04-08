@@ -2,7 +2,14 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
-    throw redirect({ to: '/convert' });
+    // Only redirect if __TAURI_INTERNALS__ exists (is not undefined)
+    if (typeof (window as any).__TAURI_INTERNALS__ !== 'undefined') {
+      throw redirect({ to: '/convert' });
+    }
   },
-  component: () => null,
+  component: IndexPage,
 });
+
+function IndexPage() {
+  return <div>IndexPage</div>;
+}
