@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMatchRoute, useNavigate } from '@tanstack/react-router';
-import { getVersion } from '@tauri-apps/api/app';
-import { invoke } from '@tauri-apps/api/core';
+// import { getVersion } from '@tauri-apps/api/app';
+// import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowCircleUp,
   ArrowsClockwise,
@@ -78,24 +78,24 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   isRunning,
   isConnectionCheckPending,
 }) => {
-  const [version, setVersion] = useState<string>('');
+  const [version, setVersion] = useState<string>('0');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const isFullscreen = useIsFullscreen();
   const isMobile = useIsMobile();
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    getVersion()
-      .then(setVersion)
-      .catch(() => setVersion('dev'));
-  }, []);
+  // useEffect(() => {
+  //   getVersion()
+  //     .then(setVersion)
+  //     .catch(() => setVersion('dev'));
+  // }, []);
 
-  useEffect(() => {
-    invoke<string | null>('check_for_update')
-      .then(setUpdateVersion)
-      .catch(() => {});
-  }, []);
+  // useEffect(() => {
+  //   invoke<string | null>('check_for_update')
+  //     .then(setUpdateVersion)
+  //     .catch(() => {});
+  // }, []);
 
   return (
     <Sidebar
