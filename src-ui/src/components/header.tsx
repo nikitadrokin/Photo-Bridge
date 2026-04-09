@@ -4,12 +4,12 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import useIsFullscreen from '@/hooks/use-is-fullscreen';
 import { cn } from '@/lib/utils';
 
-interface PageHeaderProps {
+interface PageHeaderProps extends React.ComponentProps<'header'> {
   title: string;
   children?: ReactNode;
 }
 
-export function PageHeader({ title, children }: PageHeaderProps) {
+export function PageHeader({ title, children, ...props }: PageHeaderProps) {
   const { open: sidebarOpen } = useSidebar();
   const isMobile = useIsMobile();
   const isFullscreen = useIsFullscreen();
@@ -18,9 +18,11 @@ export function PageHeader({ title, children }: PageHeaderProps) {
     <header
       data-tauri-drag-region
       className={cn(
-        'z-10 shrink-0 border-b mx-2 border-border bg-background/80 backdrop-blur-lg px-4 py-3 transition-[padding] duration-200 ease-in-out select-none [-webkit-user-select:none] [-webkit-touch-callout:none]',
-        !isFullscreen && (!sidebarOpen || isMobile) && 'pl-26',
+        'shrink-0 z-20 bg-sidebar pl-(--sidebar-width) w-full px-4 py-3 min-h-14 backdrop-blur-lg transition-[padding] duration-200 ease-in-out select-none [-webkit-user-select:none] [-webkit-touch-callout:none]',
+        !isFullscreen && 'pl-26',
+        sidebarOpen ? 'pl-(--sidebar-width)' : 'pl-2',
       )}
+      {...props}
     >
       <div className="flex items-start gap-3" data-tauri-drag-region>
         <SidebarTrigger className="-ml-2 mt-0.5" />

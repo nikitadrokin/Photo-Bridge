@@ -1,7 +1,7 @@
-import { createRootRoute } from '@tanstack/react-router';
+import { createRootRoute, Outlet } from '@tanstack/react-router';
 import {
-  AppPageChrome,
   PageHeaderActionsProvider,
+  RootPageHeader,
 } from '@/components/app-page-chrome';
 import { Toaster } from '@/components/ui/sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -18,12 +18,15 @@ function RootComponent() {
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <PixelProvider>
         <PageHeaderActionsProvider>
-          <SidebarProvider>
-            <AppSidebarWithContext />
-            <SidebarInset className="flex flex-col select-none [-webkit-user-select:none] [-webkit-touch-callout:none]">
-              <AppPageChrome />
-              <Toaster position="bottom-center" richColors />
-            </SidebarInset>
+          <SidebarProvider className="flex min-h-svh w-full flex-col overflow-hidden">
+            <RootPageHeader />
+            <div className="flex min-h-0 min-w-0 flex-1">
+              <AppSidebarWithContext />
+              <SidebarInset className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none]">
+                <Outlet />
+                <Toaster position="bottom-center" richColors />
+              </SidebarInset>
+            </div>
           </SidebarProvider>
         </PageHeaderActionsProvider>
       </PixelProvider>
