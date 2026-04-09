@@ -100,21 +100,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   return (
     <Sidebar
       variant="inset"
-      className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none]"
+      className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-14 md:bottom-0 md:h-auto"
     >
-      <SidebarHeader className="px-4 pt-2.5" data-tauri-drag-region>
-        <span
-          className={cn(
-            'font-semibold text-sm inline-block',
-            !isFullscreen && 'ml-18',
-            isMobile && 'ml-20 mt-2',
-          )}
-          data-tauri-drag-region
-        >
-          {/* iPhone to Pixel */}&nbsp;
-        </span>
-      </SidebarHeader>
-      <SidebarSeparator className="mt-2.5" />
       <SidebarContent>
         {/* Core */}
         <SidebarGroup>
