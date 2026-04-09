@@ -46,11 +46,24 @@ export function PageHeaderActionsProvider({
   );
 }
 
+/** Full-width shell header: route title and registered actions. */
+export function RootPageHeader() {
+  const { title } = useRoutePageMetadata();
+  const ctx = useContext(PageHeaderActionsContext);
+  if (!ctx) {
+    throw new Error(
+      'RootPageHeader must be used within PageHeaderActionsProvider.',
+    );
+  }
+
+  return <PageHeader title={title}>{ctx.headerActions}</PageHeader>;
+}
+
 /**
  * App shell: fixed page header (title from route `staticData`) and scrollable body.
  */
 export function AppPageChrome() {
-  const { title, description } = useRoutePageMetadata();
+  const { title } = useRoutePageMetadata();
   const ctx = useContext(PageHeaderActionsContext);
   if (!ctx) {
     throw new Error(
