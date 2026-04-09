@@ -53,14 +53,14 @@ export function AppPageChrome() {
   const { title, description } = useRoutePageMetadata();
   const ctx = useContext(PageHeaderActionsContext);
   if (!ctx) {
-    throw new Error('AppPageChrome must be used within PageHeaderActionsProvider.');
+    throw new Error(
+      'AppPageChrome must be used within PageHeaderActionsProvider.',
+    );
   }
 
   return (
     <>
-      <PageHeader title={title} description={description}>
-        {ctx.headerActions}
-      </PageHeader>
+      <PageHeader title={title}>{ctx.headerActions}</PageHeader>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         <Outlet />
       </div>
