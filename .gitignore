@@ -7,3 +7,6 @@ dist/
 
 # Binaries
 src-tauri/binaries/
+
+# opensrc - source code for packages
+opensrc/
