@@ -1,11 +1,14 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { logger } from '../utils/logger.js';
+import { createCliOutput } from '../utils/logger.js';
 
 export const checkAdb = new Command()
   .name('check-adb')
   .description('Check if an ADB device is connected')
-  .action(async () => {
+  .option('--jsonl', 'emit JSONL UI events on stdout')
+  .action(async (options: { jsonl?: boolean }) => {
+    const output = createCliOutput(Boolean(options.jsonl));
+
     try {
       const { stdout } = await execa('adb', ['devices']);
       const lines = stdout.split('\n');
@@ -15,15 +18,15 @@ export const checkAdb = new Command()
         .filter((line) => line && !line.startsWith('List of devices'));
 
       if (devices.length > 0) {
-        logger.success(`Device connected: ${devices[0]}`);
+        output.success(`Device connected: ${devices[0]}`);
       } else {
-        logger.error('No devices found');
+        output.error('No devices found', 'no_adb_devices');
         process.exit(1);
       }
     } catch (error) {
-      logger.error('Failed to run adb devices');
+      output.error('Failed to run adb devices', 'adb_devices_failed');
       if (error instanceof Error) {
-        logger.error(error.message);
+        output.error(error.message, 'adb_devices_error');
       }
       process.exit(1);
     }
