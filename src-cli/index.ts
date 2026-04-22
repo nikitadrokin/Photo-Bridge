@@ -2,7 +2,6 @@
 import { Command } from 'commander';
 import { convert } from './commands/convert/index.js';
 import { copy } from './commands/copy.js';
-import { randomize } from './commands/randomize.js';
 import { checkAdb } from './commands/check-adb.js';
 import { pushToPixel } from './commands/push-to-pixel.js';
 import { pullFromPixel } from './commands/pull-from-pixel.js';
@@ -30,7 +29,6 @@ async function main() {
 
   program.addCommand(convert);
   program.addCommand(copy);
-  program.addCommand(randomize);
   program.addCommand(checkAdb);
   program.addCommand(pushToPixel);
   program.addCommand(pullFromPixel);
