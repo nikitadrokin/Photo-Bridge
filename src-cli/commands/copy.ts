@@ -30,8 +30,24 @@ export const copy = new Command()
       .map((e) => e.name);
 
     const total = files.length;
-    output.log(`Found ${total} files`);
-    output.blankLine();
+    const sourceDir = path.resolve(initialFolder);
+
+    if (!output.jsonl) {
+      output.blankLine();
+      output.info('Source');
+      output.muted(sourceDir);
+      output.info('Destination');
+      output.muted(path.resolve(newFolderPath));
+      output.info('Mode');
+      output.muted('Copy images as-is; videos as .mp4 in sibling folder');
+      output.blankLine();
+      output.info('Files');
+      output.muted(`${total} in folder`);
+      output.blankLine();
+    } else {
+      output.log(`Found ${total} files`);
+      output.blankLine();
+    }
 
     for (const file of files) {
       const ext = path.extname(file).slice(1);
@@ -50,12 +66,22 @@ export const copy = new Command()
         await fs.copyFile(initialPath, newPath);
         output.success(`Copied ${file}`);
       } else {
-        output.log(`Skipped ${file}`);
+        if (output.jsonl) {
+          output.muted(`Skipped ${file}`);
+        } else {
+          output.warn(`Skipped · ${file}`);
+        }
       }
     }
 
     output.blankLine();
-    output.success(
-      `Done! Copied files to ${newFolderPath}. Note to self: I will need to fix dates in this command in the future.`,
-    );
+    if (!output.jsonl) {
+      output.success('Done · copy pass finished');
+      output.muted(path.resolve(newFolderPath));
+      output.muted('Dates not adjusted yet in this command');
+    } else {
+      output.success(
+        `Done! Copied files to ${newFolderPath}. Note to self: I will need to fix dates in this command in the future.`,
+      );
+    }
   });
