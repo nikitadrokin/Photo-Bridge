@@ -26,6 +26,10 @@ export const textLog = {
   log(...parts: Array<unknown>) {
     console.log(parts.join(' '));
   },
+  /** De-emphasized line for secondary copy (paths, hints). */
+  muted(...parts: Array<unknown>) {
+    console.log(kleur.dim(parts.join(' ')));
+  },
   blankLine() {
     console.log();
   },
@@ -44,6 +48,8 @@ export interface CliOutput {
   warn(message: string, code?: string): void;
   info(message: string): void;
   log(message: string): void;
+  /** Secondary line (dim); no-op in JSONL mode. */
+  muted(message: string): void;
   /** Visual spacer; no-op in JSONL mode so stdout stays parseable lines only. */
   blankLine(): void;
   /** Emit any `EventV1` (session, file, progress, …); no-op when not `jsonl`. */
@@ -89,6 +95,11 @@ export function createCliOutput(jsonl: boolean): CliOutput {
         writeJsonlEvent({ v: 1, kind: 'log', message });
       } else {
         textLog.log(message);
+      }
+    },
+    muted(message: string) {
+      if (!jsonl) {
+        textLog.muted(message);
       }
     },
     blankLine() {

@@ -89,11 +89,12 @@ async function processDirectory(
 
   if (!output.jsonl) {
     output.blankLine();
-    output.log('=========================================================');
-    output.info(`SOURCE:      ${inDir}`);
-    output.info(`DESTINATION: ${outDir}`);
-    output.info('MODE:        Copy MOV to MP4 container without re-encoding');
-    output.log('=========================================================');
+    output.info('Source');
+    output.muted(inDir);
+    output.info('Destination');
+    output.muted(outDir);
+    output.info('Mode');
+    output.muted('Remux to MP4 (stream copy, no re-encode)');
     output.blankLine();
   }
 
@@ -112,12 +113,10 @@ async function processDirectory(
 
   if (!output.jsonl) {
     output.blankLine();
-    output.log('=========================================================');
     output.success(
-      `DONE. Processed ${processedCount} files, skipped ${skippedCount}.`,
+      `Done · ${processedCount} processed, ${skippedCount} skipped`,
     );
-    output.info(`Transfer this folder to your Pixel: ${outDir}`);
-    output.log('=========================================================');
+    output.muted(`Copy to Pixel: ${outDir}`);
     output.blankLine();
   }
 }
@@ -138,11 +137,12 @@ async function processIndividualFiles(
 
   if (!output.jsonl) {
     output.blankLine();
-    output.log('=========================================================');
-    output.info(`SOURCE:      ${regularFiles.length} file(s)`);
-    output.info(`DESTINATION: In-place (Output files next to input files)`);
-    output.info('MODE:        SPM-STYLE COPY/RENAME (Fake MP4)');
-    output.log('=========================================================');
+    output.info('Source');
+    output.muted(`${regularFiles.length} file(s)`);
+    output.info('Destination');
+    output.muted('In-place (next to each input)');
+    output.info('Mode');
+    output.muted('Remux / copy to Pixel-friendly MP4');
     output.blankLine();
   }
 
@@ -156,11 +156,9 @@ async function processIndividualFiles(
 
   if (!output.jsonl) {
     output.blankLine();
-    output.log('=========================================================');
     output.success(
-      `DONE. Processed ${processedCount} files, skipped ${skippedCount}.`,
+      `Done · ${processedCount} processed, ${skippedCount} skipped`,
     );
-    output.log('=========================================================');
     output.blankLine();
   }
 }
