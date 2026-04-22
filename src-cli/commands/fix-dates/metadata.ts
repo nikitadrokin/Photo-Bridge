@@ -1,39 +1,6 @@
 import { utimesSync } from 'node:fs';
 import path from 'node:path';
 import { execa } from 'execa';
-import {
-  findJsonSidecar,
-  readTakeoutTimeCandidates,
-  type TakeoutTimeCandidate,
-} from './json-sidecar.js';
-
-const DATE_COPY_ARGS = [
-  '-AllDates<MediaCreateDate',
-  '-Track*Date<MediaCreateDate',
-  '-Media*Date<MediaCreateDate',
-  '-FileCreateDate<MediaCreateDate',
-  '-FileModifyDate<MediaCreateDate',
-  '-AllDates<CreateDate',
-  '-Track*Date<CreateDate',
-  '-Media*Date<CreateDate',
-  '-FileCreateDate<CreateDate',
-  '-FileModifyDate<CreateDate',
-  '-AllDates<DateTimeOriginal',
-  '-Track*Date<DateTimeOriginal',
-  '-Media*Date<DateTimeOriginal',
-  '-FileCreateDate<DateTimeOriginal',
-  '-FileModifyDate<DateTimeOriginal',
-  '-AllDates<ContentCreateDate',
-  '-Track*Date<ContentCreateDate',
-  '-Media*Date<ContentCreateDate',
-  '-FileCreateDate<ContentCreateDate',
-  '-FileModifyDate<ContentCreateDate',
-  '-AllDates<CreationDate',
-  '-Track*Date<CreationDate',
-  '-Media*Date<CreationDate',
-  '-FileCreateDate<CreationDate',
-  '-FileModifyDate<CreationDate',
-];
 
 /** GPS coordinates optionally applied with a fixed timestamp. */
 export interface GpsCoordinates {
@@ -45,17 +12,6 @@ export interface GpsCoordinates {
 export async function hasValidCreateDate(filePath: string): Promise<boolean> {
   const { stdout } = await execa('exiftool', ['-s3', '-CreateDate', filePath]);
   return Boolean(stdout.trim()) && !stdout.includes('0000:00:00');
-}
-
-export async function fixDatesInPlace(filePath: string): Promise<void> {
-  await execa('exiftool', [
-    '-overwrite_original',
-    '-api',
-    'QuickTimeUTC',
-    ...DATE_COPY_ARGS,
-    filePath,
-  ]);
-  await syncFilesystemDatesFromMetadata(filePath, 'video');
 }
 
 const PHOTO_DATE_COPY_ARGS = [
@@ -279,7 +235,28 @@ export async function syncFilesystemDatesFromMetadata(
   return true;
 }
 
-/** One recoverable date source for a single media file (EXIF or Takeout JSON). */
+/**
+ * Sets filesystem modification and access times from the preferred embedded capture-date tag.
+ */
+export async function applyPreferredCaptureDateToOs(
+  filePath: string,
+  mediaKind: 'video' | 'photo',
+): Promise<boolean> {
+  const sourceTags =
+    mediaKind === 'video' ? VIDEO_DATE_SOURCE_TAGS : PHOTO_DATE_SOURCE_TAGS;
+  const tagValues = await readExifDateTagMap(filePath, sourceTags);
+  const preferredUnixSeconds = resolvePreferredMetadataDate(
+    tagValues,
+    sourceTags,
+  );
+  if (preferredUnixSeconds === null) {
+    return false;
+  }
+  applyOsFileTimes(filePath, preferredUnixSeconds);
+  return true;
+}
+
+/** One embedded tag value surfaced as a candidate for `fix-dates inspect`. */
 export interface MediaDateCandidate {
   readonly id: string;
   readonly label: string;
@@ -318,15 +295,6 @@ function classifyMediaKind(filePath: string): 'video' | 'photo' | 'unknown' {
     return 'photo';
   }
   return 'unknown';
-}
-
-function takeoutRows(c: TakeoutTimeCandidate): MediaDateCandidate {
-  return {
-    id: c.id,
-    label: c.label,
-    raw: c.raw,
-    unixSeconds: c.unixSeconds,
-  };
 }
 
 function exifRows(
@@ -390,9 +358,6 @@ export async function inspectMediaDates(
 
   const tagValues = await readExifDateTagMap(filePath, tagsForKind);
 
-  const jsonPath = await findJsonSidecar(filePath);
-  const takeout = jsonPath ? await readTakeoutTimeCandidates(jsonPath) : [];
-
   const exifTagListForRows =
     mediaKind === 'video'
       ? VIDEO_DATE_SOURCE_TAGS
@@ -401,12 +366,9 @@ export async function inspectMediaDates(
         : uniqueVideoPhotoTags;
 
   const candidates: MediaDateCandidate[] = [
-    ...takeout.map(takeoutRows),
     ...exifRows(tagValues, exifTagListForRows),
     ...exifRows(tagValues, FILESYSTEM_DATE_TAGS),
   ];
-
-  const candidateIds = new Set(candidates.map((c) => c.id));
 
   const hasAutomaticDateOk =
     mediaKind === 'video'
@@ -416,50 +378,12 @@ export async function inspectMediaDates(
         : (await hasValidCreateDate(filePath)) ||
           (await hasValidPhotoDate(filePath));
 
-  const jsonPhoto = takeout.find((t) => t.id === 'json:photoTakenTime');
-  const jsonCreate = takeout.find((t) => t.id === 'json:creationTime');
-
-  let suggestedCandidateId: string | null = null;
-  if (!hasAutomaticDateOk) {
-    if (
-      jsonPhoto &&
-      jsonPhoto.unixSeconds !== null &&
-      jsonPhoto.unixSeconds > 0
-    ) {
-      suggestedCandidateId = 'json:photoTakenTime';
-    } else if (
-      jsonCreate &&
-      jsonCreate.unixSeconds !== null &&
-      jsonCreate.unixSeconds > 0
-    ) {
-      suggestedCandidateId = 'json:creationTime';
-    } else if (mediaKind === 'video') {
-      suggestedCandidateId = videoExifWinnerId(tagValues);
-    } else if (mediaKind === 'photo') {
-      suggestedCandidateId = photoExifWinnerId(tagValues);
-    } else {
-      suggestedCandidateId =
-        videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
-    }
-  } else {
-    suggestedCandidateId =
-      mediaKind === 'video'
-        ? tagValues.CreateDate
-          ? 'exif:CreateDate'
-          : videoExifWinnerId(tagValues)
-        : mediaKind === 'photo'
-          ? tagValues.DateTimeOriginal
-            ? 'exif:DateTimeOriginal'
-            : photoExifWinnerId(tagValues)
-          : videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
-  }
-
-  if (
-    suggestedCandidateId !== null &&
-    !candidateIds.has(suggestedCandidateId)
-  ) {
-    suggestedCandidateId = null;
-  }
+  const suggestedCandidateId =
+    mediaKind === 'video'
+      ? videoExifWinnerId(tagValues)
+      : mediaKind === 'photo'
+        ? photoExifWinnerId(tagValues)
+        : videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
 
   return {
     path: filePath,
