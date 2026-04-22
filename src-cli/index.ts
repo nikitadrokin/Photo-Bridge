@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { convert } from './commands/convert.js';
+import { convert } from './commands/convert/index.js';
 import { copy } from './commands/copy.js';
 import { randomize } from './commands/randomize.js';
 import { checkAdb } from './commands/check-adb.js';
