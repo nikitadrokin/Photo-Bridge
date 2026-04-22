@@ -28,7 +28,7 @@ export const textLog = {
   },
   /** De-emphasized line for secondary copy (paths, hints). */
   muted(...parts: Array<unknown>) {
-    console.log(kleur.dim(parts.join(' ')));
+    console.log(kleur.dim(' ' + parts.join(' ')));
   },
   blankLine() {
     console.log();
