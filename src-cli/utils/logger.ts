@@ -1,83 +1,105 @@
 import kleur from 'kleur';
 import type { EventV1 } from '../../types/protocol.js';
 
-let mode: 'text' | 'json' = 'text';
+/**
+ * Writes one versioned event as a single stdout line.
+ * Use only in JSONL runs; human mode should use {@link textLog} instead.
+ */
+export function writeJsonlEvent(event: EventV1): void {
+  console.log(JSON.stringify(event));
+}
 
-export const logger = {
-  setMode(newMode: 'text' | 'json') {
-    mode = newMode;
+/** Styled, human-readable lines on stdout. */
+export const textLog = {
+  error(...parts: Array<unknown>) {
+    console.log(kleur.red(parts.join(' ')));
   },
-  getMode(): 'text' | 'json' {
-    return mode;
+  warn(...parts: Array<unknown>) {
+    console.log(kleur.yellow(parts.join(' ')));
   },
-  /**
-   * Emit one structured UI event (NDJSON). No-op in text mode.
-   */
-  emitJSON(event: EventV1) {
-    if (mode === 'json') {
-      console.log(JSON.stringify(event));
-    }
+  info(...parts: Array<unknown>) {
+    console.log(kleur.cyan(parts.join(' ')));
   },
-  error(...args: unknown[]) {
-    if (mode === 'json') {
-      logger.emitJSON({
-        v: 1,
-        kind: 'error',
-        code: 'log_error',
-        detail: args.join(' '),
-      });
-    } else {
-      console.log(kleur.red(args.join(' ')));
-    }
+  success(...parts: Array<unknown>) {
+    console.log(kleur.green(parts.join(' ')));
   },
-  warn(...args: unknown[]) {
-    if (mode === 'json') {
-      logger.emitJSON({
-        v: 1,
-        kind: 'warn',
-        code: 'log_warn',
-        detail: args.join(' '),
-      });
-    } else {
-      console.log(kleur.yellow(args.join(' ')));
-    }
+  log(...parts: Array<unknown>) {
+    console.log(parts.join(' '));
   },
-  info(...args: unknown[]) {
-    if (mode === 'json') {
-      logger.emitJSON({
-        v: 1,
-        kind: 'info',
-        message: args.join(' '),
-      });
-    } else {
-      console.log(kleur.cyan(args.join(' ')));
-    }
-  },
-  success(...args: unknown[]) {
-    if (mode === 'json') {
-      logger.emitJSON({
-        v: 1,
-        kind: 'success',
-        message: args.join(' '),
-      });
-    } else {
-      console.log(kleur.green(args.join(' ')));
-    }
-  },
-  log(...args: unknown[]) {
-    if (mode === 'json') {
-      logger.emitJSON({
-        v: 1,
-        kind: 'log',
-        message: args.join(' '),
-      });
-    } else {
-      console.log(args.join(' '));
-    }
-  },
-  break() {
-    if (mode === 'text') {
-      console.log('');
-    }
+  blankLine() {
+    console.log();
   },
 };
+
+/**
+ * Output for one CLI invocation: either {@link textLog} or {@link writeJsonlEvent}
+ * with mapped severities, plus passthrough {@link CliOutput.event} for full `EventV1` rows.
+ */
+export interface CliOutput {
+  /** When true, user-facing helpers emit NDJSON instead of styled text. */
+  readonly jsonl: boolean;
+  success(message: string): void;
+  /** `code` is required for machine-readable severity rows; defaults for plain messages. */
+  error(message: string, code?: string): void;
+  warn(message: string, code?: string): void;
+  info(message: string): void;
+  log(message: string): void;
+  /** Visual spacer; no-op in JSONL mode so stdout stays parseable lines only. */
+  blankLine(): void;
+  /** Emit any `EventV1` (session, file, progress, …); no-op when not `jsonl`. */
+  event(event: EventV1): void;
+}
+
+/**
+ * Single branching point per helper: pass the result into commands instead of a global mode.
+ */
+export function createCliOutput(jsonl: boolean): CliOutput {
+  return {
+    jsonl,
+    success(message: string) {
+      if (jsonl) {
+        writeJsonlEvent({ v: 1, kind: 'success', message });
+      } else {
+        textLog.success(message);
+      }
+    },
+    error(message: string, code = 'cli_error') {
+      if (jsonl) {
+        writeJsonlEvent({ v: 1, kind: 'error', code, detail: message });
+      } else {
+        textLog.error(message);
+      }
+    },
+    warn(message: string, code = 'cli_warn') {
+      if (jsonl) {
+        writeJsonlEvent({ v: 1, kind: 'warn', code, detail: message });
+      } else {
+        textLog.warn(message);
+      }
+    },
+    info(message: string) {
+      if (jsonl) {
+        writeJsonlEvent({ v: 1, kind: 'info', message });
+      } else {
+        textLog.info(message);
+      }
+    },
+    log(message: string) {
+      if (jsonl) {
+        writeJsonlEvent({ v: 1, kind: 'log', message });
+      } else {
+        textLog.log(message);
+      }
+    },
+    blankLine() {
+      if (!jsonl) {
+        textLog.blankLine();
+      }
+    },
+    event(event: EventV1) {
+      if (jsonl) {
+        writeJsonlEvent(event);
+      }
+    },
+  };
+}
