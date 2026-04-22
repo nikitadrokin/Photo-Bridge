@@ -3,7 +3,7 @@ import path from 'node:path';
 import { processImage } from '../../processors/image.js';
 import { processVideo } from '../../processors/video.js';
 import { processLegacyVideo } from '../../processors/legacy-video.js';
-import { fixDatesOnPhoto } from '../../utils/dates.js';
+import { fixDatesOnPhoto } from '../fix-dates/metadata.js';
 import { ConversionFileError } from '../../utils/conversion-file-error.js';
 import type { CliOutput } from '../../utils/logger.js';
 import type { MediaType } from '../../../types/protocol.js';
