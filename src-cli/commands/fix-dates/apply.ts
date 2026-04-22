@@ -3,9 +3,8 @@ import path from 'node:path';
 import { Command } from 'commander';
 import { createCliOutput } from '../../utils/logger.js';
 import { validateTools } from '../../utils/validation.js';
-import type { GpsCoordinates } from './metadata.js';
-import { findJsonSidecar, readGeoData } from './json-sidecar.js';
 import { copyPathsToSiblingDirectories } from './working-copy.js';
+import { applyGoogleTakeoutEnhancements } from './google-takeout.js';
 import { fixDatesFromTimestamp } from './metadata.js';
 
 export const applyDateCmd = new Command('apply')
@@ -73,15 +72,10 @@ export const applyDateCmd = new Command('apply')
           copiedDirectory = workingCopy.roots[0];
         }
 
-        let gps: GpsCoordinates | undefined;
         if (cmdOpts.googleTakeout) {
-          const jsonPath = await findJsonSidecar(targetPath);
-          if (jsonPath) {
-            const g = await readGeoData(jsonPath);
-            gps = g ?? undefined;
-          }
+          await applyGoogleTakeoutEnhancements(targetPath);
         }
-        await fixDatesFromTimestamp(targetPath, cmdOpts.unix, gps);
+        await fixDatesFromTimestamp(targetPath, cmdOpts.unix);
 
         if (cmdOpts.jsonl) {
           process.stdout.write(
