@@ -72,9 +72,9 @@ export const applyDateCmd = new Command('apply')
           copiedDirectory = workingCopy.roots[0];
         }
 
-        if (cmdOpts.googleTakeout) {
-          await applyGoogleTakeoutEnhancements(targetPath);
-        }
+        // if (cmdOpts.googleTakeout) {
+        //   await applyGoogleTakeoutEnhancements(targetPath);
+        // }
         await fixDatesFromTimestamp(targetPath, cmdOpts.unix);
 
         if (cmdOpts.jsonl) {
