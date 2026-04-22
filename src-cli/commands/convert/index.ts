@@ -2,10 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import {
-  createCliOutput,
-  type CliOutput,
-} from '../../utils/logger.js';
+import { createCliOutput, type CliOutput } from '../../utils/logger.js';
 import { prepareSiblingDirectory } from '../../utils/sibling-directory.js';
 import { validateTools } from '../../utils/validation.js';
 import { ConversionFileError } from '../../utils/conversion-file-error.js';
