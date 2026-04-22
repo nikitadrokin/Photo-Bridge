@@ -87,11 +87,11 @@ async function processDirectory(
   if (!output.jsonl) {
     output.blankLine();
     output.info('Source');
-    output.muted(inDir);
+    output.indentedMuted(inDir);
     output.info('Destination');
-    output.muted(outDir);
+    output.indentedMuted(outDir);
     output.info('Mode');
-    output.muted('Remux to MP4 (stream copy, no re-encode)');
+    output.indentedMuted('Remux to MP4 (stream copy, no re-encode)');
     output.blankLine();
   }
 
@@ -113,7 +113,7 @@ async function processDirectory(
     output.success(
       `Done · ${processedCount} processed, ${skippedCount} skipped`,
     );
-    output.muted(`Copy to Pixel: ${outDir}`);
+    output.indentedMuted(`Copy to Pixel: ${outDir}`);
     output.blankLine();
   }
 }
@@ -135,11 +135,11 @@ async function processIndividualFiles(
   if (!output.jsonl) {
     output.blankLine();
     output.info('Source');
-    output.muted(`${regularFiles.length} file(s)`);
+    output.indentedMuted(`${regularFiles.length} file(s)`);
     output.info('Destination');
-    output.muted('In-place (next to each input)');
+    output.indentedMuted('In-place (next to each input)');
     output.info('Mode');
-    output.muted('Remux / copy to Pixel-friendly MP4');
+    output.indentedMuted('Remux / copy to Pixel-friendly MP4');
     output.blankLine();
   }
 

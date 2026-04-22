@@ -35,14 +35,16 @@ export const copy = new Command()
     if (!output.jsonl) {
       output.blankLine();
       output.info('Source');
-      output.muted(sourceDir);
+      output.indentedMuted(sourceDir);
       output.info('Destination');
-      output.muted(path.resolve(newFolderPath));
+      output.indentedMuted(path.resolve(newFolderPath));
       output.info('Mode');
-      output.muted('Copy images as-is; videos as .mp4 in sibling folder');
+      output.indentedMuted(
+        'Copy images as-is; videos as .mp4 in sibling folder',
+      );
       output.blankLine();
       output.info('Files');
-      output.muted(`${total} in folder`);
+      output.indentedMuted(`${total} in folder`);
       output.blankLine();
     } else {
       output.log(`Found ${total} files`);
@@ -73,8 +75,8 @@ export const copy = new Command()
     output.blankLine();
     if (!output.jsonl) {
       output.success('Done · copy pass finished');
-      output.muted(path.resolve(newFolderPath));
-      output.muted('Dates not adjusted yet in this command');
+      output.indentedMuted(path.resolve(newFolderPath));
+      output.indentedMuted('Dates not adjusted yet in this command');
     } else {
       output.success(
         `Done! Copied files to ${newFolderPath}. Note to self: I will need to fix dates in this command in the future.`,
