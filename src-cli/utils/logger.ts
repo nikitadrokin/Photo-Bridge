@@ -50,7 +50,7 @@ export interface CliOutput {
   warn(message: string, code?: string): void;
   info(message: string): void;
   log(message: string): void;
-  secondary(message: string): void;
+  muted(message: string): void;
   indentedMuted(message: string): void;
   /** Visual spacer; no-op in JSONL mode so stdout stays parseable lines only. */
   blankLine(): void;
@@ -99,7 +99,7 @@ export function createCliOutput(jsonl: boolean): CliOutput {
         textLog.log(message);
       }
     },
-    secondary(message: string) {
+    muted(message: string) {
       if (!jsonl) {
         textLog.secondary(message);
       }
