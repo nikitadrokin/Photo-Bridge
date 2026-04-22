@@ -57,20 +57,16 @@ export const copy = new Command()
         // Pixel 1 understands HEIC filetypes, so we don't need to convert them
         const newPath = path.join(newFolderPath, file);
         await fs.copyFile(initialPath, newPath);
-        output.success(`Copied ${file}`);
+        output.secondary(`Copied ${file}`);
       } else if (VIDEO_EXTENSIONS.includes(ext)) {
         // Pixel 1 understands MP4 filetypes, so we just move all videos to that container
         const basename = path.basename(file, ext);
 
         const newPath = path.join(newFolderPath, `${basename}.mp4`);
         await fs.copyFile(initialPath, newPath);
-        output.success(`Copied ${file}`);
+        output.secondary(`Copied ${file}`);
       } else {
-        if (output.jsonl) {
-          output.muted(`Skipped ${file}`);
-        } else {
-          output.warn(`Skipped · ${file}`);
-        }
+        output.warn(`Skipped · ${file}`);
       }
     }
 
