@@ -136,12 +136,13 @@ export const fixDates = new Command()
         output.blankLine();
       }
 
-      const { fixedCount, alreadyOkCount, failedCount } = await runFixDatesBatch(
-        videoFiles,
-        imageFiles,
-        { googleTakeout: Boolean(options.googleTakeout) },
-        output,
-      );
+      const { fixedCount, alreadyOkCount, failedCount } =
+        await runFixDatesBatch(
+          videoFiles,
+          imageFiles,
+          { googleTakeout: Boolean(options.googleTakeout) },
+          output,
+        );
 
       printBatchFooter(
         output,
