@@ -1,6 +1,18 @@
 import { execa } from 'execa';
 
 /**
+ * @param value exiftool `-T` or `-s3` date value (e.g. `2019:03:20 10:00:00`)
+ * @returns whether the value is non-empty, parseable, and not an all-zeros date
+ */
+function isUsableExifDateValue(value: string | undefined | null): boolean {
+  if (value === undefined || value === null) return false;
+  const t = value.trim();
+  if (t.length === 0) return false;
+  if (t.includes('0000:00:00')) return false;
+  return /^\d{4}:\d{2}:\d{2}/.test(t);
+}
+
+/**
  * Date tag priority chain (later tags override earlier ones):
  * MediaCreateDate -> CreateDate -> DateTimeOriginal -> ContentCreateDate -> CreationDate
  */
@@ -42,7 +54,7 @@ const DATE_COPY_ARGS = [
  */
 export async function hasValidCreateDate(filePath: string): Promise<boolean> {
   const { stdout } = await execa('exiftool', ['-s3', '-CreateDate', filePath]);
-  return !!stdout.trim() && !stdout.includes('0000:00:00');
+  return isUsableExifDateValue(stdout);
 }
 
 /**
