@@ -69,6 +69,15 @@ export const fixDates = new Command()
 
     const output = createCliOutput(Boolean(options.jsonl));
     try {
+      const logOk = (message: string) => {
+        if (output.jsonl) output.log(message);
+        else output.muted(message);
+      };
+      const logFixed = (message: string) => {
+        if (output.jsonl) output.success(message);
+        else output.muted(message);
+      };
+
       // resolve provided relative paths into absolute paths
       const resolvedPaths = paths.map((p) => path.resolve(options.cwd, p));
 
@@ -120,13 +129,27 @@ export const fixDates = new Command()
         process.exit(1);
       }
 
-      output.blankLine();
-      output.log('=========================================================');
-      output.info(
-        `Fixing dates on ${videoFiles.length} video(s) and ${imageFiles.length} photo(s)`,
-      );
-      output.log('=========================================================');
-      output.blankLine();
+      if (!output.jsonl) {
+        output.blankLine();
+        output.info('Source');
+        output.indentedMuted(`${existingPaths.length} path(s)`);
+        output.info('Destination');
+        output.indentedMuted('In-place (input files updated)');
+        output.info('Mode');
+        output.indentedMuted(
+          'Restore file dates from embedded EXIF/QuickTime tags',
+        );
+        output.blankLine();
+        output.info('Files');
+        output.indentedMuted(
+          `${totalFiles} total (${videoFiles.length} video(s), ${imageFiles.length} photo(s))`,
+        );
+        output.blankLine();
+      } else {
+        output.log(
+          `Fixing ${totalFiles} file(s) (${videoFiles.length} video(s), ${imageFiles.length} photo(s))`,
+        );
+      }
 
       await validateTools();
 
@@ -141,7 +164,7 @@ export const fixDates = new Command()
         try {
           // Check if already has valid date
           if (await hasValidCreateDate(file)) {
-            output.log(`${baseName}`);
+            logOk(`OK · ${baseName}`);
             alreadyOkCount++;
             continue;
           }
@@ -158,20 +181,18 @@ export const fixDates = new Command()
 
           // Verify if it worked
           if (await hasValidCreateDate(file)) {
-            output.success(`Fixed: ${baseName}`);
+            logFixed(`Fixed · ${baseName}`);
             fixedCount++;
           } else {
-            output.warn(
-              `Could not recover date: ${baseName} - no valid source date found`,
-            );
+            output.warn(`Failed · ${baseName} · no valid source date found`);
             failedCount++;
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('not yet supported')) {
-            output.warn(`Skipped (format not writable): ${baseName}`);
+            output.warn(`Skipped · ${baseName} · format not writable`);
           } else {
-            output.warn(`Error processing: ${baseName} - ${msg}`);
+            output.warn(`Failed · ${baseName} · ${msg}`);
           }
           failedCount++;
         }
@@ -187,7 +208,7 @@ export const fixDates = new Command()
             (await hasValidPhotoDate(file)) &&
             (await hasUsablePhotoExifFileDates(file))
           ) {
-            output.log(`${baseName}`);
+            logOk(`OK · ${baseName}`);
             alreadyOkCount++;
             continue;
           }
@@ -204,32 +225,34 @@ export const fixDates = new Command()
 
           // Verify if it worked
           if (await hasUsablePhotoExifFileDates(file)) {
-            output.success(`Fixed: ${baseName}`);
+            logFixed(`Fixed · ${baseName}`);
             fixedCount++;
           } else {
-            output.warn(
-              `Could not recover date: ${baseName} - no valid source date found`,
-            );
+            output.warn(`Failed · ${baseName} · no valid source date found`);
             failedCount++;
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('not yet supported')) {
-            output.warn(`Skipped (format not writable): ${baseName}`);
+            output.warn(`Skipped · ${baseName} · format not writable`);
           } else {
-            output.warn(`Error processing: ${baseName} - ${msg}`);
+            output.warn(`Failed · ${baseName} · ${msg}`);
           }
           failedCount++;
         }
       }
 
-      output.blankLine();
-      output.log('=========================================================');
-      output.success(
-        `DONE. Fixed: ${fixedCount}, Already OK: ${alreadyOkCount}, Failed: ${failedCount}`,
-      );
-      output.log('=========================================================');
-      output.blankLine();
+      if (!output.jsonl) {
+        output.blankLine();
+        output.success(
+          `Done · ${fixedCount} fixed, ${alreadyOkCount} OK, ${failedCount} failed`,
+        );
+        output.blankLine();
+      } else {
+        output.success(
+          `Done · ${fixedCount} fixed, ${alreadyOkCount} OK, ${failedCount} failed`,
+        );
+      }
     } catch (error) {
       output.blankLine();
       output.error(error instanceof Error ? error.message : String(error));
