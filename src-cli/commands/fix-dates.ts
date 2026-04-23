@@ -7,6 +7,7 @@ import { validateTools } from '../utils/validation.js';
 import {
   fixDatesInPlace,
   fixDatesOnPhoto,
+  hasUsablePhotoExifFileDates,
   hasValidCreateDate,
   hasValidPhotoDate,
 } from '../utils/dates.js';
@@ -182,7 +183,10 @@ export const fixDates = new Command()
 
         try {
           // Check if already has valid date
-          if (await hasValidPhotoDate(file)) {
+          if (
+            (await hasValidPhotoDate(file)) &&
+            (await hasUsablePhotoExifFileDates(file))
+          ) {
             output.log(`${baseName}`);
             alreadyOkCount++;
             continue;
@@ -199,7 +203,7 @@ export const fixDates = new Command()
           }
 
           // Verify if it worked
-          if (await hasValidPhotoDate(file)) {
+          if (await hasUsablePhotoExifFileDates(file)) {
             output.success(`Fixed: ${baseName}`);
             fixedCount++;
           } else {

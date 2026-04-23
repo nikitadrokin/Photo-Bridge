@@ -91,39 +91,63 @@ export async function fixDatesInPlace(filePath: string): Promise<void> {
 }
 
 /**
- * Photo date tag priority chain (later tags override earlier ones):
- * DateTimeDigitized -> CreateDate -> DateTimeOriginal
- *
- * Photos typically have different metadata tags than videos.
- * DateTimeOriginal is the standard for when the photo was taken.
+ * `DateTimeOriginal` = capture time (EXIF) — the usual “when taken” / Finder/Spotlight time for images.
+ * `CreateDate` / `DateTimeDigitized` = fallbacks for recovery when DTO is missing, without overwriting
+ * DTO/Create when writing (we only set Exif `File*Date` in metadata).
+ * Order: prefer capture time, then other embedded dates.
  */
-const PHOTO_DATE_COPY_ARGS = [
-  // DateTimeDigitized (fallback - when the image was digitized)
-  '-FileCreateDate<DateTimeDigitized',
-  '-FileModifyDate<DateTimeDigitized',
-  // CreateDate (EXIF - when the image file was created)
-  '-FileCreateDate<CreateDate',
-  '-FileModifyDate<CreateDate',
-  // DateTimeOriginal (highest priority - when the photo was actually taken)
-  '-FileCreateDate<DateTimeOriginal',
-  '-FileModifyDate<DateTimeOriginal',
-];
+const PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER = [
+  'DateTimeOriginal',
+  'CreateDate',
+  'DateTimeDigitized',
+] as const;
 
 /**
- * Fix dates on a photo file in-place using photo-specific metadata tags.
+ * One exiftool read. Returns the best (first valid) exiftool datetime string for restoring
+ * exiftool `FileCreateDate` / `FileModifyDate` (embedded file-date tags), in priority order.
+ *
+ * @param filePath path to a photo
+ * @returns a single line suitable for `File*=` in exiftool, or `null` if no usable tag
+ */
+export async function readBestExifStringForPhotoFileDates(
+  filePath: string,
+): Promise<string | null> {
+  const { stdout } = await execa('exiftool', [
+    '-T',
+    ...PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER,
+    filePath,
+  ]);
+  const parts = stdout
+    .replace(/\r?\n$/, '')
+    .split('\t')
+    .map((s) => s.trim());
+  for (let i = 0; i < PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER.length; i++) {
+    const v = parts[i] ?? '';
+    if (isUsableExifDateValue(v)) return v;
+  }
+  return null;
+}
+
+/**
+ * Fix dates on a photo: copy the best available embedded date into exiftool.
+ * `FileCreateDate` / `FileModifyDate` only. Does not alter `DateTimeOriginal`, `CreateDate`,
+ * or `DateTimeDigitized`.
  */
 export async function fixDatesOnPhoto(filePath: string): Promise<void> {
+  const best = await readBestExifStringForPhotoFileDates(filePath);
+  if (best === null) return;
   await execa('exiftool', [
     '-quiet',
     '-overwrite_original',
     '-P',
-    ...PHOTO_DATE_COPY_ARGS,
+    `-FileCreateDate=${best}`,
+    `-FileModifyDate=${best}`,
     filePath,
   ]);
 }
 
 /**
- * Check if a photo has a valid DateTimeOriginal
+ * `DateTimeOriginal` present and usable (batch “no work” when you care about EXIF capture time only).
  */
 export async function hasValidPhotoDate(filePath: string): Promise<boolean> {
   const { stdout } = await execa('exiftool', [
@@ -131,7 +155,31 @@ export async function hasValidPhotoDate(filePath: string): Promise<boolean> {
     '-DateTimeOriginal',
     filePath,
   ]);
-  return !!stdout.trim() && !stdout.includes('0000:00:00');
+  return isUsableExifDateValue(stdout);
+}
+
+/**
+ * exiftool `FileCreateDate` and `FileModifyDate` in metadata — what this command
+ * overwrites; matches the recovery success path.
+ */
+export async function hasUsablePhotoExifFileDates(
+  filePath: string,
+): Promise<boolean> {
+  const { stdout } = await execa('exiftool', [
+    '-T',
+    '-FileCreateDate',
+    '-FileModifyDate',
+    filePath,
+  ]);
+  const parts = stdout
+    .replace(/\r?\n$/, '')
+    .split('\t')
+    .map((s) => s.trim());
+  if (parts.length < 2) return false;
+  return (
+    isUsableExifDateValue(parts[0] ?? '') &&
+    isUsableExifDateValue(parts[1] ?? '')
+  );
 }
 
 /**
