@@ -182,7 +182,6 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
     case 'shell_storage':
       return (
         typeof parsed.availHuman === 'string' &&
-        typeof parsed.raw === 'string' &&
         typeof parsed.exitCode === 'number'
       );
     default:

@@ -183,6 +183,185 @@ export async function hasUsablePhotoExifFileDates(
 }
 
 /**
+ * Parses an exiftool date string (e.g. `2019:03:20 10:00:00`) to Unix seconds.
+ */
+export function parseExifToolDateToUnixSeconds(raw: string): number | null {
+  const s = raw.trim();
+  if (!s.length || s.includes('0000:00:00')) return null;
+  const isoLike = s.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+  const ms = Date.parse(isoLike);
+  if (Number.isNaN(ms)) return null;
+  return Math.floor(ms / 1000);
+}
+
+export const VIDEO_DATE_SOURCE_TAGS = [
+  'MediaCreateDate',
+  'CreateDate',
+  'DateTimeOriginal',
+  'ContentCreateDate',
+  'CreationDate',
+] as const;
+
+export const PHOTO_DATE_SOURCE_TAGS = [
+  'DateTimeDigitized',
+  'CreateDate',
+  'DateTimeOriginal',
+] as const;
+
+export const FILESYSTEM_DATE_TAGS = ['FileCreateDate', 'FileModifyDate'] as const;
+
+/** One embedded tag value surfaced as a candidate for `fix-dates inspect`. */
+export interface MediaDateCandidate {
+  readonly id: string;
+  readonly label: string;
+  readonly raw: string;
+  readonly unixSeconds: number | null;
+}
+
+/** Full inspection result written to stdout by `fix-dates inspect`. */
+export interface MediaDateInspectResult {
+  readonly path: string;
+  readonly basename: string;
+  readonly mediaKind: 'video' | 'photo' | 'unknown';
+  readonly hasAutomaticDateOk: boolean;
+  readonly suggestedCandidateId: string | null;
+  readonly candidates: readonly MediaDateCandidate[];
+}
+
+const INSPECT_VIDEO_EXT = new Set(['mov', 'mp4', 'm4v', 'mpg', 'mpeg']);
+const INSPECT_IMAGE_EXT = new Set([
+  'heic',
+  'heif',
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'dng',
+  'webp',
+]);
+
+function classifyMediaKind(filePath: string): 'video' | 'photo' | 'unknown' {
+  const ext = path.extname(filePath).toLowerCase().slice(1);
+  if (INSPECT_VIDEO_EXT.has(ext)) return 'video';
+  if (INSPECT_IMAGE_EXT.has(ext)) return 'photo';
+  return 'unknown';
+}
+
+async function readExifDateTagMap(
+  filePath: string,
+  tags: readonly string[],
+): Promise<Record<string, string>> {
+  if (tags.length === 0) return {};
+  const args = ['-j', '-charset', 'utf8'];
+  for (const t of tags) args.push(`-${t}`);
+  args.push(filePath);
+  const { stdout } = await execa('exiftool', args);
+  const parsed: unknown = JSON.parse(stdout);
+  if (!Array.isArray(parsed) || parsed.length < 1) return {};
+  const row = parsed[0];
+  if (typeof row !== 'object' || row === null) return {};
+  const rec = row as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const t of tags) {
+    const v = rec[t];
+    if (typeof v === 'string' && v.trim().length > 0) out[t] = v.trim();
+  }
+  return out;
+}
+
+function exifCandidateRows(
+  tagValues: Record<string, string>,
+  tags: readonly string[],
+): MediaDateCandidate[] {
+  const out: MediaDateCandidate[] = [];
+  for (const tag of tags) {
+    const raw = tagValues[tag];
+    if (!raw) continue;
+    out.push({
+      id: `exif:${tag}`,
+      label: tag,
+      raw,
+      unixSeconds: parseExifToolDateToUnixSeconds(raw),
+    });
+  }
+  return out;
+}
+
+function videoExifWinnerId(tagValues: Record<string, string>): string | null {
+  for (let i = VIDEO_DATE_SOURCE_TAGS.length - 1; i >= 0; i -= 1) {
+    const tag = VIDEO_DATE_SOURCE_TAGS[i];
+    const raw = tagValues[tag];
+    if (raw && parseExifToolDateToUnixSeconds(raw) !== null) return `exif:${tag}`;
+  }
+  return null;
+}
+
+function photoExifWinnerId(tagValues: Record<string, string>): string | null {
+  for (let i = PHOTO_DATE_SOURCE_TAGS.length - 1; i >= 0; i -= 1) {
+    const tag = PHOTO_DATE_SOURCE_TAGS[i];
+    const raw = tagValues[tag];
+    if (raw && parseExifToolDateToUnixSeconds(raw) !== null) return `exif:${tag}`;
+  }
+  return null;
+}
+
+/** Inspect a single media file and return all available date candidates. */
+export async function inspectMediaDates(
+  filePath: string,
+): Promise<MediaDateInspectResult> {
+  const basename = path.basename(filePath);
+  const mediaKind = classifyMediaKind(filePath);
+
+  const uniqueVideoPhotoTags = [
+    ...new Set([...VIDEO_DATE_SOURCE_TAGS, ...PHOTO_DATE_SOURCE_TAGS]),
+  ];
+
+  const tagsForKind =
+    mediaKind === 'video'
+      ? [...VIDEO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
+      : mediaKind === 'photo'
+        ? [...PHOTO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
+        : [...uniqueVideoPhotoTags, ...FILESYSTEM_DATE_TAGS];
+
+  const tagValues = await readExifDateTagMap(filePath, tagsForKind);
+
+  const exifTagListForRows =
+    mediaKind === 'video'
+      ? VIDEO_DATE_SOURCE_TAGS
+      : mediaKind === 'photo'
+        ? PHOTO_DATE_SOURCE_TAGS
+        : uniqueVideoPhotoTags;
+
+  const candidates: MediaDateCandidate[] = [
+    ...exifCandidateRows(tagValues, exifTagListForRows),
+    ...exifCandidateRows(tagValues, FILESYSTEM_DATE_TAGS),
+  ];
+
+  const hasAutomaticDateOk =
+    mediaKind === 'video'
+      ? await hasValidCreateDate(filePath)
+      : mediaKind === 'photo'
+        ? await hasValidPhotoDate(filePath)
+        : (await hasValidCreateDate(filePath)) || (await hasValidPhotoDate(filePath));
+
+  const suggestedCandidateId =
+    mediaKind === 'video'
+      ? videoExifWinnerId(tagValues)
+      : mediaKind === 'photo'
+        ? photoExifWinnerId(tagValues)
+        : (videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues));
+
+  return {
+    path: filePath,
+    basename,
+    mediaKind,
+    hasAutomaticDateOk,
+    suggestedCandidateId,
+    candidates,
+  };
+}
+
+/**
  * Fix dates on a file using a specific Unix timestamp (from JSON sidecar).
  * Writes the timestamp to all relevant date tags.
  */

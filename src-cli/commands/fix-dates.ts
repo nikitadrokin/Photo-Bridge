@@ -7,17 +7,12 @@ import { validateTools } from '../utils/validation.js';
 import {
   fixDatesInPlace,
   fixDatesOnPhoto,
+  fixDatesFromTimestamp,
   hasUsablePhotoExifFileDates,
   hasValidCreateDate,
   hasValidPhotoDate,
+  inspectMediaDates,
 } from '../utils/dates.js';
-
-const optionsSchema = z.object({
-  cwd: z.string(),
-  jsonl: z.boolean().optional(),
-});
-
-type Options = z.infer<typeof optionsSchema>;
 
 const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v', 'mpg', 'mpeg'];
 const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng'];
@@ -38,7 +33,6 @@ async function collectMediaFilesRecursive(
     const fullPath = path.join(dirPath, entry.name);
 
     if (entry.isDirectory()) {
-      // Recurse into subdirectory
       await collectMediaFilesRecursive(fullPath, videoFiles, imageFiles);
     } else if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase().slice(1);
@@ -51,9 +45,184 @@ async function collectMediaFilesRecursive(
   }
 }
 
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Copies the parent directory of `filePath` into a sibling directory suffixed
+ * with `_FixedDates` (incrementing if the directory already exists), then
+ * returns the path of the file inside the copy and the directory mapping.
+ */
+async function copyFileToSiblingDirectory(filePath: string): Promise<{
+  targetPath: string;
+  copiedDirectory: { sourcePath: string; destinationPath: string };
+}> {
+  const sourceDir = path.dirname(filePath);
+  const parentOfSource = path.dirname(sourceDir);
+  const baseName = path.basename(sourceDir) || 'Output';
+
+  let attempt = 0;
+  let destDir: string;
+  while (true) {
+    const suffix =
+      attempt === 0 ? '_FixedDates' : `_FixedDates-${attempt + 1}`;
+    destDir = path.join(parentOfSource, `${baseName}${suffix}`);
+    if (!(await pathExists(destDir))) break;
+    attempt++;
+  }
+
+  await fs.cp(sourceDir, destDir, { recursive: true });
+
+  return {
+    targetPath: path.join(destDir, path.basename(filePath)),
+    copiedDirectory: { sourcePath: sourceDir, destinationPath: destDir },
+  };
+}
+
+const inspectCmd = new Command('inspect')
+  .description(
+    'print JSON describing candidate date sources for one media file (for UI tools)',
+  )
+  .argument('<file>', 'media file path')
+  .option(
+    '-c, --cwd <cwd>',
+    'working directory for resolving relative paths',
+    process.cwd(),
+  )
+  .action(async (file: string, opts: { cwd: string }) => {
+    try {
+      const absPath = path.resolve(opts.cwd, file);
+      try {
+        await fs.access(absPath);
+      } catch {
+        process.stdout.write(
+          `${JSON.stringify({ error: 'file_not_found', path: absPath })}\n`,
+        );
+        process.exit(1);
+      }
+      const st = await fs.stat(absPath);
+      if (!st.isFile()) {
+        process.stdout.write(
+          `${JSON.stringify({ error: 'not_a_file', path: absPath })}\n`,
+        );
+        process.exit(1);
+      }
+      const result = await inspectMediaDates(absPath);
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+    } catch (err) {
+      process.stdout.write(
+        `${JSON.stringify({
+          error: 'inspect_failed',
+          message: err instanceof Error ? err.message : String(err),
+        })}\n`,
+      );
+      process.exit(1);
+    }
+  });
+
+const applyCmd = new Command('apply')
+  .description(
+    'write embedded and filesystem dates from an explicit Unix timestamp (manual override)',
+  )
+  .argument('<file>', 'media file path')
+  .requiredOption(
+    '--unix <seconds>',
+    'unix timestamp in seconds (UTC)',
+    (v: string) => {
+      const n = parseInt(v, 10);
+      if (Number.isNaN(n)) throw new Error('--unix must be an integer');
+      return n;
+    },
+  )
+  .option(
+    '--overwrite-original',
+    'write into the original file instead of copying to a sibling directory',
+  )
+  .option('--google-takeout', 'reserved for future Google Takeout GPS support')
+  .option('--jsonl', 'emit machine-readable output')
+  .option(
+    '-c, --cwd <cwd>',
+    'working directory for resolving relative paths',
+    process.cwd(),
+  )
+  .action(
+    async (
+      file: string,
+      opts: {
+        cwd: string;
+        unix: number;
+        overwriteOriginal?: boolean;
+        jsonl?: boolean;
+      },
+    ) => {
+      const output = createCliOutput(Boolean(opts.jsonl));
+
+      try {
+        await validateTools();
+        const absPath = path.resolve(opts.cwd, file);
+
+        try {
+          await fs.access(absPath);
+        } catch {
+          output.error('File not found.', 'file_not_found');
+          process.exit(1);
+        }
+
+        const st = await fs.stat(absPath);
+        if (!st.isFile()) {
+          output.error('Path is not a file.', 'not_a_file');
+          process.exit(1);
+        }
+
+        let targetPath = absPath;
+        let copiedDirectory:
+          | { sourcePath: string; destinationPath: string }
+          | undefined;
+
+        if (!opts.overwriteOriginal) {
+          const copy = await copyFileToSiblingDirectory(absPath);
+          targetPath = copy.targetPath;
+          copiedDirectory = copy.copiedDirectory;
+        }
+
+        await fixDatesFromTimestamp(targetPath, opts.unix);
+
+        if (opts.jsonl) {
+          process.stdout.write(
+            `${JSON.stringify({ ok: true, targetPath, copiedDirectory })}\n`,
+          );
+          return;
+        }
+
+        output.success(`Applied date to ${path.basename(targetPath)}`);
+        if (copiedDirectory) {
+          output.info(`Copied to: ${copiedDirectory.destinationPath}`);
+        }
+      } catch (err) {
+        output.error(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    },
+  );
+
+const optionsSchema = z.object({
+  cwd: z.string(),
+  jsonl: z.boolean().optional(),
+});
+
+type Options = z.infer<typeof optionsSchema>;
+
 export const fixDates = new Command()
   .name('fix-dates')
   .description('recover/fix creation dates on media files (photos and videos)')
+  .addCommand(inspectCmd)
+  .addCommand(applyCmd)
   .argument('[paths...]', 'directories or files to fix', ['.'])
   .option(
     '-c, --cwd <cwd>',
@@ -61,6 +230,10 @@ export const fixDates = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'enable JSON output for UI integration')
+  .option(
+    '--overwrite-original',
+    'write into original files (default; flag accepted for compatibility)',
+  )
   .action(async (paths: string[], opts: Options) => {
     const options = optionsSchema.parse({
       cwd: path.resolve(opts.cwd),
@@ -78,11 +251,8 @@ export const fixDates = new Command()
         else output.muted(message);
       };
 
-      // resolve provided relative paths into absolute paths
       const resolvedPaths = paths.map((p) => path.resolve(options.cwd, p));
 
-      // try "fs.stat". if it fails, the path doesn't exist
-      // this is useful to filter nonexistent paths or options without crashing the script
       const pathStats = await Promise.all(
         resolvedPaths.map(async (p) => {
           try {
@@ -94,7 +264,6 @@ export const fixDates = new Command()
         }),
       );
 
-      // filter out nonexistent paths
       const existingPaths = pathStats.filter((p) => p.exists);
       if (existingPaths.length === 0) {
         output.error('No valid paths provided.', 'no_valid_paths');
@@ -104,16 +273,13 @@ export const fixDates = new Command()
       const files = existingPaths.filter((p) => p.stat?.isFile());
       const directories = existingPaths.filter((p) => p.stat?.isDirectory());
 
-      // Collect all media files
       let videoFiles: string[] = [];
       let imageFiles: string[] = [];
 
-      // Recursively collect media files from directories
       for (const dir of directories) {
         await collectMediaFilesRecursive(dir.path, videoFiles, imageFiles);
       }
 
-      // collect media files if files were passed instead of directories
       for (const file of files) {
         const ext = path.extname(file.path).toLowerCase().slice(1);
         if (VIDEO_EXTENSIONS.includes(ext)) {
@@ -157,29 +323,22 @@ export const fixDates = new Command()
       let alreadyOkCount = 0;
       let failedCount = 0;
 
-      // Process videos
       for (const file of videoFiles) {
         const baseName = path.basename(file);
 
         try {
-          // Check if already has valid date
           if (await hasValidCreateDate(file)) {
             logOk(`OK · ${baseName}`);
             alreadyOkCount++;
             continue;
           }
 
-          // Priority 1: Try JSON sidecar (Google Takeout)
-          // no-op
-
-          // Priority 2: Try EXIF metadata
           try {
             await fixDatesInPlace(file);
           } catch {
             // Writing not supported for this format
           }
 
-          // Verify if it worked
           if (await hasValidCreateDate(file)) {
             logFixed(`Fixed · ${baseName}`);
             fixedCount++;
@@ -198,12 +357,10 @@ export const fixDates = new Command()
         }
       }
 
-      // Process photos
       for (const file of imageFiles) {
         const baseName = path.basename(file);
 
         try {
-          // Check if already has valid date
           if (
             (await hasValidPhotoDate(file)) &&
             (await hasUsablePhotoExifFileDates(file))
@@ -213,17 +370,12 @@ export const fixDates = new Command()
             continue;
           }
 
-          // Priority 1: Try JSON sidecar (Google Takeout)
-          // no-op
-
-          // Priority 2: Try EXIF metadata
           try {
             await fixDatesOnPhoto(file);
           } catch {
             // Writing not supported for this format
           }
 
-          // Verify if it worked
           if (await hasUsablePhotoExifFileDates(file)) {
             logFixed(`Fixed · ${baseName}`);
             fixedCount++;
