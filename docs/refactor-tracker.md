@@ -48,6 +48,7 @@ The production reference under `opensrc/repos/github.com/nikitadrokin/photo-brid
 - 2026-05-28: Added shared `COMMANDS` list to `types/protocol.ts`, expanded command coverage for JSONL events, updated session parser validation to use the shared set, updated UI activity verb formatting for the expanded command union, removed transfer-command event casts, and verified `bun run typecheck` passes.
 - 2026-05-28: Committed protocol/tracker boundary as `cadcafb`. Expanded `src-cli/utils/sibling-directory.ts` with reusable copy-root mapping helpers and committed it as `810e008`. `fix-dates.ts` is currently edited to use this helper but remains mixed with earlier staged work and is not committed yet.
 - 2026-05-28: Committed Pixel transfer/shell boundary as `df605a4` after typing JSONL transfer events and changing push target paths to POSIX device paths. Verified `bun run typecheck` passes.
+- 2026-05-28: User confirmed no Google Takeout support for now. Committed sibling output policy as `d2a0514`: `copy` and directory `convert` use next-available output folders (`*_Copied-2`, `*_Remuxed-2`). Committed `fix-dates` behavior as `0e8c377`: default copies to `_FixedDates-*`, `--overwrite-original` mutates provided paths. Committed video behavior as `59d2355`: conversion success is independent from best-effort date repair.
 
 ## Next Tasks
 
