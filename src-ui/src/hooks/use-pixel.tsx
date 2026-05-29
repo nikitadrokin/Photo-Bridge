@@ -372,7 +372,7 @@ function usePixelProviderValue() {
     ) => {
       if (paths.length === 0) return;
       setActiveOperation('fix-dates');
-      const args = ['fix-dates', ...paths];
+      const args = ['fix-dates', ...paths, '--jsonl'];
       if (options.writeMode === 'overwrite') {
         args.push('--overwrite-original');
       }
