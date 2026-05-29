@@ -3,7 +3,6 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { createCliOutput, type CliOutput } from '../utils/logger.js';
-import { prepareSiblingDirectory } from '../utils/sibling-directory.js';
 
 interface SplitFile {
   readonly name: string;
@@ -167,7 +166,9 @@ async function moveBatch(
 
 export const split = new Command()
   .name('split')
-  .description('move files from a folder into numbered batch folders')
+  .description(
+    'move files from a folder into numbered Part subfolders in that same folder',
+  )
   .argument('<folder>', 'the folder to split into batches')
   .option(
     '--count <files>',
@@ -200,10 +201,7 @@ export const split = new Command()
         ? batchByCount(files, options.count)
         : batchBySize(files, parseSizeLimit(options.size!));
 
-      const outputDir = await prepareSiblingDirectory(sourceDir, '_Split', {
-        create: true,
-        conflictMode: 'next-available',
-      });
+      const outputDir = sourceDir;
 
       output.event({
         v: 1,
@@ -217,10 +215,8 @@ export const split = new Command()
 
       if (!output.jsonl) {
         output.blankLine();
-        output.info('Source');
+        output.info('Folder');
         output.indentedMuted(sourceDir);
-        output.info('Destination');
-        output.indentedMuted(outputDir);
         output.info('Mode');
         output.indentedMuted(
           options.count
