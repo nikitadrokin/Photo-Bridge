@@ -179,7 +179,9 @@ const inspectCmd = new Command('inspect')
         process.stdout.write(
           `${JSON.stringify({
             error:
-              message === 'Path is not a file.' ? 'not_a_file' : 'file_not_found',
+              message === 'Path is not a file.'
+                ? 'not_a_file'
+                : 'file_not_found',
             path: absPath,
           })}\n`,
         );
@@ -245,7 +247,8 @@ const applyCmd = new Command('apply')
         try {
           await validateFilePath(absPath);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           output.error(
             message,
             message === 'Path is not a file.' ? 'not_a_file' : 'file_not_found',
