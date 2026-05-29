@@ -47,6 +47,7 @@ The production reference under `opensrc/repos/github.com/nikitadrokin/photo-brid
 - 2026-05-28: Start first task: stabilize protocol/logger contract for currently emitted CLI events.
 - 2026-05-28: Added shared `COMMANDS` list to `types/protocol.ts`, expanded command coverage for JSONL events, updated session parser validation to use the shared set, updated UI activity verb formatting for the expanded command union, removed transfer-command event casts, and verified `bun run typecheck` passes.
 - 2026-05-28: Committed protocol/tracker boundary as `cadcafb`. Expanded `src-cli/utils/sibling-directory.ts` with reusable copy-root mapping helpers and committed it as `810e008`. `fix-dates.ts` is currently edited to use this helper but remains mixed with earlier staged work and is not committed yet.
+- 2026-05-28: Committed Pixel transfer/shell boundary as `df605a4` after typing JSONL transfer events and changing push target paths to POSIX device paths. Verified `bun run typecheck` passes.
 
 ## Next Tasks
 
