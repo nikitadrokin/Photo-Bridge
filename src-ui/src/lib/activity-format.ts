@@ -1,7 +1,20 @@
-import type { EventV1 } from '@cli-protocol';
+import type { Command, EventV1 } from '@cli-protocol';
 
-export function verbForCommand(command: 'convert' | 'copy'): string {
-  return command === 'copy' ? 'Copy' : 'Convert';
+export function verbForCommand(command: Command): string {
+  switch (command) {
+    case 'copy':
+      return 'Copy';
+    case 'fix-dates':
+      return 'Fix';
+    case 'push-to-pixel':
+      return 'Push';
+    case 'pull-from-pixel':
+      return 'Pull';
+    case 'shell':
+      return 'Run';
+    case 'convert':
+      return 'Convert';
+  }
 }
 
 /** Numbers for the summary cards — live from file events until `session` end arrives. */
