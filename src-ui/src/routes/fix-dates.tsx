@@ -54,7 +54,6 @@ function FixDatesPage() {
   const [inspectResult, setInspectResult] =
     useState<MediaDateInspectResult | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
-  const [googleTakeoutApply, setGoogleTakeoutApply] = useState(false);
   const [writeMode, setWriteMode] =
     useState<FixDatesWriteMode>('copy-directory');
   const [inspectBusy, setInspectBusy] = useState(false);
@@ -118,7 +117,6 @@ function FixDatesPage() {
       const res = await pixel.applyMediaDateUnix(
         activePath,
         c.unixSeconds,
-        googleTakeoutApply,
         writeMode,
       );
       if (!res.ok) {
@@ -141,7 +139,6 @@ function FixDatesPage() {
     activePath,
     selectedCandidateId,
     inspectResult,
-    googleTakeoutApply,
     writeMode,
     pixel,
     loadInspect,
@@ -171,7 +168,7 @@ function FixDatesPage() {
         <div className="mx-auto max-w-3xl flex flex-col gap-6">
           <p className="text-sm text-muted-foreground border-l-2 border-amber-500/80 pl-3 py-1">
             Experimental: automatic fixing stays on Convert Media. Here you can
-            inspect every embedded or Takeout date and apply one explicitly.
+            inspect embedded media dates and apply one explicitly.
           </p>
 
           {!hasSelection ? (
@@ -357,31 +354,6 @@ function FixDatesPage() {
                         ))}
                       </RadioGroup>
                     </FieldSet>
-
-                    <FieldLabel
-                      htmlFor="fix-dates-takeout-apply"
-                      className="w-full"
-                    >
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <FieldTitle className="text-sm">
-                            Also write GPS from Takeout JSON
-                          </FieldTitle>
-                          <FieldDescription className="text-xs">
-                            Uses `geoData` from the sidecar when Google Takeout
-                            exported location metadata.
-                          </FieldDescription>
-                        </FieldContent>
-                        <Switch
-                          id="fix-dates-takeout-apply"
-                          checked={googleTakeoutApply}
-                          onCheckedChange={(checked) =>
-                            setGoogleTakeoutApply(checked)
-                          }
-                          disabled={applyBusy}
-                        />
-                      </Field>
-                    </FieldLabel>
 
                     <Button
                       type="button"

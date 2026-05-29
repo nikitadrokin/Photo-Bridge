@@ -109,7 +109,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         <Button
           type="button"
           variant="outline"
-          title="Restore EXIF or Takeout timestamps"
+          title="Restore embedded media timestamps"
           onClick={() => pixel.fixDates(selectedPaths)}
           disabled={pixel.isRunning}
           className="gap-2"

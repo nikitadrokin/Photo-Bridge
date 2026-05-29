@@ -429,7 +429,6 @@ function usePixelProviderValue() {
     async (
       filePath: string,
       unixSeconds: number,
-      googleTakeout: boolean,
       writeMode: FixDatesWriteMode = 'overwrite',
     ): Promise<ApplyMediaDateSuccess | { ok: false; detail: string }> => {
       const args = [
@@ -440,9 +439,6 @@ function usePixelProviderValue() {
         String(unixSeconds),
         '--jsonl',
       ];
-      if (googleTakeout) {
-        args.push('--google-takeout');
-      }
       if (writeMode === 'overwrite') {
         args.push('--overwrite-original');
       }
