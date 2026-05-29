@@ -100,7 +100,9 @@ export async function fixDatesInPlace(filePath: string): Promise<void> {
 const PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER = [
   'DateTimeOriginal',
   'CreateDate',
+  'DateCreated',
   'DateTimeDigitized',
+  'ModifyDate',
 ] as const;
 
 /**
@@ -115,7 +117,7 @@ export async function readBestExifStringForPhotoFileDates(
 ): Promise<string | null> {
   const { stdout } = await execa('exiftool', [
     '-T',
-    ...PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER,
+    ...PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER.map((tag) => `-${tag}`),
     filePath,
   ]);
   const parts = stdout
@@ -184,6 +186,39 @@ export async function hasUsablePhotoExifFileDates(
 }
 
 /**
+ * Whether exiftool `FileCreateDate` / `FileModifyDate` already match the best
+ * embedded photo date (including XMP `DateCreated` / Photos "Content Created").
+ */
+export async function photoEmbeddedFileDatesAlreadyOk(
+  filePath: string,
+): Promise<boolean> {
+  const best = await readBestExifStringForPhotoFileDates(filePath);
+  if (best === null) return false;
+
+  const bestUnix = parseExifToolDateToUnixSeconds(best);
+  
+  if (bestUnix === null) return false;
+
+  const { stdout } = await execa('exiftool', [
+    '-T',
+    '-FileCreateDate',
+    '-FileModifyDate',
+    filePath,
+  ]);
+  const parts = stdout
+    .replace(/\r?\n$/, '')
+    .split('\t')
+    .map((s) => s.trim());
+  if (parts.length < 2) return false;
+
+  const fileCreateUnix = parseExifToolDateToUnixSeconds(parts[0] ?? '');
+  const fileModifyUnix = parseExifToolDateToUnixSeconds(parts[1] ?? '');
+  if (fileCreateUnix === null || fileModifyUnix === null) return false;
+
+  return fileCreateUnix === bestUnix && fileModifyUnix === bestUnix;
+}
+
+/**
  * Parses an exiftool date string (e.g. `2019:03:20 10:00:00`) to Unix seconds.
  */
 export function parseExifToolDateToUnixSeconds(raw: string): number | null {
@@ -205,7 +240,9 @@ export const VIDEO_DATE_SOURCE_TAGS = [
 
 export const PHOTO_DATE_SOURCE_TAGS = [
   'DateTimeDigitized',
+  'ModifyDate',
   'CreateDate',
+  'DateCreated',
   'DateTimeOriginal',
 ] as const;
 
@@ -342,8 +379,9 @@ export async function inspectMediaDates(
     mediaKind === 'video'
       ? await hasValidCreateDate(filePath)
       : mediaKind === 'photo'
-        ? await hasValidPhotoDate(filePath)
-        : (await hasValidCreateDate(filePath)) || (await hasValidPhotoDate(filePath));
+        ? await photoEmbeddedFileDatesAlreadyOk(filePath)
+        : (await hasValidCreateDate(filePath)) ||
+          (await photoEmbeddedFileDatesAlreadyOk(filePath));
 
   const suggestedCandidateId =
     mediaKind === 'video'
@@ -387,6 +425,7 @@ export async function fixDatesFromTimestamp(
     `-AllDates=${exifDate}`,
     `-DateTimeOriginal=${exifDate}`,
     `-CreateDate=${exifDate}`,
+    `-DateCreated=${exifDate}`,
     `-ModifyDate=${exifDate}`,
     `-FileCreateDate=${exifDate}`,
     `-FileModifyDate=${exifDate}`,

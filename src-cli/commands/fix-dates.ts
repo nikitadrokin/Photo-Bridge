@@ -12,10 +12,9 @@ import {
   fixDatesInPlace,
   fixDatesOnPhoto,
   fixDatesFromTimestamp,
-  hasUsablePhotoExifFileDates,
   hasValidCreateDate,
-  hasValidPhotoDate,
   inspectMediaDates,
+  photoEmbeddedFileDatesAlreadyOk,
 } from '../utils/dates.js';
 
 const VIDEO_EXTENSIONS = new Set(['mov', 'mp4', 'm4v', 'mpg', 'mpeg']);
@@ -419,11 +418,9 @@ export const fixDates = new Command()
           tally(
             await processMediaFile(
               file,
-              async () =>
-                (await hasValidPhotoDate(file)) &&
-                (await hasUsablePhotoExifFileDates(file)),
+              () => photoEmbeddedFileDatesAlreadyOk(file),
               () => fixDatesOnPhoto(file),
-              () => hasUsablePhotoExifFileDates(file),
+              () => photoEmbeddedFileDatesAlreadyOk(file),
               output,
               logOk,
               logFixed,
