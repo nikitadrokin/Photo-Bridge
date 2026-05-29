@@ -10,6 +10,7 @@ export const COMMANDS = [
   'push-to-pixel',
   'pull-from-pixel',
   'shell',
+  'split',
 ] as const;
 
 export type Command = (typeof COMMANDS)[number];
