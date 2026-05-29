@@ -196,7 +196,7 @@ export async function photoEmbeddedFileDatesAlreadyOk(
   if (best === null) return false;
 
   const bestUnix = parseExifToolDateToUnixSeconds(best);
-  
+
   if (bestUnix === null) return false;
 
   const { stdout } = await execa('exiftool', [
@@ -246,7 +246,10 @@ export const PHOTO_DATE_SOURCE_TAGS = [
   'DateTimeOriginal',
 ] as const;
 
-export const FILESYSTEM_DATE_TAGS = ['FileCreateDate', 'FileModifyDate'] as const;
+export const FILESYSTEM_DATE_TAGS = [
+  'FileCreateDate',
+  'FileModifyDate',
+] as const;
 
 /** One embedded tag value surfaced as a candidate for `fix-dates inspect`. */
 export interface MediaDateCandidate {
@@ -329,7 +332,8 @@ function videoExifWinnerId(tagValues: Record<string, string>): string | null {
   for (let i = VIDEO_DATE_SOURCE_TAGS.length - 1; i >= 0; i -= 1) {
     const tag = VIDEO_DATE_SOURCE_TAGS[i];
     const raw = tagValues[tag];
-    if (raw && parseExifToolDateToUnixSeconds(raw) !== null) return `exif:${tag}`;
+    if (raw && parseExifToolDateToUnixSeconds(raw) !== null)
+      return `exif:${tag}`;
   }
   return null;
 }
@@ -338,7 +342,8 @@ function photoExifWinnerId(tagValues: Record<string, string>): string | null {
   for (let i = PHOTO_DATE_SOURCE_TAGS.length - 1; i >= 0; i -= 1) {
     const tag = PHOTO_DATE_SOURCE_TAGS[i];
     const raw = tagValues[tag];
-    if (raw && parseExifToolDateToUnixSeconds(raw) !== null) return `exif:${tag}`;
+    if (raw && parseExifToolDateToUnixSeconds(raw) !== null)
+      return `exif:${tag}`;
   }
   return null;
 }
@@ -358,8 +363,8 @@ export async function inspectMediaDates(
     mediaKind === 'video'
       ? [...VIDEO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
       : mediaKind === 'photo'
-        ? [...PHOTO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
-        : [...uniqueVideoPhotoTags, ...FILESYSTEM_DATE_TAGS];
+      ? [...PHOTO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
+      : [...uniqueVideoPhotoTags, ...FILESYSTEM_DATE_TAGS];
 
   const tagValues = await readExifDateTagMap(filePath, tagsForKind);
 
@@ -367,8 +372,8 @@ export async function inspectMediaDates(
     mediaKind === 'video'
       ? VIDEO_DATE_SOURCE_TAGS
       : mediaKind === 'photo'
-        ? PHOTO_DATE_SOURCE_TAGS
-        : uniqueVideoPhotoTags;
+      ? PHOTO_DATE_SOURCE_TAGS
+      : uniqueVideoPhotoTags;
 
   const candidates: MediaDateCandidate[] = [
     ...exifCandidateRows(tagValues, exifTagListForRows),
@@ -379,16 +384,16 @@ export async function inspectMediaDates(
     mediaKind === 'video'
       ? await hasValidCreateDate(filePath)
       : mediaKind === 'photo'
-        ? await photoEmbeddedFileDatesAlreadyOk(filePath)
-        : (await hasValidCreateDate(filePath)) ||
-          (await photoEmbeddedFileDatesAlreadyOk(filePath));
+      ? await photoEmbeddedFileDatesAlreadyOk(filePath)
+      : (await hasValidCreateDate(filePath)) ||
+        (await photoEmbeddedFileDatesAlreadyOk(filePath));
 
   const suggestedCandidateId =
     mediaKind === 'video'
       ? videoExifWinnerId(tagValues)
       : mediaKind === 'photo'
-        ? photoExifWinnerId(tagValues)
-        : (videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues));
+      ? photoExifWinnerId(tagValues)
+      : videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
 
   return {
     path: filePath,
