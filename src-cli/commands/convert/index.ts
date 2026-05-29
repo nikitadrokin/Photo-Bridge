@@ -82,6 +82,7 @@ async function processDirectory(
   const inDir = path.resolve(dirPath);
   const outDir = await prepareSiblingDirectory(inDir, '_Remuxed', {
     create: true,
+    conflictMode: 'next-available',
   });
 
   if (!output.jsonl) {
