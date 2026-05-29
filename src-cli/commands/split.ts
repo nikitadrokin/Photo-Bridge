@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { inspectMediaDates } from '../utils/dates.js';
 import { createCliOutput, type CliOutput } from '../utils/logger.js';
 
 interface SplitFile {
@@ -18,11 +19,17 @@ interface SplitBatch {
 const splitOptionsSchema = z
   .object({
     count: z.coerce.number().int().positive().optional(),
+    date: z.boolean().optional(),
     jsonl: z.boolean().optional(),
     size: z.string().optional(),
   })
-  .refine((options) => Boolean(options.count) !== Boolean(options.size), {
-    message: 'Choose exactly one split mode: --count or --size.',
+  .refine((options) => {
+    const selectedModes = [options.count, options.size, options.date].filter(
+      Boolean,
+    );
+    return selectedModes.length === 1;
+  }, {
+    message: 'Choose exactly one split mode: --count, --size, or --date.',
   });
 
 type SplitOptions = z.infer<typeof splitOptionsSchema>;
@@ -128,6 +135,33 @@ function batchBySize(files: SplitFile[], sizeLimit: number): SplitBatch[] {
   return batches;
 }
 
+function formatMonthLabel(unixSeconds: number): string {
+  const date = new Date(unixSeconds * 1000);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+async function dateLabelForFile(file: SplitFile): Promise<string> {
+  try {
+    const inspected = await inspectMediaDates(file.sourcePath);
+    const suggested = inspected.candidates.find(
+      (candidate) => candidate.id === inspected.suggestedCandidateId,
+    );
+    const fallback = inspected.candidates.find(
+      (candidate) => candidate.unixSeconds !== null,
+    );
+    const unixSeconds = suggested?.unixSeconds ?? fallback?.unixSeconds;
+    if (unixSeconds !== undefined && unixSeconds !== null) {
+      return formatMonthLabel(unixSeconds);
+    }
+  } catch {
+    // Keep date splitting read-only and best-effort: unreadable metadata falls back.
+  }
+
+  return 'Unknown Date';
+}
+
 async function moveBatch(
   batch: SplitBatch,
   batchDir: string,
@@ -164,10 +198,60 @@ async function moveBatch(
   return { failed, moved };
 }
 
+async function moveFile(
+  file: SplitFile,
+  destinationDir: string,
+  output: CliOutput,
+): Promise<'failed' | 'moved'> {
+  await fs.mkdir(destinationDir, { recursive: true });
+
+  const destinationPath = path.join(destinationDir, file.name);
+  try {
+    try {
+      await fs.access(destinationPath);
+      output.warn(`Skipped · ${file.name} · destination exists`);
+      return 'failed';
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    await fs.rename(file.sourcePath, destinationPath);
+    output.muted(`Moved · ${file.name} · ${path.basename(destinationDir)}`);
+    return 'moved';
+  } catch {
+    output.warn(`Failed · ${file.name}`);
+    return 'failed';
+  }
+}
+
+async function splitByDate(
+  files: SplitFile[],
+  outputDir: string,
+  output: CliOutput,
+): Promise<{ failed: number; moved: number }> {
+  let moved = 0;
+  let failed = 0;
+
+  for (const file of files) {
+    const label = await dateLabelForFile(file);
+    const result = await moveFile(file, path.join(outputDir, label), output);
+    if (result === 'moved') {
+      moved++;
+    } else {
+      failed++;
+    }
+    output.event({ v: 1, kind: 'progress', done: moved, total: files.length });
+  }
+
+  return { failed, moved };
+}
+
 export const split = new Command()
   .name('split')
   .description(
-    'move files from a folder into numbered Part subfolders in that same folder',
+    'move files from a folder into batch subfolders in that same folder',
   )
   .argument('<folder>', 'the folder to split into batches')
   .option(
@@ -178,6 +262,7 @@ export const split = new Command()
     '--size <bytes>',
     'maximum total size per batch folder, e.g. --size 4gb',
   )
+  .option('--date', 'move files into month folders based on media date metadata')
   .option('--jsonl', 'emit JSONL UI events on stdout')
   .action(async (initialFolder: string, rawOptions: SplitOptions) => {
     const output = createCliOutput(Boolean(rawOptions.jsonl));
@@ -196,10 +281,6 @@ export const split = new Command()
         output.error('No files found to split.', 'no_files');
         process.exit(1);
       }
-
-      const batches = options.count
-        ? batchByCount(files, options.count)
-        : batchBySize(files, parseSizeLimit(options.size!));
 
       const outputDir = sourceDir;
 
@@ -221,33 +302,57 @@ export const split = new Command()
         output.indentedMuted(
           options.count
             ? `Move into folders of up to ${options.count} file(s)`
-            : `Move into folders of up to ${options.size}`,
+            : options.size
+            ? `Move into folders of up to ${options.size}`
+            : 'Move into folders by month from available date metadata',
         );
-        output.blankLine();
-        output.info('Batches');
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          output.indentedMuted(
-            `Part ${i + 1}: ${batch.files.length} file(s), ${formatBytes(
-              batch.totalSize,
-            )}`,
-          );
-        }
-        output.blankLine();
       }
 
       let moved = 0;
       let failed = 0;
 
-      for (let i = 0; i < batches.length; i++) {
-        const batchDir = path.join(
-          outputDir,
-          `Part ${String(i + 1).padStart(String(batches.length).length, '0')}`,
-        );
-        const result = await moveBatch(batches[i], batchDir, output);
-        moved += result.moved;
-        failed += result.failed;
-        output.event({ v: 1, kind: 'progress', done: moved, total: files.length });
+      if (options.date) {
+        if (!output.jsonl) {
+          output.blankLine();
+          output.info('Moves');
+        }
+        const result = await splitByDate(files, outputDir, output);
+        moved = result.moved;
+        failed = result.failed;
+      } else {
+        const batches = options.count
+          ? batchByCount(files, options.count)
+          : batchBySize(files, parseSizeLimit(options.size!));
+
+        if (!output.jsonl) {
+          output.blankLine();
+          output.info('Batches');
+          for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            output.indentedMuted(
+              `Part ${i + 1}: ${batch.files.length} file(s), ${formatBytes(
+                batch.totalSize,
+              )}`,
+            );
+          }
+          output.blankLine();
+        }
+
+        for (let i = 0; i < batches.length; i++) {
+          const batchDir = path.join(
+            outputDir,
+            `Part ${String(i + 1).padStart(String(batches.length).length, '0')}`,
+          );
+          const result = await moveBatch(batches[i], batchDir, output);
+          moved += result.moved;
+          failed += result.failed;
+          output.event({
+            v: 1,
+            kind: 'progress',
+            done: moved,
+            total: files.length,
+          });
+        }
       }
 
       output.event({
