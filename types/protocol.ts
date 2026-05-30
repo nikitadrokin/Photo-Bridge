@@ -11,6 +11,7 @@ export const COMMANDS = [
   'pull-from-pixel',
   'shell',
   'split',
+  'gallery',
 ] as const;
 
 export type Command = (typeof COMMANDS)[number];
@@ -117,6 +118,29 @@ export interface ShellStorageEvent {
   readonly exitCode: number;
 }
 
+/** One file row inside {@link GalleryScanEvent}. */
+export interface GalleryScanFilePayload {
+  readonly path: string;
+  readonly basename: string;
+  readonly mediaKind: 'video' | 'photo' | 'unknown';
+  readonly unixSeconds: number | null;
+}
+
+/** One UTC day bucket inside {@link GalleryScanEvent}. */
+export interface GalleryScanDayPayload {
+  readonly dayKey: string;
+  readonly files: readonly GalleryScanFilePayload[];
+}
+
+/** Final grouped scan from `pb gallery scan --jsonl`. */
+export interface GalleryScanEvent {
+  readonly v: 1;
+  readonly kind: 'gallery_scan';
+  readonly root: string;
+  readonly totalFiles: number;
+  readonly days: readonly GalleryScanDayPayload[];
+}
+
 export type EventV1 =
   | SessionEvent
   | FileEvent
@@ -126,7 +150,8 @@ export type EventV1 =
   | BlockedEvent
   | SeverityEvent
   | MessageEvent
-  | ShellStorageEvent;
+  | ShellStorageEvent
+  | GalleryScanEvent;
 
 /** Legacy stdout lines from `logger` before structured events. */
 export interface Log {
@@ -196,6 +221,12 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
       return (
         typeof parsed.availHuman === 'string' &&
         typeof parsed.exitCode === 'number'
+      );
+    case 'gallery_scan':
+      return (
+        typeof parsed.root === 'string' &&
+        typeof parsed.totalFiles === 'number' &&
+        Array.isArray(parsed.days)
       );
     default:
       return false;

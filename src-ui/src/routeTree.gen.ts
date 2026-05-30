@@ -14,6 +14,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as FixDatesRouteImport } from './routes/fix-dates'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TransferRoute = TransferRouteImport.update({
@@ -41,6 +42,11 @@ const ConvertRoute = ConvertRouteImport.update({
   path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,6 +55,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
@@ -76,16 +85,25 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/browse'
     | '/convert'
     | '/fix-dates'
     | '/roadmap'
     | '/settings'
     | '/transfer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/convert' | '/fix-dates' | '/roadmap' | '/settings' | '/transfer'
+  to:
+    | '/'
+    | '/browse'
+    | '/convert'
+    | '/fix-dates'
+    | '/roadmap'
+    | '/settings'
+    | '/transfer'
   id:
     | '__root__'
     | '/'
+    | '/browse'
     | '/convert'
     | '/fix-dates'
     | '/roadmap'
@@ -95,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrowseRoute: typeof BrowseRoute
   ConvertRoute: typeof ConvertRoute
   FixDatesRoute: typeof FixDatesRoute
   RoadmapRoute: typeof RoadmapRoute
@@ -139,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConvertRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -151,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrowseRoute: BrowseRoute,
   ConvertRoute: ConvertRoute,
   FixDatesRoute: FixDatesRoute,
   RoadmapRoute: RoadmapRoute,

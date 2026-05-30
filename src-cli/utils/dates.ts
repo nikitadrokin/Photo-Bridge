@@ -405,6 +405,20 @@ export async function inspectMediaDates(
   };
 }
 
+/** Best-effort capture instant from an inspect result (suggested tag, then any dated tag). */
+export function pickInspectUnixSeconds(
+  inspected: MediaDateInspectResult,
+): number | null {
+  const suggested = inspected.candidates.find(
+    (candidate) => candidate.id === inspected.suggestedCandidateId,
+  );
+  const fallback = inspected.candidates.find(
+    (candidate) => candidate.unixSeconds !== null,
+  );
+  const unixSeconds = suggested?.unixSeconds ?? fallback?.unixSeconds;
+  return unixSeconds ?? null;
+}
+
 /**
  * Fix dates on a file using a specific Unix timestamp (from JSON sidecar).
  * Writes the timestamp to all relevant date tags.

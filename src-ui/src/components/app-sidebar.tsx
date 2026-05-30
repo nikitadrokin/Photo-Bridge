@@ -8,6 +8,7 @@ import {
   CalendarBlank,
   DeviceMobile,
   FilmStrip,
+  Images,
   Gear,
   GithubLogo,
   RoadHorizon,
@@ -51,6 +52,12 @@ const routes = [
     label: 'Fix Dates',
     icon: CalendarBlank,
     tooltip: 'Experimental: inspect dates and apply overrides',
+  },
+  {
+    to: '/browse',
+    label: 'Browse by Day',
+    icon: Images,
+    tooltip: 'View media grouped and sorted by capture date',
   },
   {
     to: '/transfer',
