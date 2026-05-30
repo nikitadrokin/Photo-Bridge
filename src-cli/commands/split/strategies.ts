@@ -1,0 +1,179 @@
+import path from 'node:path';
+import { inspectMediaDates } from '../../utils/dates.js';
+import { sha256File } from '../../utils/hash.js';
+import type { CliOutput } from '../../utils/logger.js';
+import { applyMoveResult, moveFile } from './move.js';
+import type { SplitDestinationLayout, SplitFile } from './types.js';
+
+type SplitResult = { failed: number; moved: number };
+
+function formatMonthLabel(unixSeconds: number): string {
+  const date = new Date(unixSeconds * 1000);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+async function dateLabelForFile(file: SplitFile): Promise<string> {
+  try {
+    const inspected = await inspectMediaDates(file.sourcePath);
+    const suggested = inspected.candidates.find(
+      (candidate) => candidate.id === inspected.suggestedCandidateId,
+    );
+    const fallback = inspected.candidates.find(
+      (candidate) => candidate.unixSeconds !== null,
+    );
+    const unixSeconds = suggested?.unixSeconds ?? fallback?.unixSeconds;
+    if (unixSeconds !== undefined && unixSeconds !== null) {
+      return formatMonthLabel(unixSeconds);
+    }
+  } catch {
+    // Best-effort: unreadable metadata falls back to a safe label.
+  }
+
+  return 'Unknown Date';
+}
+
+async function hashLabelForFile(
+  file: SplitFile,
+  output: CliOutput,
+): Promise<string | null> {
+  try {
+    return await sha256File(file.sourcePath);
+  } catch {
+    output.warn(`Skipped · ${file.relativePath} · could not hash file`);
+    return null;
+  }
+}
+
+export async function splitByDate(
+  files: SplitFile[],
+  outputDir: string,
+  output: CliOutput,
+  layout: SplitDestinationLayout = 'preserve',
+): Promise<SplitResult> {
+  const counts = { moved: 0, failed: 0 };
+
+  for (const file of files) {
+    const label = await dateLabelForFile(file);
+    const result = await moveFile(
+      file,
+      path.join(outputDir, label),
+      output,
+      layout,
+    );
+    applyMoveResult(result, counts);
+    output.event({
+      v: 1,
+      kind: 'progress',
+      done: counts.moved,
+      total: files.length,
+    });
+  }
+
+  return counts;
+}
+
+export async function splitByHash(
+  files: SplitFile[],
+  outputDir: string,
+  output: CliOutput,
+): Promise<SplitResult> {
+  const counts = { moved: 0, failed: 0 };
+
+  for (const file of files) {
+    const label = await hashLabelForFile(file, output);
+    if (label === null) {
+      counts.failed++;
+      output.event({
+        v: 1,
+        kind: 'progress',
+        done: counts.moved,
+        total: files.length,
+      });
+      continue;
+    }
+
+    const result = await moveFile(
+      file,
+      path.join(outputDir, label),
+      output,
+      'flat',
+    );
+    applyMoveResult(result, counts);
+    output.event({
+      v: 1,
+      kind: 'progress',
+      done: counts.moved,
+      total: files.length,
+    });
+  }
+
+  return counts;
+}
+
+interface DateHashEntry {
+  readonly dateLabel: string;
+  readonly file: SplitFile;
+  readonly hashLabel: string;
+}
+
+function dateHashGroupKey(dateLabel: string, hashLabel: string): string {
+  return `${dateLabel}\0${hashLabel}`;
+}
+
+/**
+ * Files that are the only one in their (month, hash) group land flat in the
+ * month folder. Files that share a hash with at least one sibling in the same
+ * month are moved into a hash subfolder so duplicates are grouped together.
+ */
+export async function splitByDateAndHash(
+  files: SplitFile[],
+  outputDir: string,
+  output: CliOutput,
+): Promise<SplitResult> {
+  const counts = { moved: 0, failed: 0 };
+  const entries: DateHashEntry[] = [];
+
+  for (const file of files) {
+    const hashLabel = await hashLabelForFile(file, output);
+    if (hashLabel === null) {
+      counts.failed++;
+      output.event({
+        v: 1,
+        kind: 'progress',
+        done: counts.moved,
+        total: files.length,
+      });
+      continue;
+    }
+
+    const dateLabel = await dateLabelForFile(file);
+    entries.push({ file, dateLabel, hashLabel });
+  }
+
+  const groupSizes = new Map<string, number>();
+  for (const entry of entries) {
+    const key = dateHashGroupKey(entry.dateLabel, entry.hashLabel);
+    groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1);
+  }
+
+  for (const entry of entries) {
+    const key = dateHashGroupKey(entry.dateLabel, entry.hashLabel);
+    const hasDuplicates = (groupSizes.get(key) ?? 0) > 1;
+    const destinationDir = hasDuplicates
+      ? path.join(outputDir, entry.dateLabel, entry.hashLabel)
+      : path.join(outputDir, entry.dateLabel);
+
+    const result = await moveFile(entry.file, destinationDir, output, 'flat');
+    applyMoveResult(result, counts);
+    output.event({
+      v: 1,
+      kind: 'progress',
+      done: counts.moved,
+      total: files.length,
+    });
+  }
+
+  return counts;
+}

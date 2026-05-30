@@ -8,7 +8,7 @@ import { pullFromPixel } from './commands/pull-from-pixel.js';
 import { shell } from './commands/shell.js';
 import { fixDates } from './commands/fix-dates.js';
 import { fixSnapchatDates } from './commands/fix-snapchat-dates.js';
-import { split } from './commands/split.js';
+import { split } from './commands/split/index.js';
 import { gallery } from './commands/gallery.js';
 
 // Fix for macOS sidecar process not having access to Homebrew paths
