@@ -33,35 +33,44 @@ const splitOptionsSchema = z
     recursive: z.boolean().optional(),
     size: z.string().optional(),
   })
-  .refine((options) => {
-    if (options.recursive) {
-      return (
-        Boolean(options.date) &&
-        !options.hash &&
-        !options.count &&
-        !options.size
+  .refine(
+    (options) => {
+      if (options.recursive) {
+        return (
+          Boolean(options.date) &&
+          !options.hash &&
+          !options.count &&
+          !options.size
+        );
+      }
+      return true;
+    },
+    {
+      message:
+        '--recursive requires --date without --hash, --count, or --size.',
+    },
+  )
+  .refine(
+    (options) => {
+      const hasCount = Boolean(options.count);
+      const hasSize = Boolean(options.size);
+      const hasDate = Boolean(options.date);
+      const hasHash = Boolean(options.hash);
+
+      if (hasDate && hasHash) {
+        return !hasCount && !hasSize;
+      }
+
+      const selectedModes = [hasCount, hasSize, hasDate, hasHash].filter(
+        Boolean,
       );
-    }
-    return true;
-  }, {
-    message: '--recursive requires --date without --hash, --count, or --size.',
-  })
-  .refine((options) => {
-    const hasCount = Boolean(options.count);
-    const hasSize = Boolean(options.size);
-    const hasDate = Boolean(options.date);
-    const hasHash = Boolean(options.hash);
-
-    if (hasDate && hasHash) {
-      return !hasCount && !hasSize;
-    }
-
-    const selectedModes = [hasCount, hasSize, hasDate, hasHash].filter(Boolean);
-    return selectedModes.length === 1;
-  }, {
-    message:
-      'Choose --count, --size, --date, --hash, or --date with --hash together.',
-  });
+      return selectedModes.length === 1;
+    },
+    {
+      message:
+        'Choose --count, --size, --date, --hash, or --date with --hash together.',
+    },
+  );
 
 type SplitOptions = z.infer<typeof splitOptionsSchema>;
 
@@ -70,7 +79,9 @@ const SIZE_PATTERN = /^(\d+(?:\.\d+)?)\s*(b|kb|kib|mb|mib|gb|gib|tb|tib)?$/i;
 function parseSizeLimit(value: string): number {
   const match = value.trim().match(SIZE_PATTERN);
   if (!match) {
-    throw new Error('Invalid --size value. Use values like 500mb, 4gb, or 10gb.');
+    throw new Error(
+      'Invalid --size value. Use values like 500mb, 4gb, or 10gb.',
+    );
   }
 
   const amount = Number(match[1]);
@@ -370,12 +381,36 @@ async function splitByHash(
   return counts;
 }
 
+interface DateHashEntry {
+  readonly dateLabel: string;
+  readonly file: SplitFile;
+  readonly hashLabel: string;
+}
+
+function dateHashGroupKey(dateLabel: string, hashLabel: string): string {
+  return `${dateLabel}\0${hashLabel}`;
+}
+
+function destinationDirForDateHashEntry(
+  outputDir: string,
+  entry: DateHashEntry,
+  collisionGroupSizes: ReadonlyMap<string, number>,
+): string {
+  const key = dateHashGroupKey(entry.dateLabel, entry.hashLabel);
+  const hasDuplicates = (collisionGroupSizes.get(key) ?? 0) > 1;
+  if (hasDuplicates) {
+    return path.join(outputDir, entry.dateLabel, entry.hashLabel);
+  }
+  return path.join(outputDir, entry.dateLabel);
+}
+
 async function splitByDateAndHash(
   files: SplitFile[],
   outputDir: string,
   output: CliOutput,
 ): Promise<{ failed: number; moved: number }> {
   const counts = { moved: 0, failed: 0 };
+  const entries: DateHashEntry[] = [];
 
   for (const file of files) {
     const hashLabel = await hashLabelForFile(file, output);
@@ -391,12 +426,22 @@ async function splitByDateAndHash(
     }
 
     const dateLabel = await dateLabelForFile(file);
-    const result = await moveFile(
-      file,
-      path.join(outputDir, dateLabel, hashLabel),
-      output,
-      'flat',
+    entries.push({ file, dateLabel, hashLabel });
+  }
+
+  const collisionGroupSizes = new Map<string, number>();
+  for (const entry of entries) {
+    const key = dateHashGroupKey(entry.dateLabel, entry.hashLabel);
+    collisionGroupSizes.set(key, (collisionGroupSizes.get(key) ?? 0) + 1);
+  }
+
+  for (const entry of entries) {
+    const destinationDir = destinationDirForDateHashEntry(
+      outputDir,
+      entry,
+      collisionGroupSizes,
     );
+    const result = await moveFile(entry.file, destinationDir, output, 'flat');
     applyMoveResult(result, counts);
     output.event({
       v: 1,
@@ -453,11 +498,11 @@ export const split = new Command()
   )
   .option(
     '--date',
-    'move files into month folders (YYYY-MM) from media date metadata; combine with --hash for date/hash nesting',
+    'move files into month folders (YYYY-MM) from media date metadata; combine with --hash for date folders with hash subfolders for duplicates',
   )
   .option(
     '--hash',
-    'move files into SHA-256 hash folders (flat files inside); combine with --date for YYYY-MM/hash layout',
+    'move files into SHA-256 hash folders (flat files inside); combine with --date for YYYY-MM layout with hash folders for duplicates',
   )
   .option(
     '--recursive',
@@ -505,7 +550,7 @@ export const split = new Command()
             : options.size
             ? `Move into folders of up to ${options.size}`
             : options.date && options.hash
-            ? 'Move into YYYY-MM folders, then SHA-256 hash subfolders'
+            ? 'Move into YYYY-MM folders; hash subfolders only when duplicates share a month'
             : options.hash
             ? 'Move into folders by SHA-256 content hash'
             : options.date && options.recursive
@@ -568,7 +613,10 @@ export const split = new Command()
         for (let i = 0; i < batches.length; i++) {
           const batchDir = path.join(
             outputDir,
-            `Part ${String(i + 1).padStart(String(batches.length).length, '0')}`,
+            `Part ${String(i + 1).padStart(
+              String(batches.length).length,
+              '0',
+            )}`,
           );
           const result = await moveBatch(batches[i], batchDir, output);
           moved += result.moved;
