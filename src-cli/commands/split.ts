@@ -2,14 +2,22 @@ import { Command } from 'commander';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { ALL_EXTENSIONS } from '../utils/constants.js';
 import { inspectMediaDates } from '../utils/dates.js';
+import { sha256File } from '../utils/hash.js';
 import { createCliOutput, type CliOutput } from '../utils/logger.js';
 
 interface SplitFile {
   readonly name: string;
+  /** Path relative to the source root (preserves nested folder structure on move). */
+  readonly relativePath: string;
   readonly sourcePath: string;
   readonly size: number;
 }
+
+const MEDIA_EXTENSIONS = new Set(
+  ALL_EXTENSIONS.map((ext) => ext.toLowerCase()),
+);
 
 interface SplitBatch {
   readonly files: SplitFile[];
@@ -20,16 +28,39 @@ const splitOptionsSchema = z
   .object({
     count: z.coerce.number().int().positive().optional(),
     date: z.boolean().optional(),
+    hash: z.boolean().optional(),
     jsonl: z.boolean().optional(),
+    recursive: z.boolean().optional(),
     size: z.string().optional(),
   })
   .refine((options) => {
-    const selectedModes = [options.count, options.size, options.date].filter(
-      Boolean,
-    );
+    if (options.recursive) {
+      return (
+        Boolean(options.date) &&
+        !options.hash &&
+        !options.count &&
+        !options.size
+      );
+    }
+    return true;
+  }, {
+    message: '--recursive requires --date without --hash, --count, or --size.',
+  })
+  .refine((options) => {
+    const hasCount = Boolean(options.count);
+    const hasSize = Boolean(options.size);
+    const hasDate = Boolean(options.date);
+    const hasHash = Boolean(options.hash);
+
+    if (hasDate && hasHash) {
+      return !hasCount && !hasSize;
+    }
+
+    const selectedModes = [hasCount, hasSize, hasDate, hasHash].filter(Boolean);
     return selectedModes.length === 1;
   }, {
-    message: 'Choose exactly one split mode: --count, --size, or --date.',
+    message:
+      'Choose --count, --size, --date, --hash, or --date with --hash together.',
   });
 
 type SplitOptions = z.infer<typeof splitOptionsSchema>;
@@ -79,23 +110,53 @@ function formatBytes(bytes: number): string {
 }
 
 async function collectFiles(sourceDir: string): Promise<SplitFile[]> {
-  const entries = await fs.readdir(sourceDir, { withFileTypes: true });
-  const files = await Promise.all(
-    entries
-      .filter((entry) => entry.isFile() && !entry.name.startsWith('.'))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-      .map(async (entry) => {
-        const sourcePath = path.join(sourceDir, entry.name);
-        const stat = await fs.stat(sourcePath);
-        return {
-          name: entry.name,
-          sourcePath,
-          size: stat.size,
-        };
-      }),
-  );
+  const files: SplitFile[] = [];
 
-  return files;
+  async function walk(dir: string, relativeDir: string): Promise<void> {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+
+      const relativePath = relativeDir
+        ? path.join(relativeDir, entry.name)
+        : entry.name;
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        await walk(fullPath, relativePath);
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+
+      const ext = path.extname(entry.name).toLowerCase().slice(1);
+      if (!MEDIA_EXTENSIONS.has(ext)) continue;
+
+      const stat = await fs.stat(fullPath);
+      files.push({
+        name: entry.name,
+        relativePath,
+        sourcePath: fullPath,
+        size: stat.size,
+      });
+    }
+  }
+
+  await walk(sourceDir, '');
+  return files.sort((a, b) =>
+    a.relativePath.localeCompare(b.relativePath, undefined, { numeric: true }),
+  );
+}
+
+type SplitDestinationLayout = 'flat' | 'preserve';
+
+function destinationPathFor(
+  file: SplitFile,
+  destinationDir: string,
+  layout: SplitDestinationLayout = 'preserve',
+): string {
+  const relativeName = layout === 'flat' ? file.name : file.relativePath;
+  return path.join(destinationDir, relativeName);
 }
 
 function batchByCount(files: SplitFile[], count: number): SplitBatch[] {
@@ -173,11 +234,16 @@ async function moveBatch(
   await fs.mkdir(batchDir, { recursive: true });
 
   for (const file of batch.files) {
-    const destinationPath = path.join(batchDir, file.name);
+    const destinationPath = destinationPathFor(file, batchDir);
     try {
+      if (path.resolve(file.sourcePath) === path.resolve(destinationPath)) {
+        moved++;
+        continue;
+      }
+
       try {
         await fs.access(destinationPath);
-        output.warn(`Skipped · ${file.name} · destination exists`);
+        output.warn(`Skipped · ${file.relativePath} · destination exists`);
         failed++;
         continue;
       } catch (error) {
@@ -186,30 +252,42 @@ async function moveBatch(
         }
       }
 
+      await fs.mkdir(path.dirname(destinationPath), { recursive: true });
       await fs.rename(file.sourcePath, destinationPath);
       moved++;
-      output.muted(`Moved · ${file.name}`);
+      output.muted(`Moved · ${file.relativePath}`);
     } catch (error) {
       failed++;
-      output.warn(`Failed · ${file.name}`);
+      output.warn(`Failed · ${file.relativePath}`);
     }
   }
 
   return { failed, moved };
 }
 
+type MoveFileResult = 'failed' | 'moved' | 'skipped';
+
 async function moveFile(
   file: SplitFile,
   destinationDir: string,
   output: CliOutput,
-): Promise<'failed' | 'moved'> {
+  layout: SplitDestinationLayout = 'preserve',
+): Promise<MoveFileResult> {
   await fs.mkdir(destinationDir, { recursive: true });
 
-  const destinationPath = path.join(destinationDir, file.name);
+  const destinationPath = destinationPathFor(file, destinationDir, layout);
   try {
+    if (path.resolve(file.sourcePath) === path.resolve(destinationPath)) {
+      return 'moved';
+    }
+
     try {
       await fs.access(destinationPath);
-      output.warn(`Skipped · ${file.name} · destination exists`);
+      if (layout === 'flat') {
+        output.muted(`Skipped · ${file.relativePath} · duplicate`);
+        return 'skipped';
+      }
+      output.warn(`Skipped · ${file.relativePath} · destination exists`);
       return 'failed';
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -217,41 +295,152 @@ async function moveFile(
       }
     }
 
+    if (layout === 'preserve') {
+      await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+    }
     await fs.rename(file.sourcePath, destinationPath);
-    output.muted(`Moved · ${file.name} · ${path.basename(destinationDir)}`);
+    output.muted(
+      `Moved · ${file.relativePath} · ${path.basename(destinationDir)}`,
+    );
     return 'moved';
   } catch {
-    output.warn(`Failed · ${file.name}`);
+    output.warn(`Failed · ${file.relativePath}`);
     return 'failed';
   }
+}
+
+function applyMoveResult(
+  result: MoveFileResult,
+  counts: { failed: number; moved: number },
+): void {
+  if (result === 'moved' || result === 'skipped') {
+    counts.moved++;
+  } else {
+    counts.failed++;
+  }
+}
+
+async function hashLabelForFile(
+  file: SplitFile,
+  output: CliOutput,
+): Promise<string | null> {
+  try {
+    return await sha256File(file.sourcePath);
+  } catch {
+    output.warn(`Skipped · ${file.relativePath} · could not hash file`);
+    return null;
+  }
+}
+
+async function splitByHash(
+  files: SplitFile[],
+  outputDir: string,
+  output: CliOutput,
+): Promise<{ failed: number; moved: number }> {
+  const counts = { moved: 0, failed: 0 };
+
+  for (const file of files) {
+    const label = await hashLabelForFile(file, output);
+    if (label === null) {
+      counts.failed++;
+      output.event({
+        v: 1,
+        kind: 'progress',
+        done: counts.moved,
+        total: files.length,
+      });
+      continue;
+    }
+
+    const result = await moveFile(
+      file,
+      path.join(outputDir, label),
+      output,
+      'flat',
+    );
+    applyMoveResult(result, counts);
+    output.event({
+      v: 1,
+      kind: 'progress',
+      done: counts.moved,
+      total: files.length,
+    });
+  }
+
+  return counts;
+}
+
+async function splitByDateAndHash(
+  files: SplitFile[],
+  outputDir: string,
+  output: CliOutput,
+): Promise<{ failed: number; moved: number }> {
+  const counts = { moved: 0, failed: 0 };
+
+  for (const file of files) {
+    const hashLabel = await hashLabelForFile(file, output);
+    if (hashLabel === null) {
+      counts.failed++;
+      output.event({
+        v: 1,
+        kind: 'progress',
+        done: counts.moved,
+        total: files.length,
+      });
+      continue;
+    }
+
+    const dateLabel = await dateLabelForFile(file);
+    const result = await moveFile(
+      file,
+      path.join(outputDir, dateLabel, hashLabel),
+      output,
+      'flat',
+    );
+    applyMoveResult(result, counts);
+    output.event({
+      v: 1,
+      kind: 'progress',
+      done: counts.moved,
+      total: files.length,
+    });
+  }
+
+  return counts;
 }
 
 async function splitByDate(
   files: SplitFile[],
   outputDir: string,
   output: CliOutput,
+  layout: SplitDestinationLayout = 'preserve',
 ): Promise<{ failed: number; moved: number }> {
-  let moved = 0;
-  let failed = 0;
+  const counts = { moved: 0, failed: 0 };
 
   for (const file of files) {
     const label = await dateLabelForFile(file);
-    const result = await moveFile(file, path.join(outputDir, label), output);
-    if (result === 'moved') {
-      moved++;
-    } else {
-      failed++;
-    }
-    output.event({ v: 1, kind: 'progress', done: moved, total: files.length });
+    const result = await moveFile(
+      file,
+      path.join(outputDir, label),
+      output,
+      layout,
+    );
+    applyMoveResult(result, counts);
+    output.event({
+      v: 1,
+      kind: 'progress',
+      done: counts.moved,
+      total: files.length,
+    });
   }
 
-  return { failed, moved };
+  return counts;
 }
 
 export const split = new Command()
   .name('split')
   .description(
-    'move files from a folder into batch subfolders in that same folder',
+    'recursively move media files from a folder into batch subfolders in that same folder',
   )
   .argument('<folder>', 'the folder to split into batches')
   .option(
@@ -262,7 +451,18 @@ export const split = new Command()
     '--size <bytes>',
     'maximum total size per batch folder, e.g. --size 4gb',
   )
-  .option('--date', 'move files into month folders based on media date metadata')
+  .option(
+    '--date',
+    'move files into month folders (YYYY-MM) from media date metadata; combine with --hash for date/hash nesting',
+  )
+  .option(
+    '--hash',
+    'move files into SHA-256 hash folders (flat files inside); combine with --date for YYYY-MM/hash layout',
+  )
+  .option(
+    '--recursive',
+    'with --date, pull nested files (e.g. from prior hash splits) into flat YYYY-MM folders',
+  )
   .option('--jsonl', 'emit JSONL UI events on stdout')
   .action(async (initialFolder: string, rawOptions: SplitOptions) => {
     const output = createCliOutput(Boolean(rawOptions.jsonl));
@@ -278,7 +478,7 @@ export const split = new Command()
 
       const files = await collectFiles(sourceDir);
       if (files.length === 0) {
-        output.error('No files found to split.', 'no_files');
+        output.error('No media files found to split.', 'no_files');
         process.exit(1);
       }
 
@@ -304,6 +504,12 @@ export const split = new Command()
             ? `Move into folders of up to ${options.count} file(s)`
             : options.size
             ? `Move into folders of up to ${options.size}`
+            : options.date && options.hash
+            ? 'Move into YYYY-MM folders, then SHA-256 hash subfolders'
+            : options.hash
+            ? 'Move into folders by SHA-256 content hash'
+            : options.date && options.recursive
+            ? 'Move into flat YYYY-MM folders (from nested sources)'
             : 'Move into folders by month from available date metadata',
         );
       }
@@ -311,12 +517,33 @@ export const split = new Command()
       let moved = 0;
       let failed = 0;
 
-      if (options.date) {
+      if (options.date && options.hash) {
         if (!output.jsonl) {
           output.blankLine();
           output.info('Moves');
         }
-        const result = await splitByDate(files, outputDir, output);
+        const result = await splitByDateAndHash(files, outputDir, output);
+        moved = result.moved;
+        failed = result.failed;
+      } else if (options.date) {
+        if (!output.jsonl) {
+          output.blankLine();
+          output.info('Moves');
+        }
+        const result = await splitByDate(
+          files,
+          outputDir,
+          output,
+          options.recursive ? 'flat' : 'preserve',
+        );
+        moved = result.moved;
+        failed = result.failed;
+      } else if (options.hash) {
+        if (!output.jsonl) {
+          output.blankLine();
+          output.info('Moves');
+        }
+        const result = await splitByHash(files, outputDir, output);
         moved = result.moved;
         failed = result.failed;
       } else {
