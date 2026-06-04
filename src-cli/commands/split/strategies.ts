@@ -3,6 +3,7 @@ import { inspectMediaDates } from '../../utils/dates.js';
 import { sha256File } from '../../utils/hash.js';
 import type { CliOutput } from '../../utils/logger.js';
 import { applyMoveResult, moveFile } from './move.js';
+import { SplitProgressReporter } from './progress.js';
 import type { SplitDestinationLayout, SplitFile } from './types.js';
 
 type SplitResult = { failed: number; moved: number };
@@ -53,8 +54,11 @@ export async function splitByDate(
   layout: SplitDestinationLayout = 'preserve',
 ): Promise<SplitResult> {
   const counts = { moved: 0, failed: 0 };
+  const progress = new SplitProgressReporter(output, files.length);
 
-  for (const file of files) {
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    progress.tick(index + 1, file.relativePath, 'read_dates');
     const label = await dateLabelForFile(file);
     const result = await moveFile(
       file,
@@ -63,14 +67,9 @@ export async function splitByDate(
       layout,
     );
     applyMoveResult(result, counts);
-    output.event({
-      v: 1,
-      kind: 'progress',
-      done: counts.moved,
-      total: files.length,
-    });
   }
 
+  progress.finish();
   return counts;
 }
 
@@ -80,17 +79,14 @@ export async function splitByHash(
   output: CliOutput,
 ): Promise<SplitResult> {
   const counts = { moved: 0, failed: 0 };
+  const progress = new SplitProgressReporter(output, files.length);
 
-  for (const file of files) {
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    progress.tick(index + 1, file.relativePath, 'hash');
     const label = await hashLabelForFile(file, output);
     if (label === null) {
       counts.failed++;
-      output.event({
-        v: 1,
-        kind: 'progress',
-        done: counts.moved,
-        total: files.length,
-      });
       continue;
     }
 
@@ -101,14 +97,9 @@ export async function splitByHash(
       'flat',
     );
     applyMoveResult(result, counts);
-    output.event({
-      v: 1,
-      kind: 'progress',
-      done: counts.moved,
-      total: files.length,
-    });
   }
 
+  progress.finish();
   return counts;
 }
 
@@ -134,22 +125,26 @@ export async function splitByDateAndHash(
 ): Promise<SplitResult> {
   const counts = { moved: 0, failed: 0 };
   const entries: DateHashEntry[] = [];
+  const progress = new SplitProgressReporter(output, files.length);
 
-  for (const file of files) {
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    progress.tick(index + 1, file.relativePath, 'analyze');
     const hashLabel = await hashLabelForFile(file, output);
     if (hashLabel === null) {
       counts.failed++;
-      output.event({
-        v: 1,
-        kind: 'progress',
-        done: counts.moved,
-        total: files.length,
-      });
       continue;
     }
 
     const dateLabel = await dateLabelForFile(file);
     entries.push({ file, dateLabel, hashLabel });
+  }
+
+  progress.finish();
+
+  if (!output.jsonl) {
+    output.blankLine();
+    output.info('Moves');
   }
 
   const groupSizes = new Map<string, number>();
@@ -170,7 +165,7 @@ export async function splitByDateAndHash(
     output.event({
       v: 1,
       kind: 'progress',
-      done: counts.moved,
+      done: counts.moved + counts.failed,
       total: files.length,
     });
   }

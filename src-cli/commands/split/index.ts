@@ -53,6 +53,11 @@ export const split = new Command()
         process.exit(1);
       }
 
+      if (!output.jsonl) {
+        output.info('Scanning');
+        output.indentedMuted(sourceDir);
+      }
+
       const files = await collectFiles(sourceDir);
       if (files.length === 0) {
         output.error('No media files found to split.', 'no_files');
@@ -75,6 +80,7 @@ export const split = new Command()
         output.blankLine();
         output.info('Folder');
         output.indentedMuted(sourceDir);
+        output.indentedMuted(`${files.length} media file(s)`);
         output.info('Mode');
         output.indentedMuted(
           options.count
@@ -97,7 +103,7 @@ export const split = new Command()
       if (options.date && options.hash) {
         if (!output.jsonl) {
           output.blankLine();
-          output.info('Moves');
+          output.info('Analyzing');
         }
         const result = await splitByDateAndHash(files, outputDir, output);
         moved = result.moved;
