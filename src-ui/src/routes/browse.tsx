@@ -120,7 +120,7 @@ function BrowsePage() {
         }}
       />
 
-      <main className="flex min-h-0 flex-1 flex-col p-2">
+      <main className="flex min-h-0 flex-1 flex-col p-4">
         {!folderPath ? (
           <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 px-8 py-16 text-center">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">

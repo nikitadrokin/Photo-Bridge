@@ -18,7 +18,7 @@ function SettingsPage() {
   const { preferredTerminal, setPreferredTerminal } = useSettingsStore();
 
   return (
-    <main className="flex-1 p-2">
+    <main className="flex-1 p-4">
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <Field>
           <FieldLabel>Default terminal</FieldLabel>

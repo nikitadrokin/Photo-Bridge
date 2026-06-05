@@ -1,5 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { IconFolder, IconFolders, IconLoader2, IconX } from '@tabler/icons-react';
+import {
+  IconFolder,
+  IconFolders,
+  IconLoader2,
+  IconX,
+} from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -115,16 +120,13 @@ function SplitPage() {
     <>
       <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
 
-      <main className="flex-1 p-2">
+      <main className="flex-1 p-4">
         <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
           <div className="flex flex-col gap-6">
             {!selectedDirectory ? (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-                  <IconFolders
-                    size={32}
-                    className="text-primary"
-                  />
+                  <IconFolders size={32} className="text-primary" />
                 </div>
                 <h2 className="text-lg font-semibold tracking-tight mb-1">
                   Select a media folder
@@ -148,10 +150,7 @@ function SplitPage() {
                 <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                      <IconFolder
-                        size={16}
-                        className="text-primary"
-                      />
+                      <IconFolder size={16} className="text-primary" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">

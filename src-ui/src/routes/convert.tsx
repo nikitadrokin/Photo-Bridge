@@ -48,7 +48,7 @@ function ConvertPage() {
     <>
       <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
 
-      <main className="flex-1 p-2">
+      <main className="flex-1 p-4">
         <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
           {/* LEFT PANEL: Controls */}
           <div className="flex flex-col gap-6">

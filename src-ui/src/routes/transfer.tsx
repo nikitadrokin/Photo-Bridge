@@ -1,5 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { IconDownload, IconFile, IconFolder, IconTerminal2 } from '@tabler/icons-react';
+import {
+  IconDownload,
+  IconFile,
+  IconFolder,
+  IconTerminal2,
+} from '@tabler/icons-react';
 import ActivityFeed from '@/components/activity-feed';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
@@ -20,7 +25,7 @@ function TransferPage() {
 
   return (
     <>
-      <main className="flex-1 p-2">
+      <main className="flex-1 p-4">
         <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
           {/* Connection Status */}
           <div className="flex flex-col gap-6">
@@ -46,9 +51,7 @@ function TransferPage() {
                   disabled={isDisabled}
                   onClick={pixel.pushFolder}
                 >
-                  <IconFolder
-                    className="size-3.5 shrink-0 text-primary"
-                  />
+                  <IconFolder className="size-3.5 shrink-0 text-primary" />
                   <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                     <span className="font-medium leading-tight">
                       Push Folder
@@ -66,9 +69,7 @@ function TransferPage() {
                   disabled={isDisabled}
                   onClick={pixel.pushFiles}
                 >
-                  <IconFile
-                    className="size-3.5 shrink-0 text-primary"
-                  />
+                  <IconFile className="size-3.5 shrink-0 text-primary" />
                   <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                     <span className="font-medium leading-tight">
                       Push Files
@@ -111,9 +112,7 @@ function TransferPage() {
                   disabled={!pixel.isConnected}
                   onClick={pixel.openCameraShellInTerminal}
                 >
-                  <IconTerminal2
-                    className="size-3 shrink-0 text-muted-foreground"
-                  />
+                  <IconTerminal2 className="size-3 shrink-0 text-muted-foreground" />
                   <span className="flex min-w-0 flex-col items-start gap-px text-left">
                     <span className="font-medium leading-tight">
                       Open Camera Shell
