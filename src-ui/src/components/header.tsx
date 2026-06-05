@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import useIsFullscreen from '@/hooks/use-is-fullscreen';
 import { cn } from '@/lib/utils';
 
@@ -10,8 +9,6 @@ interface PageHeaderProps extends React.ComponentProps<'header'> {
 }
 
 export function PageHeader({ title, children, ...props }: PageHeaderProps) {
-  const { open: sidebarOpen } = useSidebar();
-  const isMobile = useIsMobile();
   const isFullscreen = useIsFullscreen();
 
   return (
