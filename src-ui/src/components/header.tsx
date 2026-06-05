@@ -18,7 +18,7 @@ export function PageHeader({ title, children, ...props }: PageHeaderProps) {
     <header
       data-tauri-drag-region
       className={cn(
-        'shrink-0 z-20 bg-sidebar pl-(--sidebar-width) w-full px-4 py-3 min-h-14 backdrop-blur-lg transition-[padding] duration-200 ease-in-out select-none [-webkit-user-select:none] [-webkit-touch-callout:none]',
+        'shrink-0 z-20 bg-sidebar pr-2 py-2 backdrop-blur-lg transition-[padding] duration-200 ease-in-out select-none [-webkit-user-select:none] [-webkit-touch-callout:none]',
         !isFullscreen ? 'pl-26' : 'pl-4',
       )}
       {...props}
