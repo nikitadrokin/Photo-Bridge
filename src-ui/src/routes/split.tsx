@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Folder, Folders, Spinner, X } from '@phosphor-icons/react';
+import { IconFolder, IconFolders, IconLoader2, IconX } from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -121,9 +121,8 @@ function SplitPage() {
             {!selectedDirectory ? (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-                  <Folders
+                  <IconFolders
                     size={32}
-                    weight="duotone"
                     className="text-primary"
                   />
                 </div>
@@ -140,7 +139,7 @@ function SplitPage() {
                   disabled={pixel.isRunning}
                   className="gap-2"
                 >
-                  <Folder weight="duotone" />
+                  <IconFolder />
                   Select Folder
                 </Button>
               </div>
@@ -149,9 +148,8 @@ function SplitPage() {
                 <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                      <Folder
+                      <IconFolder
                         size={16}
-                        weight="duotone"
                         className="text-primary"
                       />
                     </div>
@@ -171,7 +169,7 @@ function SplitPage() {
                     className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 p-0"
                     aria-label="Clear selection"
                   >
-                    <X size={16} weight="bold" />
+                    <IconX size={16} />
                   </Button>
                 </div>
 
@@ -198,9 +196,9 @@ function SplitPage() {
                   onClick={runSplit}
                 >
                   {isBusy ? (
-                    <Spinner size={18} className="animate-spin" />
+                    <IconLoader2 size={18} className="animate-spin" />
                   ) : (
-                    <Folders size={18} weight="duotone" />
+                    <IconFolders size={18} />
                   )}
                   {isBusy ? 'Splitting folder…' : 'Split Folder'}
                 </Button>

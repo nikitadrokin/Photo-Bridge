@@ -1,4 +1,4 @@
-import { X } from '@phosphor-icons/react';
+import { IconX } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 
 interface PathListProps {
@@ -25,7 +25,7 @@ const PathList: React.FC<PathListProps> = ({
             onClick={onClear}
             className="h-6 px-2 text-xs"
           >
-            <X data-icon="inline-start" weight="bold" />
+            <IconX data-icon="inline-start" />
             Clear
           </Button>
         )}

@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { AvailableStorageState } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { ArrowsClockwise, HardDrives } from '@phosphor-icons/react';
+import { IconRefresh, IconBox } from '@tabler/icons-react';
 
 interface AvailableStorageCardProps {
   readonly storage: AvailableStorageState;
@@ -23,7 +23,7 @@ export function AvailableStorageCard({
       <CardContent className="flex flex-row items-start justify-between space-y-0">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary">
-            <HardDrives className="size-4" weight="duotone" />
+            <IconBox className="size-4" />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Available storage</p>
@@ -45,12 +45,11 @@ export function AvailableStorageCard({
           }}
           aria-label="Refresh storage"
         >
-          <ArrowsClockwise
+          <IconRefresh
             className={cn(
               'size-3.5',
               storage.status === 'loading' && 'animate-spin',
             )}
-            weight="bold"
           />
         </Button>
       </CardContent>

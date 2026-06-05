@@ -1,4 +1,4 @@
-import { Folder, Images, UploadSimple } from '@phosphor-icons/react';
+import { IconFolder, IconPhoto, IconUpload } from '@tabler/icons-react';
 import { useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ const SelectFiles: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <Images size={32} weight="duotone" className="text-primary" />
+        <IconPhoto size={32} className="text-primary" />
       </div>
       <h2 className="text-lg font-semibold tracking-tight mb-1">
         No files selected
@@ -59,7 +59,7 @@ const SelectFiles: React.FC = () => {
           disabled={pixel.isRunning}
           className="gap-2"
         >
-          <Folder weight="duotone" />
+          <IconFolder />
           Select Folder
         </Button>
         <Button
@@ -67,7 +67,7 @@ const SelectFiles: React.FC = () => {
           disabled={pixel.isRunning}
           className="gap-2"
         >
-          <UploadSimple weight="bold" />
+          <IconUpload />
           Select Files
         </Button>
       </div>

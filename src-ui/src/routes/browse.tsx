@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
-  Folder,
-  Images,
-  MagnifyingGlass,
-  Spinner,
-  X,
-} from '@phosphor-icons/react';
+  IconFolder,
+  IconPhoto,
+  IconSearch,
+  IconLoader2,
+  IconX,
+} from '@tabler/icons-react';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import type { GalleryScanFilePayload } from '@cli-protocol';
@@ -40,8 +40,9 @@ function isLikelyDirectoryPath(path: string): boolean {
 
 function BrowsePage() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
-  const [previewFile, setPreviewFile] =
-    useState<GalleryScanFilePayload | null>(null);
+  const [previewFile, setPreviewFile] = useState<GalleryScanFilePayload | null>(
+    null,
+  );
   const { result, progress, isScanning, error, scanDirectory, reset } =
     useGalleryScan();
 
@@ -81,9 +82,9 @@ function BrowsePage() {
         onClick={rescan}
       >
         {isScanning ? (
-          <Spinner size={16} className="animate-spin" />
+          <IconLoader2 size={16} className="animate-spin" />
         ) : (
-          <MagnifyingGlass size={16} weight="duotone" />
+          <IconSearch size={16} />
         )}
         Rescan
       </Button>
@@ -123,7 +124,7 @@ function BrowsePage() {
         {!folderPath ? (
           <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 px-8 py-16 text-center">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-              <Images size={32} weight="duotone" className="text-primary" />
+              <IconPhoto size={32} className="text-primary" />
             </div>
             <h2 className="mb-1 text-lg font-semibold tracking-tight">
               Browse photos by day
@@ -140,7 +141,7 @@ function BrowsePage() {
               }}
               className="gap-2"
             >
-              <Folder weight="duotone" />
+              <IconFolder />
               Select Folder
             </Button>
           </div>
@@ -149,7 +150,7 @@ function BrowsePage() {
             <div className="flex shrink-0 items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Folder size={16} weight="duotone" className="text-primary" />
+                  <IconFolder size={16} className="text-primary" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
@@ -174,18 +175,16 @@ function BrowsePage() {
                 className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
                 aria-label="Clear folder"
               >
-                <X size={16} weight="bold" />
+                <IconX size={16} />
               </Button>
             </div>
 
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
               {isScanning && !result ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
-                  <Spinner size={32} className="animate-spin" />
+                  <IconLoader2 size={32} className="animate-spin" />
                   <p className="text-sm">{progressLabel}</p>
                 </div>
               ) : result && result.days.length > 0 ? (

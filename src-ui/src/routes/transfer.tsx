@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { DownloadSimple, File, Folder, Terminal } from '@phosphor-icons/react';
+import { IconDownload, IconFile, IconFolder, IconTerminal2 } from '@tabler/icons-react';
 import ActivityFeed from '@/components/activity-feed';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
@@ -46,9 +46,8 @@ function TransferPage() {
                   disabled={isDisabled}
                   onClick={pixel.pushFolder}
                 >
-                  <Folder
+                  <IconFolder
                     className="size-3.5 shrink-0 text-primary"
-                    weight="duotone"
                   />
                   <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                     <span className="font-medium leading-tight">
@@ -67,9 +66,8 @@ function TransferPage() {
                   disabled={isDisabled}
                   onClick={pixel.pushFiles}
                 >
-                  <File
+                  <IconFile
                     className="size-3.5 shrink-0 text-primary"
-                    weight="duotone"
                   />
                   <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                     <span className="font-medium leading-tight">
@@ -88,7 +86,7 @@ function TransferPage() {
                   disabled={isDisabled}
                   onClick={pixel.pull}
                 >
-                  <DownloadSimple className="size-3.5 shrink-0 text-primary" />
+                  <IconDownload className="size-3.5 shrink-0 text-primary" />
                   <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                     <span className="font-medium leading-tight">
                       Pull Camera
@@ -113,9 +111,8 @@ function TransferPage() {
                   disabled={!pixel.isConnected}
                   onClick={pixel.openCameraShellInTerminal}
                 >
-                  <Terminal
+                  <IconTerminal2
                     className="size-3 shrink-0 text-muted-foreground"
-                    weight="duotone"
                   />
                   <span className="flex min-w-0 flex-col items-start gap-px text-left">
                     <span className="font-medium leading-tight">

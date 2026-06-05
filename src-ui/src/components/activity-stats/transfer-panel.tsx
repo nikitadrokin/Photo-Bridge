@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CheckCircle, Stack, XCircle } from '@phosphor-icons/react';
+import { IconCircleCheck, IconStack2, IconCircleX } from '@tabler/icons-react';
 import { buildAlertRows } from '@/lib/activity-format';
 import { usePixel } from '@/hooks/use-pixel';
 import { cn } from '@/lib/utils';
@@ -109,15 +109,14 @@ const TransferStatsPanel: React.FC = () => {
       <StatCard
         label="Total"
         value={totalDisplay}
-        icon={<Stack size={13} weight="duotone" />}
+        icon={<IconStack2 size={13} />}
       />
       <StatCard
         label={pushedVsPulledLabel}
         value={String(stats.success)}
         icon={
-          <CheckCircle
+          <IconCircleCheck
             size={13}
-            weight="duotone"
             className="text-emerald-600 dark:text-emerald-400"
           />
         }
@@ -127,9 +126,8 @@ const TransferStatsPanel: React.FC = () => {
         label="Failed"
         value={String(stats.failed)}
         icon={
-          <XCircle
+          <IconCircleX
             size={13}
-            weight="duotone"
             className={cn(
               stats.failed > 0 ? 'text-destructive' : 'text-muted-foreground',
             )}

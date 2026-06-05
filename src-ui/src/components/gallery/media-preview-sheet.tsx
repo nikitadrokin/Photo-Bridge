@@ -1,6 +1,6 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Command } from '@tauri-apps/plugin-shell';
-import { FilmStrip, FolderOpen } from '@phosphor-icons/react';
+import { IconMovie, IconFolderOpen } from '@tabler/icons-react';
 import type { GalleryScanFilePayload } from '@cli-protocol';
 import {
   Sheet,
@@ -70,7 +70,7 @@ const MediaPreviewSheet: React.FC<MediaPreviewSheetProps> = ({
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <FilmStrip size={40} weight="duotone" />
+                    <IconMovie size={40} />
                     <p className="text-sm">Preview not available for this format</p>
                   </div>
                 )}
@@ -88,7 +88,7 @@ const MediaPreviewSheet: React.FC<MediaPreviewSheetProps> = ({
                   void revealInFinder(file.path);
                 }}
               >
-                <FolderOpen size={18} weight="duotone" />
+                <IconFolderOpen size={18} />
                 Show in Finder
               </Button>
             </div>

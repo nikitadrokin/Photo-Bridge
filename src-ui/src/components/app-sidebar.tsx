@@ -3,16 +3,16 @@ import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import {
-  ArrowCircleUp,
-  ArrowsClockwise,
-  CalendarBlank,
-  DeviceMobile,
-  FilmStrip,
-  Folders,
-  Images,
-  Gear,
-  GithubLogo,
-} from '@phosphor-icons/react';
+  IconCircleArrowUp,
+  IconRefresh,
+  IconCalendar,
+  IconDeviceMobile,
+  IconMovie,
+  IconFolders,
+  IconPhoto,
+  IconSettings,
+  IconBrandGithub,
+} from '@tabler/icons-react';
 import {
   Sidebar,
   SidebarContent,
@@ -38,37 +38,37 @@ const routes = [
   {
     to: '/convert',
     label: 'Convert Media',
-    icon: FilmStrip,
+    icon: IconMovie,
     tooltip: 'Convert media for Pixel',
   },
   {
     to: '/fix-dates',
     label: 'Fix Dates',
-    icon: CalendarBlank,
+    icon: IconCalendar,
     tooltip: 'Experimental: inspect dates and apply overrides',
   },
   {
     to: '/split',
     label: 'Split Folder',
-    icon: Folders,
+    icon: IconFolders,
     tooltip: 'Organize media into month or hash folders in place',
   },
   {
     to: '/browse',
     label: 'Browse by Day',
-    icon: Images,
+    icon: IconPhoto,
     tooltip: 'View media grouped and sorted by capture date',
   },
   {
     to: '/transfer',
     label: 'Pixel Transfer',
-    icon: DeviceMobile,
+    icon: IconDeviceMobile,
     tooltip: 'Transfer files to Pixel',
   },
   {
     to: '/settings',
     label: 'Settings',
-    icon: Gear,
+    icon: IconSettings,
     tooltip: 'App settings',
   },
 ] as const;
@@ -117,10 +117,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                       tooltip={route.tooltip}
                       onClick={() => navigate({ to: route.to })}
                     >
-                      <route.icon
-                        weight={isActive ? 'duotone' : 'regular'}
-                        className={cn(isActive && 'text-primary')}
-                      />
+                      <route.icon className={cn(isActive && 'text-primary')} />
                       <span>{route.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -143,8 +140,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   disabled={isRunning || isConnectionCheckPending}
                   tooltip="Check Pixel connection via ADB"
                 >
-                  <DeviceMobile
-                    weight={isPixelConnected ? 'duotone' : 'regular'}
+                  <IconDeviceMobile
                     className={cn(
                       isPixelConnected
                         ? 'text-green-500'
@@ -154,7 +150,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   <span>
                     {isPixelConnected ? 'Connected' : 'Not Connected'}
                   </span>
-                  <ArrowsClockwise
+                  <IconRefresh
                     className={cn(
                       'ml-auto h-4 w-4',
                       isConnectionCheckPending && 'animate-spin',
@@ -176,8 +172,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-primary hover:underline"
             >
-              <ArrowCircleUp size={13} weight="duotone" />v{updateVersion}{' '}
-              available
+              <IconCircleArrowUp size={13} />v{updateVersion} available
             </a>
           )}
 
@@ -203,7 +198,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 className="inline-flex items-center gap-1.5 text-primary hover:underline"
                 aria-label="View source on GitHub"
               >
-                <GithubLogo size={14} />
+                <IconBrandGithub size={14} />
               </a>
               {version ? (
                 <span className="text-muted-foreground">v{version}</span>

@@ -1,10 +1,10 @@
 import {
-  DownloadSimple,
-  Export,
-  File,
-  Folder,
-  Terminal,
-} from '@phosphor-icons/react';
+  IconDownload,
+  IconFileExport,
+  IconFile,
+  IconFolder,
+  IconTerminal2,
+} from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import ActionItem from '@/components/action-item';
 import { usePixel } from '@/hooks/use-pixel';
@@ -17,7 +17,7 @@ const PixelActionItems: React.FC = () => {
     <>
       {/* Push to Pixel */}
       <ActionItem
-        icon={<Export size={24} weight="bold" />}
+        icon={<IconFileExport size={24} />}
         iconClass={
           pixel.isConnected ? 'text-green-500' : 'text-muted-foreground'
         }
@@ -35,7 +35,7 @@ const PixelActionItems: React.FC = () => {
           onClick={pixel.pushFolder}
           disabled={pixel.isRunning || !pixel.isConnected}
         >
-          <Folder data-icon="inline-start" /> Folder
+          <IconFolder data-icon="inline-start" /> Folder
         </Button>
         <Button
           variant="outline"
@@ -43,13 +43,13 @@ const PixelActionItems: React.FC = () => {
           onClick={pixel.pushFiles}
           disabled={pixel.isRunning || !pixel.isConnected}
         >
-          <File data-icon="inline-start" /> Files
+          <IconFile data-icon="inline-start" /> Files
         </Button>
       </ActionItem>
 
       {/* Pull from Pixel */}
       <ActionItem
-        icon={<DownloadSimple size={24} weight="bold" />}
+        icon={<IconDownload size={24} />}
         iconClass={
           pixel.isConnected ? 'text-blue-500' : 'text-muted-foreground'
         }
@@ -72,7 +72,7 @@ const PixelActionItems: React.FC = () => {
 
       {/* Open Camera Shell */}
       <ActionItem
-        icon={<Terminal size={24} weight="bold" />}
+        icon={<IconTerminal2 size={24} />}
         iconClass={
           pixel.isConnected ? 'text-purple-500' : 'text-muted-foreground'
         }

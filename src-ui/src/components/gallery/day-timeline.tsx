@@ -1,6 +1,6 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type { GalleryScanDayPayload, GalleryScanFilePayload } from '@cli-protocol';
-import { FilmStrip, Image as ImageIcon } from '@phosphor-icons/react';
+import { IconMovie, IconPhoto } from '@tabler/icons-react';
 import {
   formatGalleryCaptureTime,
   formatGalleryDayTitle,
@@ -48,9 +48,9 @@ function GalleryThumb({ file, onSelect }: GalleryThumbProps) {
       ) : (
         <div className="flex size-full flex-col items-center justify-center gap-1 bg-muted/60 text-muted-foreground">
           {file.mediaKind === 'video' ? (
-            <FilmStrip size={28} weight="duotone" />
+            <IconMovie size={28} />
           ) : (
-            <ImageIcon size={28} weight="duotone" />
+            <IconPhoto size={28} />
           )}
           <span className="max-w-full truncate px-2 text-[10px]">
             {file.basename}

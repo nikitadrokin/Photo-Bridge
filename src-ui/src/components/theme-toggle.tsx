@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from '@phosphor-icons/react';
+import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -11,9 +11,9 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   const themes = [
-    { id: 'light' as const, icon: Sun, label: 'Light' },
-    { id: 'system' as const, icon: Monitor, label: 'System' },
-    { id: 'dark' as const, icon: Moon, label: 'Dark' },
+    { id: 'light' as const, icon: IconSun, label: 'Light' },
+    { id: 'system' as const, icon: IconDeviceDesktop, label: 'System' },
+    { id: 'dark' as const, icon: IconMoon, label: 'Dark' },
   ];
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-between gap-3.5">
-        <Sun className="h-[1.2rem] w-[1.2rem] shrink-0" />
+        <IconSun className="h-[1.2rem] w-[1.2rem] shrink-0" />
         <span className="mr-auto select-none text-sm">Theme</span>
         <div className="relative inline-flex gap-1 rounded-full bg-muted">
           {themes.map((t) => {
@@ -72,8 +72,8 @@ export function ThemeToggle() {
 
   return (
     <div className="flex items-center justify-between gap-3.5">
-      <Sun className="h-[1.2rem] w-[1.2rem] shrink-0 rotate-0 scale-100 transition-all dark:scale-0 dark:-rotate-90" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] shrink-0 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <IconSun className="h-[1.2rem] w-[1.2rem] shrink-0 rotate-0 scale-100 transition-all dark:scale-0 dark:-rotate-90" />
+      <IconMoon className="absolute h-[1.2rem] w-[1.2rem] shrink-0 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
       <span className="mr-auto select-none text-sm">Theme</span>
 
       <div

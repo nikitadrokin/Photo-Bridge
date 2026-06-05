@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  CaretDown,
-  CaretRight,
-  ListBullets,
-  Trash,
-  WarningCircle,
-} from '@phosphor-icons/react';
+  IconChevronDown,
+  IconChevronRight,
+  IconList,
+  IconTrash,
+  IconAlertCircle,
+} from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { buildDetailRows } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
@@ -69,7 +69,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
       >
         <header className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30">
           <div className="flex items-center gap-2 min-w-0">
-            <ListBullets size={16} className="text-muted-foreground shrink-0" />
+            <IconList size={16} className="text-muted-foreground shrink-0" />
             <span className="text-xs font-medium text-muted-foreground">
               Summary
             </span>
@@ -81,7 +81,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
               onClick={clearLogs}
               className="h-6 text-xs text-muted-foreground hover:text-destructive"
             >
-              <Trash size={12} />
+              <IconTrash size={12} />
               Clear
             </Button>
           ) : null}
@@ -104,11 +104,11 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
                 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full text-left mb-2"
               >
                 {showDetails ? (
-                  <CaretDown size={14} className="shrink-0" />
+                  <IconChevronDown size={14} className="shrink-0" />
                 ) : (
-                  <CaretRight size={14} className="shrink-0" />
+                  <IconChevronRight size={14} className="shrink-0" />
                 )}
-                <ListBullets size={14} className="shrink-0" />
+                <IconList size={14} className="shrink-0" />
                 Per-file log
                 <span className="text-muted-foreground/70 font-normal">
                   ({detailRows.length})
@@ -146,7 +146,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
               )}
             >
               <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                <WarningCircle size={14} />
+                <IconAlertCircle size={14} />
                 Technical details
               </p>
               <div className="font-mono text-xs text-muted-foreground space-y-0.5">

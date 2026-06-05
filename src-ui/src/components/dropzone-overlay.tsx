@@ -1,4 +1,4 @@
-import { UploadSimple } from '@phosphor-icons/react';
+import { IconUpload } from '@tabler/icons-react';
 
 interface DropzoneOverlayProps {
   isVisible: boolean;
@@ -20,10 +20,9 @@ const DropzoneOverlay: React.FC<DropzoneOverlayProps> = ({
 
       <div className="relative flex flex-col items-center gap-5 p-16 border-2 border-dashed border-primary/40 rounded-3xl bg-primary/5 backdrop-blur-sm">
         <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <UploadSimple
+          <IconUpload
             size={40}
             className="text-primary animate-bounce"
-            weight="duotone"
           />
         </div>
         <div className="text-center">
