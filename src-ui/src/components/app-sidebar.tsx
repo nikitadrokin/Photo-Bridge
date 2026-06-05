@@ -12,7 +12,6 @@ import {
   Images,
   Gear,
   GithubLogo,
-  RoadHorizon,
 } from '@phosphor-icons/react';
 import {
   Sidebar,
@@ -21,15 +20,11 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import useIsFullscreen from '@/hooks/use-is-fullscreen';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 interface AppSidebarProps {
@@ -38,8 +33,6 @@ interface AppSidebarProps {
   isRunning: boolean;
   isConnectionCheckPending: boolean;
 }
-
-const isDev = import.meta.env.DEV;
 
 const routes = [
   {
@@ -88,8 +81,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 }) => {
   const [version, setVersion] = useState<string>('0');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
-  const isFullscreen = useIsFullscreen();
-  const isMobile = useIsMobile();
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
 
