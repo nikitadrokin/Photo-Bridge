@@ -1,5 +1,5 @@
 import { type ReactNode, useContext, useLayoutEffect } from 'react';
-import { PageHeaderActionsContext } from '@/components/page-header-actions-context';
+import { PageHeaderActionsContext } from '@/components/contexts/page-header-actions-context';
 
 /**
  * Registers nodes rendered beside the title in `PageHeader` for the active route.

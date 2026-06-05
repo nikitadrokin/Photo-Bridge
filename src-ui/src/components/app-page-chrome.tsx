@@ -1,12 +1,7 @@
-import {
-  type ReactNode,
-  useContext,
-  useMemo,
-  useState,
-} from 'react';
+import { type ReactNode, useContext, useMemo, useState } from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { PageHeader } from '@/components/header';
-import { PageHeaderActionsContext } from '@/components/page-header-actions-context';
+import { PageHeaderActionsContext } from '@/components/contexts/page-header-actions-context';
 import { useRoutePageMetadata } from '@/lib/route-page-metadata';
 
 interface PageHeaderActionsProviderProps {
