@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransferRouteImport } from './routes/transfer'
+import { Route as SplitRouteImport } from './routes/split'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as FixDatesRouteImport } from './routes/fix-dates'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TransferRoute = TransferRouteImport.update({
   id: '/transfer',
   path: '/transfer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplitRoute = SplitRouteImport.update({
+  id: '/split',
+  path: '/split',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
+  '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
+  '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/fix-dates': typeof FixDatesRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
+  '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/fix-dates'
     | '/roadmap'
     | '/settings'
+    | '/split'
     | '/transfer'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/fix-dates'
     | '/roadmap'
     | '/settings'
+    | '/split'
     | '/transfer'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/fix-dates'
     | '/roadmap'
     | '/settings'
+    | '/split'
     | '/transfer'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   FixDatesRoute: typeof FixDatesRoute
   RoadmapRoute: typeof RoadmapRoute
   SettingsRoute: typeof SettingsRoute
+  SplitRoute: typeof SplitRoute
   TransferRoute: typeof TransferRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/transfer'
       fullPath: '/transfer'
       preLoaderRoute: typeof TransferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/split': {
+      id: '/split'
+      path: '/split'
+      fullPath: '/split'
+      preLoaderRoute: typeof SplitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   FixDatesRoute: FixDatesRoute,
   RoadmapRoute: RoadmapRoute,
   SettingsRoute: SettingsRoute,
+  SplitRoute: SplitRoute,
   TransferRoute: TransferRoute,
 }
 export const routeTree = rootRouteImport

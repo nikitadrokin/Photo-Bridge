@@ -14,6 +14,10 @@ export function verbForCommand(command: Command): string {
       return 'Run';
     case 'convert':
       return 'Convert';
+    case 'split':
+      return 'Organiz';
+    default:
+      return '';
   }
 }
 

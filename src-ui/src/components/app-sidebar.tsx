@@ -8,6 +8,7 @@ import {
   CalendarBlank,
   DeviceMobile,
   FilmStrip,
+  Folders,
   Images,
   Gear,
   GithubLogo,
@@ -52,6 +53,12 @@ const routes = [
     label: 'Fix Dates',
     icon: CalendarBlank,
     tooltip: 'Experimental: inspect dates and apply overrides',
+  },
+  {
+    to: '/split',
+    label: 'Split Folder',
+    icon: Folders,
+    tooltip: 'Organize media into month or hash folders in place',
   },
   {
     to: '/browse',
