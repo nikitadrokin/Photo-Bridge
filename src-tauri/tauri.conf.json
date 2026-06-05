@@ -20,8 +20,8 @@
         "minHeight": 360,
         "titleBarStyle": "Overlay",
         "trafficLightPosition": {
-          "x": 22,
-          "y": 30
+          "x": 16,
+          "y": 26
         },
         "hiddenTitle": true,
         "resizable": true,
