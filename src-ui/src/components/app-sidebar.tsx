@@ -73,12 +73,6 @@ const routes = [
     tooltip: 'Transfer files to Pixel',
   },
   {
-    to: '/roadmap',
-    label: 'Roadmap',
-    icon: RoadHorizon,
-    tooltip: 'View planned and upcoming features',
-  },
-  {
     to: '/settings',
     label: 'Settings',
     icon: Gear,
@@ -123,7 +117,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
           <SidebarGroupContent>
             <SidebarMenu>
               {routes.map((route) => {
-                if (route.to === '/roadmap' && !isDev) return null;
                 const isActive = !!matchRoute({ to: route.to, fuzzy: true });
 
                 return (
