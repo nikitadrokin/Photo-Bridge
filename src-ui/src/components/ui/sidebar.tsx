@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
+import useIsFullscreen from '@/hooks/use-is-fullscreen';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -302,11 +303,16 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
 }
 
 function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
+  const isFullscreen = useIsFullscreen();
+  const { open } = useSidebar();
+
   return (
     <main
       data-slot="sidebar-inset"
       className={cn(
-        'bg-background md:peer-data-[state="expanded"]:peer-data-[variant=inset]:m-[0_.5rem_.5rem_0] md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:rounded-br-md md:peer-data-[variant=inset]:shadow-sm relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain',
+        'bg-background md:peer-data-[state="expanded"]:peer-data-[variant=inset]:m-[0_.5rem_.5rem_0] md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain',
+        !isFullscreen && 'md:peer-data-[variant=inset]:rounded-br-md',
+        isFullscreen && !open && 'md:peer-data-[variant=inset]:rounded-b-none',
         className,
       )}
       {...props}
