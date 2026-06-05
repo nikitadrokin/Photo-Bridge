@@ -1,25 +1,13 @@
 import {
   type ReactNode,
-  type SetStateAction,
-  createContext,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { PageHeader } from '@/components/header';
+import { PageHeaderActionsContext } from '@/components/page-header-actions-context';
 import { useRoutePageMetadata } from '@/lib/route-page-metadata';
-
-interface PageHeaderActionsContextValue {
-  /** Current nodes shown beside the page title. */
-  headerActions: ReactNode;
-  /** Updates `headerActions`; used by `useRegisterPageHeaderActions`. */
-  setHeaderActions: React.Dispatch<SetStateAction<ReactNode>>;
-}
-
-const PageHeaderActionsContext =
-  createContext<PageHeaderActionsContextValue | null>(null);
 
 interface PageHeaderActionsProviderProps {
   children: ReactNode;
@@ -81,24 +69,4 @@ export function AppPageChrome() {
   );
 }
 
-/**
- * Registers nodes rendered beside the title in `PageHeader` for the active route.
- * Clears on unmount.
- */
-export function useRegisterPageHeaderActions(actions: ReactNode): void {
-  const ctx = useContext(PageHeaderActionsContext);
-  if (!ctx) {
-    throw new Error(
-      'useRegisterPageHeaderActions must be used within PageHeaderActionsProvider.',
-    );
-  }
-
-  const { setHeaderActions } = ctx;
-
-  useEffect(() => {
-    setHeaderActions(actions);
-    return () => {
-      setHeaderActions(null);
-    };
-  }, [actions, setHeaderActions]);
-}
+export { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-actions';

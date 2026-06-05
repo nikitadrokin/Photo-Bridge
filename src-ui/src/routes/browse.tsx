@@ -14,7 +14,7 @@ import DropzoneOverlay from '@/components/dropzone-overlay';
 import DayTimeline from '@/components/gallery/day-timeline';
 import MediaPreviewSheet from '@/components/gallery/media-preview-sheet';
 import { Button } from '@/components/ui/button';
-import { useRegisterPageHeaderActions } from '@/components/app-page-chrome';
+import { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-actions';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
