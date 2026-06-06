@@ -32,7 +32,7 @@ export const MEDIA_EXTENSIONS = new Set(
 
 export const splitOptionsSchema = z
   .object({
-    count: z.string().regex(/^\d+$/).transform(Number).optional(),
+    count: z.coerce.number().int().positive().optional(),
     date: z.boolean().optional(),
     jsonl: z.boolean().optional(),
     size: z.string().optional(),
