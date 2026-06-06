@@ -4,7 +4,7 @@ import { sha256File } from '../../utils/hash.js';
 import type { CliOutput } from '../../utils/logger.js';
 import { applyMoveResult, moveFile } from './move.js';
 import { SplitProgressReporter } from './progress.js';
-import type { SplitDestinationLayout, SplitFile } from './types.js';
+import type { SplitFile } from './types.js';
 
 type SplitResult = { failed: number; moved: number };
 
@@ -47,62 +47,6 @@ async function hashLabelForFile(
   }
 }
 
-export async function splitByDate(
-  files: SplitFile[],
-  outputDir: string,
-  output: CliOutput,
-  layout: SplitDestinationLayout = 'preserve',
-): Promise<SplitResult> {
-  const counts = { moved: 0, failed: 0 };
-  const progress = new SplitProgressReporter(output, files.length);
-
-  for (let index = 0; index < files.length; index++) {
-    const file = files[index];
-    progress.tick(index + 1, file.relativePath, 'read_dates');
-    const label = await dateLabelForFile(file);
-    const result = await moveFile(
-      file,
-      path.join(outputDir, label),
-      output,
-      layout,
-    );
-    applyMoveResult(result, counts);
-  }
-
-  progress.finish();
-  return counts;
-}
-
-export async function splitByHash(
-  files: SplitFile[],
-  outputDir: string,
-  output: CliOutput,
-): Promise<SplitResult> {
-  const counts = { moved: 0, failed: 0 };
-  const progress = new SplitProgressReporter(output, files.length);
-
-  for (let index = 0; index < files.length; index++) {
-    const file = files[index];
-    progress.tick(index + 1, file.relativePath, 'hash');
-    const label = await hashLabelForFile(file, output);
-    if (label === null) {
-      counts.failed++;
-      continue;
-    }
-
-    const result = await moveFile(
-      file,
-      path.join(outputDir, label),
-      output,
-      'flat',
-    );
-    applyMoveResult(result, counts);
-  }
-
-  progress.finish();
-  return counts;
-}
-
 interface DateHashEntry {
   readonly dateLabel: string;
   readonly file: SplitFile;
@@ -114,9 +58,9 @@ function dateHashGroupKey(dateLabel: string, hashLabel: string): string {
 }
 
 /**
- * Files that are the only one in their (month, hash) group land flat in the
- * month folder. Files that share a hash with at least one sibling in the same
- * month are moved into a hash subfolder so duplicates are grouped together.
+ * Organizes files into YYYY-MM month folders. Files that share a content hash
+ * within the same month are moved into a hash subfolder so duplicates are
+ * grouped together for easy manual comparison.
  */
 export async function splitByDateAndHash(
   files: SplitFile[],

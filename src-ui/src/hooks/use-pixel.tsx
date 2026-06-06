@@ -407,22 +407,31 @@ function usePixelProviderValue() {
   );
 
   const split = useCallback(
-    async (folder: string, options: { mode: SplitMode }) => {
+    async (
+      folder: string,
+      options: { mode: SplitMode; sizeValue?: string },
+    ) => {
       if (!folder) return;
       setActiveOperation('split');
-      await execute(buildSplitArgs(folder, options.mode), {
-        onFinish: () => setActiveOperation(null),
-      });
+      await execute(
+        buildSplitArgs(folder, options.mode, options.sizeValue),
+        { onFinish: () => setActiveOperation(null) },
+      );
     },
     [execute],
   );
 
   const splitInTerminal = useCallback(
-    async (folder: string, options: { mode: SplitMode }) => {
+    async (
+      folder: string,
+      options: { mode: SplitMode; sizeValue?: string },
+    ) => {
       if (!folder) return;
-      const args = buildSplitArgs(folder, options.mode).filter(
-        (arg) => arg !== '--jsonl',
-      );
+      const args = buildSplitArgs(
+        folder,
+        options.mode,
+        options.sizeValue,
+      ).filter((arg) => arg !== '--jsonl');
       await openSidecarInTerminal(args);
     },
     [openSidecarInTerminal],

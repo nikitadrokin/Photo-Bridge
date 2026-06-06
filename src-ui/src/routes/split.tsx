@@ -13,14 +13,11 @@ import SplitStatsPanel from '@/components/activity-stats/split-panel';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
+import { Input } from '@/components/ui/input';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
-import {
-  buildSplitArgs,
-  type SplitMode,
-  splitModeLabel,
-} from '@/lib/split-args';
+import { type SplitMode, splitModeLabel } from '@/lib/split-args';
 import { useMediaStore } from '@/stores/media-store';
 
 const SPLIT_MODE_OPTIONS: ReadonlyArray<{
@@ -29,28 +26,15 @@ const SPLIT_MODE_OPTIONS: ReadonlyArray<{
   description: string;
 }> = [
   {
-    value: 'date-hash',
-    title: 'By month + duplicates',
-    description:
-      'YYYY-MM folders; hash subfolders only when duplicates share the same month.',
-  },
-  {
     value: 'date',
     title: 'By month',
     description:
-      'Move files into YYYY-MM folders from capture or file metadata dates.',
+      'YYYY-MM folders; files sharing a content hash in the same month are grouped into a hash subfolder for easy comparison.',
   },
   {
-    value: 'hash',
-    title: 'By content hash',
-    description:
-      'Group identical files under SHA-256 hash folders (flat filenames inside).',
-  },
-  {
-    value: 'date-recursive',
-    title: 'Flatten by month',
-    description:
-      'Pull nested files (e.g. from prior hash splits) into flat month folders.',
+    value: 'size',
+    title: 'By size',
+    description: 'Split into Part folders, each within a total size limit.',
   },
 ];
 
@@ -58,7 +42,7 @@ export const Route = createFileRoute('/split')({
   staticData: {
     pageTitle: 'Split Folder',
     pageDescription:
-      'Organize media in place into month or hash folders without converting files.',
+      'Organize media in place into month or size-limited folders without converting files.',
   },
   component: SplitPage,
 });
@@ -76,13 +60,16 @@ function isLikelyDirectoryPath(path: string): boolean {
 function SplitPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
-  const [mode, setMode] = useState<SplitMode>('date-hash');
+  const [mode, setMode] = useState<SplitMode>('date');
+  const [sizeValue, setSizeValue] = useState('');
 
   const selectedDirectory =
     selectedPaths.length === 1 && isLikelyDirectoryPath(selectedPaths[0])
       ? selectedPaths[0]
       : null;
   const isBusy = pixel.isRunning && pixel.activeOperation === 'split';
+
+  const isSizeValid = mode !== 'size' || sizeValue.trim().length > 0;
 
   const selectFolder = useCallback(async () => {
     const selected = await open({
@@ -97,9 +84,12 @@ function SplitPage() {
   }, [pixel, setSelectedPaths]);
 
   const runSplit = useCallback(() => {
-    if (!selectedDirectory) return;
-    void pixel.split(selectedDirectory, { mode });
-  }, [pixel, selectedDirectory, mode]);
+    if (!selectedDirectory || !isSizeValid) return;
+    void pixel.split(selectedDirectory, {
+      mode,
+      sizeValue: mode === 'size' ? sizeValue.trim() : undefined,
+    });
+  }, [pixel, selectedDirectory, mode, sizeValue, isSizeValid]);
 
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
@@ -133,7 +123,7 @@ function SplitPage() {
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6 max-w-sm">
                   Split moves files within the folder you choose. Pick a library
-                  or export directory to organize by month or content hash.
+                  or export directory to organize by month or size.
                 </p>
                 <Button
                   type="button"
@@ -175,11 +165,33 @@ function SplitPage() {
                 <ChoiceCardRadioGroup
                   legend="Layout"
                   value={mode}
-                  onValueChange={setMode}
+                  onValueChange={(value) => {
+                    setMode(value);
+                    setSizeValue('');
+                  }}
                   options={SPLIT_MODE_OPTIONS}
                   disabled={pixel.isRunning}
                   name="split-mode"
                 />
+
+                {mode === 'size' && (
+                  <div className="flex flex-col gap-1.5 -mt-2">
+                    <label
+                      htmlFor="size-limit"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Size limit per folder
+                    </label>
+                    <Input
+                      id="size-limit"
+                      placeholder="e.g. 4gb, 500mb"
+                      value={sizeValue}
+                      onChange={(e) => setSizeValue(e.target.value)}
+                      disabled={pixel.isRunning}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                )}
 
                 <p className="text-xs text-muted-foreground -mt-2">
                   {modeSummary}. Files are moved in place under the selected
@@ -191,7 +203,7 @@ function SplitPage() {
                 <Button
                   type="button"
                   className="gap-2 w-fit"
-                  disabled={pixel.isRunning}
+                  disabled={pixel.isRunning || !isSizeValid}
                   onClick={runSplit}
                 >
                   {isBusy ? (

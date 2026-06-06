@@ -10,7 +10,7 @@ export interface SplitFile {
   readonly size: number;
 }
 
-/** A group of files and their combined byte size for count/size batching. */
+/** A group of files and their combined byte size for size-based batching. */
 export interface SplitBatch {
   readonly files: SplitFile[];
   readonly totalSize: number;
@@ -32,49 +32,18 @@ export const MEDIA_EXTENSIONS = new Set(
 
 export const splitOptionsSchema = z
   .object({
-    count: z.coerce.number().int().positive().optional(),
     date: z.boolean().optional(),
-    hash: z.boolean().optional(),
     jsonl: z.boolean().optional(),
-    recursive: z.boolean().optional(),
     size: z.string().optional(),
   })
   .refine(
     (options) => {
-      if (options.recursive) {
-        return (
-          Boolean(options.date) &&
-          !options.hash &&
-          !options.count &&
-          !options.size
-        );
-      }
-      return true;
-    },
-    {
-      message:
-        '--recursive requires --date without --hash, --count, or --size.',
-    },
-  )
-  .refine(
-    (options) => {
-      const hasCount = Boolean(options.count);
-      const hasSize = Boolean(options.size);
       const hasDate = Boolean(options.date);
-      const hasHash = Boolean(options.hash);
-
-      if (hasDate && hasHash) {
-        return !hasCount && !hasSize;
-      }
-
-      const selectedModes = [hasCount, hasSize, hasDate, hasHash].filter(
-        Boolean,
-      );
-      return selectedModes.length === 1;
+      const hasSize = Boolean(options.size);
+      return hasDate !== hasSize;
     },
     {
-      message:
-        'Choose --count, --size, --date, --hash, or --date with --hash together.',
+      message: 'Choose exactly one of --date or --size.',
     },
   );
 

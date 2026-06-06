@@ -1,17 +1,13 @@
 /** UI-facing split layout modes (maps to `pb split` flags). */
-export type SplitMode = 'date' | 'date-hash' | 'hash' | 'date-recursive';
+export type SplitMode = 'date' | 'size';
 
 /** Human-readable label for each {@link SplitMode}. */
 export function splitModeLabel(mode: SplitMode): string {
   switch (mode) {
     case 'date':
-      return 'By month (YYYY-MM)';
-    case 'date-hash':
-      return 'By month, hash folders for duplicates';
-    case 'hash':
-      return 'By content hash';
-    case 'date-recursive':
-      return 'Flatten into month folders';
+      return 'By month, hash subfolders for duplicates';
+    case 'size':
+      return 'By size limit';
   }
 }
 
@@ -19,20 +15,17 @@ export function splitModeLabel(mode: SplitMode): string {
 export function buildSplitArgs(
   folder: string,
   mode: SplitMode,
+  sizeValue?: string,
 ): Array<string> {
   const args = ['split', folder, '--jsonl'];
   switch (mode) {
     case 'date':
       args.push('--date');
       break;
-    case 'date-hash':
-      args.push('--date', '--hash');
-      break;
-    case 'hash':
-      args.push('--hash');
-      break;
-    case 'date-recursive':
-      args.push('--date', '--recursive');
+    case 'size':
+      if (sizeValue) {
+        args.push('--size', sizeValue);
+      }
       break;
   }
   return args;
