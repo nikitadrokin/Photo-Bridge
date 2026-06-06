@@ -8,6 +8,7 @@ import {
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import ActivityFeed from '@/components/activity-feed';
 import SplitStatsPanel from '@/components/activity-stats/split-panel';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import { Button } from '@/components/ui/button';
@@ -245,8 +246,6 @@ function SplitPage() {
                   folder.
                 </p>
 
-                <SplitStatsPanel />
-
                 <Button
                   type="button"
                   className="gap-2 w-fit"
@@ -263,6 +262,12 @@ function SplitPage() {
               </>
             )}
           </div>
+
+          {selectedDirectory && (
+            <div className="flex flex-col min-h-0 gap-4">
+              <SplitStatsPanel />
+            </div>
+          )}
         </div>
       </main>
     </>
