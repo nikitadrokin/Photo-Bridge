@@ -72,30 +72,35 @@ async function pushJobs(
       ...relativePath.split(path.sep),
     );
 
-    const transfer = sync.pushFile(absolutePath, targetPath);
+    try {
+      const transfer = sync.pushFile(absolutePath, targetPath);
 
-    transfer.on('progress', (stats: { bytesTransferred: number }) => {
-      if (!isJsonl) return;
-      onEvent({
-        v: 1,
-        kind: 'push_bytes',
-        file: relativePath,
-        bytesTransferred: stats.bytesTransferred,
-        completedFiles,
-        totalFiles,
+      transfer.on('progress', (stats: { bytesTransferred: number }) => {
+        if (!isJsonl) return;
+        onEvent({
+          v: 1,
+          kind: 'push_bytes',
+          file: relativePath,
+          bytesTransferred: stats.bytesTransferred,
+          completedFiles,
+          totalFiles,
+        });
       });
-    });
 
-    await new Promise<void>((resolve, reject) => {
-      transfer.on('end', () => {
-        completedFiles++;
-        if (isJsonl) {
-          onEvent({ v: 1, kind: 'progress', done: completedFiles, total: totalFiles });
-        }
-        resolve();
+      await new Promise<void>((resolve, reject) => {
+        transfer.on('end', () => {
+          completedFiles++;
+          if (isJsonl) {
+            onEvent({ v: 1, kind: 'progress', done: completedFiles, total: totalFiles });
+          }
+          resolve();
+        });
+        transfer.on('error', reject);
       });
-      transfer.on('error', reject);
-    });
+    } catch (err) {
+      const detail = `${relativePath}: ${err instanceof Error ? err.message : String(err)}`;
+      onEvent({ v: 1, kind: 'error', code: 'push_transfer_failed', detail });
+    }
   }
 }
 

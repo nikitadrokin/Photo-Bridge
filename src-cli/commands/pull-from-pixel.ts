@@ -40,28 +40,33 @@ async function pullFiles(
     const relativePath = path.posix.relative(remoteBase, remotePath);
     const localPath = path.join(destDir, ...relativePath.split('/'));
 
-    await fs.mkdir(path.dirname(localPath), { recursive: true });
+    try {
+      await fs.mkdir(path.dirname(localPath), { recursive: true });
 
-    const transfer = sync.pull(remotePath);
+      const transfer = sync.pull(remotePath);
 
-    if (isJsonl) {
-      transfer.on('progress', (stats: { bytesTransferred: number }) => {
-        onEvent({
-          v: 1,
-          kind: 'pull_bytes',
-          file: relativePath,
-          bytesTransferred: stats.bytesTransferred,
-          completedFiles,
-          totalFiles,
+      if (isJsonl) {
+        transfer.on('progress', (stats: { bytesTransferred: number }) => {
+          onEvent({
+            v: 1,
+            kind: 'pull_bytes',
+            file: relativePath,
+            bytesTransferred: stats.bytesTransferred,
+            completedFiles,
+            totalFiles,
+          });
         });
-      });
-    }
+      }
 
-    await pipeline(transfer, createWriteStream(localPath));
+      await pipeline(transfer, createWriteStream(localPath));
 
-    completedFiles++;
-    if (isJsonl) {
-      onEvent({ v: 1, kind: 'progress', done: completedFiles, total: totalFiles });
+      completedFiles++;
+      if (isJsonl) {
+        onEvent({ v: 1, kind: 'progress', done: completedFiles, total: totalFiles });
+      }
+    } catch (err) {
+      const detail = `${relativePath}: ${err instanceof Error ? err.message : String(err)}`;
+      onEvent({ v: 1, kind: 'error', code: 'pull_transfer_failed', detail });
     }
   }
 }
