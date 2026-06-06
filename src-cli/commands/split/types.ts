@@ -32,18 +32,22 @@ export const MEDIA_EXTENSIONS = new Set(
 
 export const splitOptionsSchema = z
   .object({
+    count: z.string().regex(/^\d+$/).transform(Number).optional(),
     date: z.boolean().optional(),
     jsonl: z.boolean().optional(),
     size: z.string().optional(),
   })
   .refine(
     (options) => {
-      const hasDate = Boolean(options.date);
-      const hasSize = Boolean(options.size);
-      return hasDate !== hasSize;
+      const selected = [
+        Boolean(options.date),
+        Boolean(options.size),
+        options.count !== undefined,
+      ].filter(Boolean);
+      return selected.length === 1;
     },
     {
-      message: 'Choose exactly one of --date or --size.',
+      message: 'Choose exactly one of --date, --size, or --count.',
     },
   );
 

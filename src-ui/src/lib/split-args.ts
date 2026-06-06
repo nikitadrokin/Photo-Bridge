@@ -1,5 +1,5 @@
 /** UI-facing split layout modes (maps to `pb split` flags). */
-export type SplitMode = 'date' | 'size';
+export type SplitMode = 'count' | 'date' | 'size';
 
 /** Human-readable label for each {@link SplitMode}. */
 export function splitModeLabel(mode: SplitMode): string {
@@ -7,7 +7,9 @@ export function splitModeLabel(mode: SplitMode): string {
     case 'date':
       return 'By month, hash subfolders for duplicates';
     case 'size':
-      return 'By size limit';
+      return 'By size limit per folder';
+    case 'count':
+      return 'By file count per folder';
   }
 }
 
@@ -15,7 +17,7 @@ export function splitModeLabel(mode: SplitMode): string {
 export function buildSplitArgs(
   folder: string,
   mode: SplitMode,
-  sizeValue?: string,
+  limitValue?: string,
 ): Array<string> {
   const args = ['split', folder, '--jsonl'];
   switch (mode) {
@@ -23,9 +25,10 @@ export function buildSplitArgs(
       args.push('--date');
       break;
     case 'size':
-      if (sizeValue) {
-        args.push('--size', sizeValue);
-      }
+      if (limitValue) args.push('--size', limitValue);
+      break;
+    case 'count':
+      if (limitValue) args.push('--count', limitValue);
       break;
   }
   return args;

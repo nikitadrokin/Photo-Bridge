@@ -36,6 +36,11 @@ const SPLIT_MODE_OPTIONS: ReadonlyArray<{
     title: 'By size',
     description: 'Split into Part folders, each within a total size limit.',
   },
+  {
+    value: 'count',
+    title: 'By count',
+    description: 'Split into Part folders, each holding up to N files.',
+  },
 ];
 
 export const Route = createFileRoute('/split')({
@@ -61,7 +66,7 @@ function SplitPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
   const [mode, setMode] = useState<SplitMode>('date');
-  const [sizeValue, setSizeValue] = useState('');
+  const [limitValue, setLimitValue] = useState('');
 
   const selectedDirectory =
     selectedPaths.length === 1 && isLikelyDirectoryPath(selectedPaths[0])
@@ -69,7 +74,8 @@ function SplitPage() {
       : null;
   const isBusy = pixel.isRunning && pixel.activeOperation === 'split';
 
-  const isSizeValid = mode !== 'size' || sizeValue.trim().length > 0;
+  const needsLimit = mode === 'size' || mode === 'count';
+  const isLimitValid = !needsLimit || limitValue.trim().length > 0;
 
   const selectFolder = useCallback(async () => {
     const selected = await open({
@@ -84,12 +90,12 @@ function SplitPage() {
   }, [pixel, setSelectedPaths]);
 
   const runSplit = useCallback(() => {
-    if (!selectedDirectory || !isSizeValid) return;
+    if (!selectedDirectory || !isLimitValid) return;
     void pixel.split(selectedDirectory, {
       mode,
-      sizeValue: mode === 'size' ? sizeValue.trim() : undefined,
+      limitValue: needsLimit ? limitValue.trim() : undefined,
     });
-  }, [pixel, selectedDirectory, mode, sizeValue, isSizeValid]);
+  }, [pixel, selectedDirectory, mode, limitValue, isLimitValid, needsLimit]);
 
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
@@ -167,26 +173,26 @@ function SplitPage() {
                   value={mode}
                   onValueChange={(value) => {
                     setMode(value);
-                    setSizeValue('');
+                    setLimitValue('');
                   }}
                   options={SPLIT_MODE_OPTIONS}
                   disabled={pixel.isRunning}
                   name="split-mode"
                 />
 
-                {mode === 'size' && (
+                {needsLimit && (
                   <div className="flex flex-col gap-1.5 -mt-2">
                     <label
-                      htmlFor="size-limit"
+                      htmlFor="limit-value"
                       className="text-xs font-medium text-muted-foreground"
                     >
-                      Size limit per folder
+                      {mode === 'size' ? 'Size limit per folder' : 'Max files per folder'}
                     </label>
                     <Input
-                      id="size-limit"
-                      placeholder="e.g. 4gb, 500mb"
-                      value={sizeValue}
-                      onChange={(e) => setSizeValue(e.target.value)}
+                      id="limit-value"
+                      placeholder={mode === 'size' ? 'e.g. 4gb, 500mb' : 'e.g. 1000'}
+                      value={limitValue}
+                      onChange={(e) => setLimitValue(e.target.value)}
                       disabled={pixel.isRunning}
                       className="h-8 text-sm"
                     />
@@ -203,7 +209,7 @@ function SplitPage() {
                 <Button
                   type="button"
                   className="gap-2 w-fit"
-                  disabled={pixel.isRunning || !isSizeValid}
+                  disabled={pixel.isRunning || !isLimitValid}
                   onClick={runSplit}
                 >
                   {isBusy ? (

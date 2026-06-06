@@ -3,7 +3,12 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { createCliOutput } from '../../utils/logger.js';
-import { batchBySize, formatBytes, parseSizeLimit } from './batch.js';
+import {
+  batchByCount,
+  batchBySize,
+  formatBytes,
+  parseSizeLimit,
+} from './batch.js';
 import { collectFiles } from './collect.js';
 import { moveBatch } from './move.js';
 import { splitByDateAndHash } from './strategies.js';
@@ -15,6 +20,10 @@ export const split = new Command()
     'recursively move media files from a folder into batch subfolders in that same folder',
   )
   .argument('<folder>', 'the folder to split into batches')
+  .option(
+    '--count <files>',
+    'maximum number of files per batch folder, e.g. --count 1000',
+  )
   .option(
     '--size <bytes>',
     'maximum total size per batch folder, e.g. --size 4gb',
@@ -66,9 +75,11 @@ export const split = new Command()
         output.indentedMuted(`${files.length} media file(s)`);
         output.info('Mode');
         output.indentedMuted(
-          options.size
-            ? `Move into folders of up to ${options.size}`
-            : 'Move into YYYY-MM folders; hash subfolders when duplicates share a month',
+          options.count !== undefined
+            ? `Move into folders of up to ${options.count} file(s)`
+            : options.size
+              ? `Move into folders of up to ${options.size}`
+              : 'Move into YYYY-MM folders; hash subfolders when duplicates share a month',
         );
       }
 
@@ -84,7 +95,10 @@ export const split = new Command()
         moved = result.moved;
         failed = result.failed;
       } else {
-        const batches = batchBySize(files, parseSizeLimit(options.size ?? ''));
+        const batches =
+          options.count !== undefined
+            ? batchByCount(files, options.count)
+            : batchBySize(files, parseSizeLimit(options.size ?? ''));
 
         if (!output.jsonl) {
           output.blankLine();
