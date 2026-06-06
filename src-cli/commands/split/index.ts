@@ -32,6 +32,10 @@ export const split = new Command()
     '--date',
     'move files into YYYY-MM folders by capture date; files that share a month and content hash are grouped into a hash subfolder for easy comparison',
   )
+  .option(
+    '--day',
+    'with --date, add a DD subfolder inside each YYYY-MM folder (YYYY-MM/DD layout)',
+  )
   .option('--jsonl', 'emit JSONL UI events on stdout')
   .action(async (initialFolder: string, rawOptions: SplitOptions) => {
     const output = createCliOutput(Boolean(rawOptions.jsonl));
@@ -79,7 +83,9 @@ export const split = new Command()
             ? `Move into folders of up to ${options.count} file(s)`
             : options.size
               ? `Move into folders of up to ${options.size}`
-              : 'Move into YYYY-MM folders; hash subfolders when duplicates share a month',
+              : options.day
+                ? 'Move into YYYY-MM/DD folders; hash subfolders when duplicates share a day'
+                : 'Move into YYYY-MM folders; hash subfolders when duplicates share a month',
         );
       }
 
@@ -91,7 +97,12 @@ export const split = new Command()
           output.blankLine();
           output.info('Analyzing');
         }
-        const result = await splitByDateAndHash(files, outputDir, output);
+        const result = await splitByDateAndHash(
+          files,
+          outputDir,
+          output,
+          Boolean(options.day),
+        );
         moved = result.moved;
         failed = result.failed;
       } else {

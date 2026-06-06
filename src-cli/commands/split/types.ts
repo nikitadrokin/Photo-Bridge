@@ -34,9 +34,14 @@ export const splitOptionsSchema = z
   .object({
     count: z.coerce.number().int().positive().optional(),
     date: z.boolean().optional(),
+    day: z.boolean().optional(),
     jsonl: z.boolean().optional(),
     size: z.string().optional(),
   })
+  .refine(
+    (options) => !options.day || Boolean(options.date),
+    { message: '--day requires --date.' },
+  )
   .refine(
     (options) => {
       const selected = [
@@ -46,9 +51,7 @@ export const splitOptionsSchema = z
       ].filter(Boolean);
       return selected.length === 1;
     },
-    {
-      message: 'Choose exactly one of --date, --size, or --count.',
-    },
+    { message: 'Choose exactly one of --date, --size, or --count.' },
   );
 
 export type SplitOptions = z.infer<typeof splitOptionsSchema>;

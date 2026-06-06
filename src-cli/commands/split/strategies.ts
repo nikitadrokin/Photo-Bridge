@@ -8,14 +8,22 @@ import type { SplitFile } from './types.js';
 
 type SplitResult = { failed: number; moved: number };
 
-function formatMonthLabel(unixSeconds: number): string {
+interface DateLabels {
+  /** YYYY-MM, or 'Unknown Date' when metadata is unavailable. */
+  readonly month: string;
+  /** Zero-padded day of month (01–31), or null when date is unknown. */
+  readonly day: string | null;
+}
+
+function parseDateLabels(unixSeconds: number): DateLabels {
   const date = new Date(unixSeconds * 1000);
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return { month: `${year}-${month}`, day };
 }
 
-async function dateLabelForFile(file: SplitFile): Promise<string> {
+async function dateLabelsForFile(file: SplitFile): Promise<DateLabels> {
   try {
     const inspected = await inspectMediaDates(file.sourcePath);
     const suggested = inspected.candidates.find(
@@ -26,13 +34,13 @@ async function dateLabelForFile(file: SplitFile): Promise<string> {
     );
     const unixSeconds = suggested?.unixSeconds ?? fallback?.unixSeconds;
     if (unixSeconds !== undefined && unixSeconds !== null) {
-      return formatMonthLabel(unixSeconds);
+      return parseDateLabels(unixSeconds);
     }
   } catch {
     // Best-effort: unreadable metadata falls back to a safe label.
   }
 
-  return 'Unknown Date';
+  return { month: 'Unknown Date', day: null };
 }
 
 async function hashLabelForFile(
@@ -48,24 +56,26 @@ async function hashLabelForFile(
 }
 
 interface DateHashEntry {
-  readonly dateLabel: string;
+  /** The resolved date folder path: 'YYYY-MM' or 'YYYY-MM/DD' (or 'Unknown Date'). */
+  readonly dateFolder: string;
   readonly file: SplitFile;
   readonly hashLabel: string;
 }
 
-function dateHashGroupKey(dateLabel: string, hashLabel: string): string {
-  return `${dateLabel}\0${hashLabel}`;
+function dateHashGroupKey(dateFolder: string, hashLabel: string): string {
+  return `${dateFolder}\0${hashLabel}`;
 }
 
 /**
- * Organizes files into YYYY-MM month folders. Files that share a content hash
- * within the same month are moved into a hash subfolder so duplicates are
- * grouped together for easy manual comparison.
+ * Organizes files into YYYY-MM month folders (or YYYY-MM/DD when `byDay` is
+ * true). Files that share a content hash within the same date bucket are moved
+ * into a hash subfolder so duplicates are grouped together for easy comparison.
  */
 export async function splitByDateAndHash(
   files: SplitFile[],
   outputDir: string,
   output: CliOutput,
+  byDay = false,
 ): Promise<SplitResult> {
   const counts = { moved: 0, failed: 0 };
   const entries: DateHashEntry[] = [];
@@ -80,8 +90,12 @@ export async function splitByDateAndHash(
       continue;
     }
 
-    const dateLabel = await dateLabelForFile(file);
-    entries.push({ file, dateLabel, hashLabel });
+    const labels = await dateLabelsForFile(file);
+    const dateFolder =
+      byDay && labels.day !== null
+        ? path.join(labels.month, labels.day)
+        : labels.month;
+    entries.push({ file, dateFolder, hashLabel });
   }
 
   progress.finish();
@@ -93,16 +107,16 @@ export async function splitByDateAndHash(
 
   const groupSizes = new Map<string, number>();
   for (const entry of entries) {
-    const key = dateHashGroupKey(entry.dateLabel, entry.hashLabel);
+    const key = dateHashGroupKey(entry.dateFolder, entry.hashLabel);
     groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1);
   }
 
   for (const entry of entries) {
-    const key = dateHashGroupKey(entry.dateLabel, entry.hashLabel);
+    const key = dateHashGroupKey(entry.dateFolder, entry.hashLabel);
     const hasDuplicates = (groupSizes.get(key) ?? 0) > 1;
     const destinationDir = hasDuplicates
-      ? path.join(outputDir, entry.dateLabel, entry.hashLabel)
-      : path.join(outputDir, entry.dateLabel);
+      ? path.join(outputDir, entry.dateFolder, entry.hashLabel)
+      : path.join(outputDir, entry.dateFolder);
 
     const result = await moveFile(entry.file, destinationDir, output, 'flat');
     applyMoveResult(result, counts);

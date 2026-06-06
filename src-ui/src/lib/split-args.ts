@@ -2,10 +2,12 @@
 export type SplitMode = 'count' | 'date' | 'size';
 
 /** Human-readable label for each {@link SplitMode}. */
-export function splitModeLabel(mode: SplitMode): string {
+export function splitModeLabel(mode: SplitMode, dateByDay = false): string {
   switch (mode) {
     case 'date':
-      return 'By month, hash subfolders for duplicates';
+      return dateByDay
+        ? 'By month › day, hash subfolders for duplicates'
+        : 'By month, hash subfolders for duplicates';
     case 'size':
       return 'By size limit per folder';
     case 'count':
@@ -18,11 +20,13 @@ export function buildSplitArgs(
   folder: string,
   mode: SplitMode,
   limitValue?: string,
+  dateByDay = false,
 ): Array<string> {
   const args = ['split', folder, '--jsonl'];
   switch (mode) {
     case 'date':
       args.push('--date');
+      if (dateByDay) args.push('--day');
       break;
     case 'size':
       if (limitValue) args.push('--size', limitValue);

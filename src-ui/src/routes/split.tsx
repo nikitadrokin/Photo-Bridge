@@ -14,6 +14,8 @@ import DropzoneOverlay from '@/components/dropzone-overlay';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
@@ -67,6 +69,7 @@ function SplitPage() {
   const pixel = usePixel();
   const [mode, setMode] = useState<SplitMode>('date');
   const [limitValue, setLimitValue] = useState('');
+  const [dateByDay, setDateByDay] = useState(false);
 
   const selectedDirectory =
     selectedPaths.length === 1 && isLikelyDirectoryPath(selectedPaths[0])
@@ -94,8 +97,17 @@ function SplitPage() {
     void pixel.split(selectedDirectory, {
       mode,
       limitValue: needsLimit ? limitValue.trim() : undefined,
+      dateByDay: mode === 'date' ? dateByDay : undefined,
     });
-  }, [pixel, selectedDirectory, mode, limitValue, isLimitValid, needsLimit]);
+  }, [
+    pixel,
+    selectedDirectory,
+    mode,
+    limitValue,
+    isLimitValid,
+    needsLimit,
+    dateByDay,
+  ]);
 
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
@@ -110,7 +122,10 @@ function SplitPage() {
     },
   });
 
-  const modeSummary = useMemo(() => splitModeLabel(mode), [mode]);
+  const modeSummary = useMemo(
+    () => splitModeLabel(mode, dateByDay),
+    [mode, dateByDay],
+  );
 
   return (
     <>
@@ -174,11 +189,34 @@ function SplitPage() {
                   onValueChange={(value) => {
                     setMode(value);
                     setLimitValue('');
+                    setDateByDay(false);
                   }}
                   options={SPLIT_MODE_OPTIONS}
                   disabled={pixel.isRunning}
                   name="split-mode"
                 />
+
+                {mode === 'date' && (
+                  <Label
+                    htmlFor="date-by-day"
+                    className="flex cursor-pointer items-center justify-between -mt-2 py-1"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium leading-none">
+                        Group by day
+                      </span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        Adds a DD subfolder inside each YYYY-MM folder
+                      </span>
+                    </div>
+                    <Switch
+                      id="date-by-day"
+                      checked={dateByDay}
+                      onCheckedChange={setDateByDay}
+                      disabled={pixel.isRunning}
+                    />
+                  </Label>
+                )}
 
                 {needsLimit && (
                   <div className="flex flex-col gap-1.5 -mt-2">
@@ -186,11 +224,15 @@ function SplitPage() {
                       htmlFor="limit-value"
                       className="text-xs font-medium text-muted-foreground"
                     >
-                      {mode === 'size' ? 'Size limit per folder' : 'Max files per folder'}
+                      {mode === 'size'
+                        ? 'Size limit per folder'
+                        : 'Max files per folder'}
                     </label>
                     <Input
                       id="limit-value"
-                      placeholder={mode === 'size' ? 'e.g. 4gb, 500mb' : 'e.g. 1000'}
+                      placeholder={
+                        mode === 'size' ? 'e.g. 4gb, 500mb' : 'e.g. 1000'
+                      }
                       value={limitValue}
                       onChange={(e) => setLimitValue(e.target.value)}
                       disabled={pixel.isRunning}
