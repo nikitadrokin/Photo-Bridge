@@ -8,7 +8,6 @@ import {
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import ActivityFeed from '@/components/activity-feed';
 import SplitStatsPanel from '@/components/activity-stats/split-panel';
 import DropzoneOverlay from '@/components/dropzone-overlay';
 import { Button } from '@/components/ui/button';
@@ -263,10 +262,6 @@ function SplitPage() {
                 </Button>
               </>
             )}
-          </div>
-
-          <div className="flex flex-col min-h-0">
-            <ActivityFeed emptyMessage="Activity will appear here after splitting" />
           </div>
         </div>
       </main>
