@@ -99,7 +99,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   return (
     <Sidebar
       variant="inset"
-      className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-14 md:bottom-0 md:h-auto"
+      className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
       <SidebarContent>
         {/* Core */}
