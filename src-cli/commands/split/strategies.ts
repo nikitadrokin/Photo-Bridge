@@ -55,6 +55,8 @@ interface DateHashEntry {
   readonly hashLabel: string | null;
 }
 
+type DateEntry = Omit<DateHashEntry, 'hashLabel'>;
+
 function dateHashGroupKey(dateFolder: string, hashLabel: string): string {
   return `${dateFolder}\0${hashLabel}`;
 }
@@ -90,7 +92,7 @@ async function mapConcurrent<T, R>(
 async function dateEntryForFile(
   file: SplitFile,
   byDay: boolean,
-): Promise<Omit<DateHashEntry, 'hashLabel'>> {
+): Promise<DateEntry> {
   const labels = await dateLabelsForFile(file);
   const dateFolder =
     byDay && labels.day !== null
@@ -126,7 +128,7 @@ export async function splitByDateAndHash(
   );
   progress.finish();
 
-  const possibleDuplicateGroups = new Map<string, typeof dateEntries>();
+  const possibleDuplicateGroups = new Map<string, DateEntry[]>();
   for (const entry of dateEntries) {
     const key = `${entry.dateFolder}\0${entry.file.size}`;
     const group = possibleDuplicateGroups.get(key);
@@ -155,7 +157,7 @@ export async function splitByDateAndHash(
     const hashProgress = new SplitProgressReporter(
       output,
       hashCandidates.size,
-      false,
+      { emitEvents: false },
     );
     const hashFiles = [...hashCandidates];
     let hashesDone = 0;
@@ -183,7 +185,7 @@ export async function splitByDateAndHash(
       if (group.length <= 1) continue;
       for (const entry of group) {
         const hashLabel = hashLabels.get(entry.file);
-        if (hashLabel) {
+        if (hashLabel !== undefined) {
           entries.push({ ...entry, hashLabel });
         }
       }
@@ -208,7 +210,7 @@ export async function splitByDateAndHash(
       (groupSizes.get(dateHashGroupKey(entry.dateFolder, entry.hashLabel)) ??
         0) > 1;
     const destinationDir = hasDuplicates
-      ? path.join(outputDir, entry.dateFolder, entry.hashLabel ?? '')
+      ? path.join(outputDir, entry.dateFolder, entry.hashLabel)
       : path.join(outputDir, entry.dateFolder);
 
     const result = await moveFile(entry.file, destinationDir, output, 'flat');

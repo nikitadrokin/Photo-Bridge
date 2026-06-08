@@ -3,10 +3,9 @@ import kleur from 'kleur';
 import type { CliOutput } from '../../utils/logger.js';
 
 /** Labels the slow pre-move work shown in human-mode progress lines. */
-export type SplitProgressPhase = 'analyze' | 'hash' | 'read_dates';
+export type SplitProgressPhase = 'hash' | 'read_dates';
 
 const PHASE_LABELS: Record<SplitProgressPhase, string> = {
-  analyze: 'Analyzing',
   hash: 'Hashing',
   read_dates: 'Reading dates',
 };
@@ -21,12 +20,12 @@ export class SplitProgressReporter {
   constructor(
     private readonly output: CliOutput,
     private readonly total: number,
-    private readonly emitEvents = true,
+    private readonly options: { readonly emitEvents?: boolean } = {},
   ) {}
 
   /** Reports incremental progress for one file in the current phase. */
   tick(done: number, detail: string, phase: SplitProgressPhase): void {
-    if (this.emitEvents) {
+    if (this.options.emitEvents ?? true) {
       this.output.event({
         v: 1,
         kind: 'progress',
