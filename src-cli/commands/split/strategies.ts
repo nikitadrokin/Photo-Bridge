@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { inspectMediaDates } from '../../utils/dates.js';
+import { readMediaCaptureUnixSeconds } from '../../utils/dates.js';
 import { sha256File } from '../../utils/hash.js';
 import type { CliOutput } from '../../utils/logger.js';
 import { applyMoveResult, moveFile } from './move.js';
@@ -25,15 +25,8 @@ function parseDateLabels(unixSeconds: number): DateLabels {
 
 async function dateLabelsForFile(file: SplitFile): Promise<DateLabels> {
   try {
-    const inspected = await inspectMediaDates(file.sourcePath);
-    const suggested = inspected.candidates.find(
-      (candidate) => candidate.id === inspected.suggestedCandidateId,
-    );
-    const fallback = inspected.candidates.find(
-      (candidate) => candidate.unixSeconds !== null,
-    );
-    const unixSeconds = suggested?.unixSeconds ?? fallback?.unixSeconds;
-    if (unixSeconds !== undefined && unixSeconds !== null) {
+    const unixSeconds = await readMediaCaptureUnixSeconds(file.sourcePath);
+    if (unixSeconds !== null) {
       return parseDateLabels(unixSeconds);
     }
   } catch {
@@ -59,11 +52,51 @@ interface DateHashEntry {
   /** The resolved date folder path: 'YYYY-MM' or 'YYYY-MM/DD' (or 'Unknown Date'). */
   readonly dateFolder: string;
   readonly file: SplitFile;
-  readonly hashLabel: string;
+  readonly hashLabel: string | null;
 }
 
 function dateHashGroupKey(dateFolder: string, hashLabel: string): string {
   return `${dateFolder}\0${hashLabel}`;
+}
+
+const DATE_READ_CONCURRENCY = 8;
+const HASH_CONCURRENCY = 3;
+
+async function mapConcurrent<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function runWorker(): Promise<void> {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index], index);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () =>
+      runWorker(),
+    ),
+  );
+  return results;
+}
+
+async function dateEntryForFile(
+  file: SplitFile,
+  byDay: boolean,
+): Promise<Omit<DateHashEntry, 'hashLabel'>> {
+  const labels = await dateLabelsForFile(file);
+  const dateFolder =
+    byDay && labels.day !== null
+      ? path.join(labels.month, labels.day)
+      : labels.month;
+  return { file, dateFolder };
 }
 
 /**
@@ -78,27 +111,84 @@ export async function splitByDateAndHash(
   byDay = false,
 ): Promise<SplitResult> {
   const counts = { moved: 0, failed: 0 };
-  const entries: DateHashEntry[] = [];
   const progress = new SplitProgressReporter(output, files.length);
 
-  for (let index = 0; index < files.length; index++) {
-    const file = files[index];
-    progress.tick(index + 1, file.relativePath, 'analyze');
-    const hashLabel = await hashLabelForFile(file, output);
-    if (hashLabel === null) {
-      counts.failed++;
+  let datesDone = 0;
+  const dateEntries = await mapConcurrent(
+    files,
+    DATE_READ_CONCURRENCY,
+    async (file) => {
+      const entry = await dateEntryForFile(file, byDay);
+      datesDone += 1;
+      progress.tick(datesDone, file.relativePath, 'read_dates');
+      return entry;
+    },
+  );
+  progress.finish();
+
+  const possibleDuplicateGroups = new Map<string, typeof dateEntries>();
+  for (const entry of dateEntries) {
+    const key = `${entry.dateFolder}\0${entry.file.size}`;
+    const group = possibleDuplicateGroups.get(key);
+    if (group) {
+      group.push(entry);
+    } else {
+      possibleDuplicateGroups.set(key, [entry]);
+    }
+  }
+
+  const entries: DateHashEntry[] = [];
+  const hashCandidates = new Set<SplitFile>();
+  for (const group of possibleDuplicateGroups.values()) {
+    if (group.length === 1) {
+      entries.push({ ...group[0], hashLabel: null });
       continue;
     }
 
-    const labels = await dateLabelsForFile(file);
-    const dateFolder =
-      byDay && labels.day !== null
-        ? path.join(labels.month, labels.day)
-        : labels.month;
-    entries.push({ file, dateFolder, hashLabel });
+    for (const entry of group) {
+      hashCandidates.add(entry.file);
+    }
   }
 
-  progress.finish();
+  const hashLabels = new Map<SplitFile, string>();
+  if (hashCandidates.size > 0) {
+    const hashProgress = new SplitProgressReporter(
+      output,
+      hashCandidates.size,
+      false,
+    );
+    const hashFiles = [...hashCandidates];
+    let hashesDone = 0;
+    const hashResults = await mapConcurrent(
+      hashFiles,
+      HASH_CONCURRENCY,
+      async (file) => {
+        const hashLabel = await hashLabelForFile(file, output);
+        hashesDone += 1;
+        hashProgress.tick(hashesDone, file.relativePath, 'hash');
+        return { file, hashLabel };
+      },
+    );
+    hashProgress.finish();
+
+    for (const result of hashResults) {
+      if (result.hashLabel === null) {
+        counts.failed++;
+      } else {
+        hashLabels.set(result.file, result.hashLabel);
+      }
+    }
+
+    for (const group of possibleDuplicateGroups.values()) {
+      if (group.length <= 1) continue;
+      for (const entry of group) {
+        const hashLabel = hashLabels.get(entry.file);
+        if (hashLabel) {
+          entries.push({ ...entry, hashLabel });
+        }
+      }
+    }
+  }
 
   if (!output.jsonl) {
     output.blankLine();
@@ -107,15 +197,18 @@ export async function splitByDateAndHash(
 
   const groupSizes = new Map<string, number>();
   for (const entry of entries) {
+    if (entry.hashLabel === null) continue;
     const key = dateHashGroupKey(entry.dateFolder, entry.hashLabel);
     groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1);
   }
 
   for (const entry of entries) {
-    const key = dateHashGroupKey(entry.dateFolder, entry.hashLabel);
-    const hasDuplicates = (groupSizes.get(key) ?? 0) > 1;
+    const hasDuplicates =
+      entry.hashLabel !== null &&
+      (groupSizes.get(dateHashGroupKey(entry.dateFolder, entry.hashLabel)) ??
+        0) > 1;
     const destinationDir = hasDuplicates
-      ? path.join(outputDir, entry.dateFolder, entry.hashLabel)
+      ? path.join(outputDir, entry.dateFolder, entry.hashLabel ?? '')
       : path.join(outputDir, entry.dateFolder);
 
     const result = await moveFile(entry.file, destinationDir, output, 'flat');

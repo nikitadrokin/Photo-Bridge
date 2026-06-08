@@ -405,6 +405,48 @@ export async function inspectMediaDates(
   };
 }
 
+/**
+ * Lightweight best-effort capture instant lookup for bulk organization commands.
+ * Unlike inspectMediaDates, this does not validate whether automatic repair is needed,
+ * so it keeps bulk scans to one exiftool read per file.
+ */
+export async function readMediaCaptureUnixSeconds(
+  filePath: string,
+): Promise<number | null> {
+  const mediaKind = classifyMediaKind(filePath);
+  const uniqueVideoPhotoTags = [
+    ...new Set([...VIDEO_DATE_SOURCE_TAGS, ...PHOTO_DATE_SOURCE_TAGS]),
+  ];
+
+  const tagsForKind =
+    mediaKind === 'video'
+      ? [...VIDEO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
+      : mediaKind === 'photo'
+        ? [...PHOTO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
+        : [...uniqueVideoPhotoTags, ...FILESYSTEM_DATE_TAGS];
+
+  const tagValues = await readExifDateTagMap(filePath, tagsForKind);
+  const winnerId =
+    mediaKind === 'video'
+      ? videoExifWinnerId(tagValues)
+      : mediaKind === 'photo'
+        ? photoExifWinnerId(tagValues)
+        : videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
+
+  if (winnerId) {
+    const tag = winnerId.replace(/^exif:/, '');
+    const unixSeconds = parseExifToolDateToUnixSeconds(tagValues[tag] ?? '');
+    if (unixSeconds !== null) return unixSeconds;
+  }
+
+  for (const tag of tagsForKind) {
+    const unixSeconds = parseExifToolDateToUnixSeconds(tagValues[tag] ?? '');
+    if (unixSeconds !== null) return unixSeconds;
+  }
+
+  return null;
+}
+
 /** Best-effort capture instant from an inspect result (suggested tag, then any dated tag). */
 export function pickInspectUnixSeconds(
   inspected: MediaDateInspectResult,

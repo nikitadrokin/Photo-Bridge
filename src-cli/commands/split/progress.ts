@@ -21,16 +21,19 @@ export class SplitProgressReporter {
   constructor(
     private readonly output: CliOutput,
     private readonly total: number,
+    private readonly emitEvents = true,
   ) {}
 
   /** Reports incremental progress for one file in the current phase. */
   tick(done: number, detail: string, phase: SplitProgressPhase): void {
-    this.output.event({
-      v: 1,
-      kind: 'progress',
-      done,
-      total: this.total,
-    });
+    if (this.emitEvents) {
+      this.output.event({
+        v: 1,
+        kind: 'progress',
+        done,
+        total: this.total,
+      });
+    }
 
     if (this.output.jsonl) {
       return;
