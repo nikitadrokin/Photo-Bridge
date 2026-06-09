@@ -242,7 +242,13 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
                 return (
                   <SidebarMenuItem key={route.to}>
-                    <SidebarMenuButton isActive={isActive}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      tooltip={route.tooltip}
+                      onClick={() => {
+                        void navigate({ to: route.to });
+                      }}
+                    >
                       <route.icon
                         className={cn(
                           'self-start h-lh',
