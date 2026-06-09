@@ -3,6 +3,7 @@ import {
   IconDownload,
   IconFile,
   IconFolder,
+  IconAlertTriangle,
   IconTerminal2,
 } from '@tabler/icons-react';
 import ActivityFeed from '@/components/activity-feed';
@@ -11,6 +12,11 @@ import { usePixel } from '@/hooks/use-pixel';
 import { PIXEL_CAMERA_DIR } from '@/lib/constants';
 import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/transfer')({
@@ -37,6 +43,19 @@ function TransferPage() {
                 void pixel.checkConnection({ interactive: true });
               }}
             />
+
+            {pixel.transferInterrupted ? (
+              <Alert variant="destructive">
+                <IconAlertTriangle className="size-4" />
+                <AlertTitle>Transfer interrupted</AlertTitle>
+                <AlertDescription>
+                  The Pixel disconnected while files were transferring. The
+                  last file may be incomplete or corrupted on the device.
+                  Reconnect the Pixel, remove the partial file if needed, and
+                  run the transfer again.
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
             <section className="space-y-4">
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">

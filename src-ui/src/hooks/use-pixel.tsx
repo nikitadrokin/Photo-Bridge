@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import { listen } from '@tauri-apps/api/event';
@@ -134,6 +135,9 @@ function usePixelProviderValue() {
     useState(false);
   const [availableStorage, setAvailableStorage] =
     useState<AvailableStorageState>({ status: 'idle' });
+  const [transferInterrupted, setTransferInterrupted] = useState(false);
+  const activeOperationRef = useRef<ActiveOperation>(null);
+  const isRunningRef = useRef(false);
 
   const { execute, captureStdout, isRunning, logs, activityEvents, clearLogs } =
     useCommand({
@@ -145,6 +149,14 @@ function usePixelProviderValue() {
     terminalName,
     isReady: terminalReady,
   } = useTerminal();
+
+  useEffect(() => {
+    activeOperationRef.current = activeOperation;
+  }, [activeOperation]);
+
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
 
   const checkConnection = useCallback(
     async ({ interactive = false }: CheckConnectionOptions = {}) => {
@@ -234,6 +246,14 @@ function usePixelProviderValue() {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     void listen<{ connected: boolean }>('adb-device-state', (e) => {
+      const operation = activeOperationRef.current;
+      if (
+        !e.payload.connected &&
+        isRunningRef.current &&
+        (operation === 'push' || operation === 'pull')
+      ) {
+        setTransferInterrupted(true);
+      }
       setIsConnected(e.payload.connected);
     }).then((fn) => {
       unlisten = fn;
@@ -258,6 +278,7 @@ function usePixelProviderValue() {
     });
     if (selected) {
       const paths = Array.isArray(selected) ? selected : [selected];
+      setTransferInterrupted(false);
       setActiveOperation('push');
       setTransferPaths({
         source: paths[0],
@@ -277,6 +298,7 @@ function usePixelProviderValue() {
       title: 'Select Folder to Push to Pixel',
     });
     if (selected && typeof selected === 'string') {
+      setTransferInterrupted(false);
       setActiveOperation('push');
       setTransferPaths({
         source: selected,
@@ -296,6 +318,7 @@ function usePixelProviderValue() {
       title: 'Select Destination for Camera Files',
     });
     if (destination && typeof destination === 'string') {
+      setTransferInterrupted(false);
       setActiveOperation('pull');
       setTransferPaths({ source: PIXEL_CAMERA_DIR, destination });
       await execute(['pull-from-pixel', '--jsonl', destination], {
@@ -526,6 +549,7 @@ function usePixelProviderValue() {
   const clearAll = useCallback(() => {
     clearLogs();
     setTransferPaths(null);
+    setTransferInterrupted(false);
   }, [clearLogs]);
 
   return {
@@ -557,6 +581,7 @@ function usePixelProviderValue() {
     // New exports
     activeOperation,
     transferPaths,
+    transferInterrupted,
     openActiveInTerminal,
   };
 }
