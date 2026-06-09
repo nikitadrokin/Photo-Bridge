@@ -3,15 +3,14 @@ import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import {
-  IconCircleArrowUp,
-  IconRefresh,
-  IconCalendar,
-  IconDeviceMobile,
-  IconMovie,
-  IconFolders,
-  IconPhoto,
-  IconSettings,
   IconBrandGithub,
+  IconCalendar,
+  IconCircleArrowUp,
+  IconDeviceMobile,
+  IconFolders,
+  IconMovie,
+  IconRefresh,
+  IconSettings,
 } from '@tabler/icons-react';
 import {
   Sidebar,
@@ -26,6 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Badge } from '@/components/ui/badge';
 
 interface AppSidebarProps {
   isPixelConnected: boolean;
@@ -46,18 +46,13 @@ const routes = [
     label: 'Fix Dates',
     icon: IconCalendar,
     tooltip: 'Experimental: inspect dates and apply overrides',
+    badge: 'BETA',
   },
   {
     to: '/split',
     label: 'Split Folder',
     icon: IconFolders,
     tooltip: 'Organize media into month or hash folders in place',
-  },
-  {
-    to: '/browse',
-    label: 'Browse by Day',
-    icon: IconPhoto,
-    tooltip: 'View media grouped and sorted by capture date',
   },
   {
     to: '/transfer',
@@ -135,6 +130,14 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                     >
                       <route.icon className={cn(isActive && 'text-primary')} />
                       <span>{route.label}</span>
+                      {'badge' in route ? (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto h-4 rounded px-1.5 text-[10px]"
+                        >
+                          {route.badge}
+                        </Badge>
+                      ) : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
