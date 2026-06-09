@@ -115,11 +115,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   <SidebarMenuItem key={route.to}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      aria-disabled={isRunning}
-                      className={cn(
-                        isRunning &&
-                          'cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto',
-                      )}
+                      disabled={isRunning}
+                      className={cn(isRunning && 'cursor-not-allowed')}
                       tooltip={
                         isRunning
                           ? {
@@ -157,7 +154,12 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                     onCheckConnection({ interactive: true });
                   }}
                   disabled={isRunning || isConnectionCheckPending}
-                  tooltip="Check Pixel connection via ADB"
+                  className={cn(isRunning && 'cursor-not-allowed')}
+                  tooltip={
+                    isRunning
+                      ? processRunningTooltip
+                      : 'Check Pixel connection via ADB'
+                  }
                 >
                   <IconDeviceMobile
                     className={cn(
