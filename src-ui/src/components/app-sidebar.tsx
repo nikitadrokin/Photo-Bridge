@@ -9,6 +9,7 @@ import {
   IconDeviceMobile,
   IconFolders,
   IconMovie,
+  IconPhoto,
   IconRefresh,
   IconSettings,
 } from '@tabler/icons-react';
@@ -34,37 +35,60 @@ interface AppSidebarProps {
   isConnectionCheckPending: boolean;
 }
 
-const routes = [
+const routeGroups = [
   {
-    to: '/convert',
-    label: 'Convert Media',
-    icon: IconMovie,
-    tooltip: 'Convert media for Pixel',
+    label: 'Media',
+    routes: [
+      {
+        to: '/convert',
+        label: 'Convert Media',
+        icon: IconMovie,
+        tooltip: 'Convert media for Pixel',
+      },
+      {
+        to: '/split',
+        label: 'Split Folder',
+        icon: IconFolders,
+        tooltip: 'Organize media into month or hash folders in place',
+      },
+      {
+        to: '/browse',
+        label: 'Browse by Day',
+        icon: IconPhoto,
+        tooltip: 'View media grouped and sorted by capture date',
+        badge: 'DEV',
+        hideInProd: true,
+      },
+      {
+        to: '/fix-dates',
+        label: 'Fix Dates',
+        icon: IconCalendar,
+        tooltip: 'Experimental: inspect dates and apply overrides',
+        badge: 'BETA',
+      },
+    ],
   },
   {
-    to: '/fix-dates',
-    label: 'Fix Dates',
-    icon: IconCalendar,
-    tooltip: 'Experimental: inspect dates and apply overrides',
-    badge: 'BETA',
+    label: 'Device',
+    routes: [
+      {
+        to: '/transfer',
+        label: 'Pixel Transfer',
+        icon: IconDeviceMobile,
+        tooltip: 'Transfer files to Pixel',
+      },
+    ],
   },
   {
-    to: '/split',
-    label: 'Split Folder',
-    icon: IconFolders,
-    tooltip: 'Organize media into month or hash folders in place',
-  },
-  {
-    to: '/transfer',
-    label: 'Pixel Transfer',
-    icon: IconDeviceMobile,
-    tooltip: 'Transfer files to Pixel',
-  },
-  {
-    to: '/settings',
-    label: 'Settings',
-    icon: IconSettings,
-    tooltip: 'App settings',
+    label: 'App',
+    routes: [
+      {
+        to: '/settings',
+        label: 'Settings',
+        icon: IconSettings,
+        tooltip: 'App settings',
+      },
+    ],
   },
 ] as const;
 
@@ -98,93 +122,97 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
       <SidebarContent>
-        {/* Core */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Core</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {routes.map((route) => {
-                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
+        {routeGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.routes
+                  .filter(
+                    (route) => !(route.hideInProd && import.meta.env.PROD),
+                  )
+                  .map((route) => {
+                    const isActive = !!matchRoute({
+                      to: route.to,
+                      fuzzy: true,
+                    });
 
-                return (
-                  <SidebarMenuItem key={route.to}>
+                    return (
+                      <SidebarMenuItem key={route.to}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          disabled={isRunning}
+                          className={cn(isRunning && 'cursor-not-allowed')}
+                          tooltip={
+                            isRunning
+                              ? {
+                                  children: processRunningTooltip,
+                                  hidden: false,
+                                }
+                              : route.tooltip
+                          }
+                          onClick={(event) => {
+                            if (isRunning) {
+                              event.preventDefault();
+                              return;
+                            }
+                            void navigate({ to: route.to });
+                          }}
+                        >
+                          <route.icon
+                            className={cn(isActive && 'text-primary')}
+                          />
+                          <span>{route.label}</span>
+                          {'badge' in route ? (
+                            <Badge
+                              variant="secondary"
+                              className="ml-auto h-4 rounded px-1.5 text-[10px]"
+                            >
+                              {route.badge}
+                            </Badge>
+                          ) : null}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                {group.label === 'Device' ? (
+                  <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={isActive}
-                      disabled={isRunning}
+                      onClick={() => {
+                        onCheckConnection({ interactive: true });
+                      }}
+                      disabled={isRunning || isConnectionCheckPending}
                       className={cn(isRunning && 'cursor-not-allowed')}
                       tooltip={
                         isRunning
-                          ? {
-                              children: processRunningTooltip,
-                              hidden: false,
-                            }
-                          : route.tooltip
+                          ? processRunningTooltip
+                          : 'Check Pixel connection via ADB'
                       }
-                      onClick={(event) => {
-                        if (isRunning) {
-                          event.preventDefault();
-                          return;
-                        }
-                        void navigate({ to: route.to });
-                      }}
                     >
-                      <route.icon className={cn(isActive && 'text-primary')} />
-                      <span>{route.label}</span>
-                      {'badge' in route ? (
-                        <Badge
-                          variant="secondary"
-                          className="ml-auto h-4 rounded px-1.5 text-[10px]"
-                        >
-                          {route.badge}
-                        </Badge>
-                      ) : null}
+                      <IconDeviceMobile
+                        className={cn(
+                          isPixelConnected
+                            ? 'text-green-500'
+                            : 'text-muted-foreground',
+                        )}
+                      />
+                      <span>
+                        {isPixelConnected ? 'Connected' : 'Not Connected'}
+                      </span>
+                      <IconRefresh
+                        className={cn(
+                          'ml-auto h-4 w-4',
+                          isConnectionCheckPending && 'animate-spin',
+                        )}
+                      />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                ) : null}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
 
-        {/* Device Status */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Device</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => {
-                    onCheckConnection({ interactive: true });
-                  }}
-                  disabled={isRunning || isConnectionCheckPending}
-                  className={cn(isRunning && 'cursor-not-allowed')}
-                  tooltip={
-                    isRunning
-                      ? processRunningTooltip
-                      : 'Check Pixel connection via ADB'
-                  }
-                >
-                  <IconDeviceMobile
-                    className={cn(
-                      isPixelConnected
-                        ? 'text-green-500'
-                        : 'text-muted-foreground',
-                    )}
-                  />
-                  <span>
-                    {isPixelConnected ? 'Connected' : 'Not Connected'}
-                  </span>
-                  <IconRefresh
-                    className={cn(
-                      'ml-auto h-4 w-4',
-                      isConnectionCheckPending && 'animate-spin',
-                    )}
-                  />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4">
