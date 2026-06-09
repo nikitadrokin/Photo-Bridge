@@ -35,60 +35,51 @@ interface AppSidebarProps {
   isConnectionCheckPending: boolean;
 }
 
-const routeGroups = [
+const mediaRoutes = [
   {
-    label: 'Media',
-    routes: [
-      {
-        to: '/convert',
-        label: 'Convert Media',
-        icon: IconMovie,
-        tooltip: 'Convert media for Pixel',
-      },
-      {
-        to: '/split',
-        label: 'Split Folder',
-        icon: IconFolders,
-        tooltip: 'Organize media into month or hash folders in place',
-      },
-      {
-        to: '/browse',
-        label: 'Browse by Day',
-        icon: IconPhoto,
-        tooltip: 'View media grouped and sorted by capture date',
-        badge: 'DEV',
-        hideInProd: true,
-      },
-      {
-        to: '/fix-dates',
-        label: 'Fix Dates',
-        icon: IconCalendar,
-        tooltip: 'Experimental: inspect dates and apply overrides',
-        badge: 'BETA',
-      },
-    ],
+    to: '/convert',
+    label: 'Convert Media',
+    icon: IconMovie,
+    tooltip: 'Convert media for Pixel',
   },
   {
-    label: 'Device',
-    routes: [
-      {
-        to: '/transfer',
-        label: 'Pixel Transfer',
-        icon: IconDeviceMobile,
-        tooltip: 'Transfer files to Pixel',
-      },
-    ],
+    to: '/split',
+    label: 'Split Folder',
+    icon: IconFolders,
+    tooltip: 'Organize media into month or hash folders in place',
   },
   {
-    label: 'App',
-    routes: [
-      {
-        to: '/settings',
-        label: 'Settings',
-        icon: IconSettings,
-        tooltip: 'App settings',
-      },
-    ],
+    to: '/browse',
+    label: 'Browse by Day',
+    icon: IconPhoto,
+    tooltip: 'View media grouped and sorted by capture date',
+    badge: 'DEV',
+    hideInProd: true,
+  },
+  {
+    to: '/fix-dates',
+    label: 'Fix Dates',
+    icon: IconCalendar,
+    tooltip: 'Experimental: inspect dates and apply overrides',
+    badge: 'BETA',
+  },
+] as const;
+
+const deviceRoutes = [
+  {
+    to: '/transfer',
+    label: 'Pixel Transfer',
+    icon: IconDeviceMobile,
+    tooltip: 'Transfer files to Pixel',
+  },
+] as const;
+
+const appRoutes = [
+  {
+    to: '/settings',
+    label: 'Settings',
+    icon: IconSettings,
+    tooltip: 'App settings',
   },
 ] as const;
 
@@ -122,14 +113,19 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
       <SidebarContent>
-        {routeGroups.map((group) => (
+        {[
+          { label: 'Media', routes: mediaRoutes },
+          { label: 'Device', routes: deviceRoutes },
+          { label: 'App', routes: appRoutes },
+        ].map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.routes
                   .filter(
-                    (route) => !(route.hideInProd && import.meta.env.PROD),
+                    (route) =>
+                      !('hideInProd' in route && route.hideInProd && import.meta.env.PROD),
                   )
                   .map((route) => {
                     const isActive = !!matchRoute({
