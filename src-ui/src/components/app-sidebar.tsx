@@ -21,7 +21,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
@@ -163,7 +162,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                           }}
                         >
                           <route.icon
-                            className={cn(isActive && 'text-primary')}
+                            className={cn(
+                              isActive && 'text-primary',
+                              isPixelTransfer && 'self-start h-lh',
+                            )}
                           />
                           <span
                             className={cn(
@@ -198,21 +200,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                             </Badge>
                           ) : null}
                         </SidebarMenuButton>
-                        {isPixelTransfer ? (
-                          <SidebarMenuAction
-                            aria-label="Check Pixel connection"
-                            disabled={isRunning || isConnectionCheckPending}
-                            onClick={() => {
-                              onCheckConnection({ interactive: true });
-                            }}
-                            className={cn(
-                              isRunning && 'cursor-not-allowed',
-                              isConnectionCheckPending && 'animate-spin',
-                            )}
-                          >
-                            <IconRefresh />
-                          </SidebarMenuAction>
-                        ) : null}
                       </SidebarMenuItem>
                     );
                   })}
@@ -220,7 +207,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-
       </SidebarContent>
 
       <SidebarFooter className="p-4">
