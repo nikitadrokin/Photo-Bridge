@@ -10,7 +10,6 @@ import {
   IconFolders,
   IconMovie,
   IconPhoto,
-  IconRefresh,
   IconSettings,
 } from '@tabler/icons-react';
 import {
@@ -30,9 +29,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface AppSidebarProps {
   isPixelConnected: boolean;
-  onCheckConnection: (opts?: { interactive?: boolean }) => void;
   isRunning: boolean;
-  isConnectionCheckPending: boolean;
 }
 
 const mediaRoutes = [
@@ -85,9 +82,7 @@ const appRoutes = [
 
 const AppSidebar: React.FC<AppSidebarProps> = ({
   isPixelConnected,
-  onCheckConnection,
   isRunning,
-  isConnectionCheckPending,
 }) => {
   const [version, setVersion] = useState<string>('0');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
