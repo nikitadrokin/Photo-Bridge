@@ -114,12 +114,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             <SidebarMenu>
               {mediaRoutes
                 .filter(
-                  (route) =>
-                    !(
-                      'hideInProd' in route &&
-                      route.hideInProd &&
-                      import.meta.env.PROD
-                    ),
+                  (route) => !('hideInProd' in route && import.meta.env.PROD),
                 )
                 .map((route) => {
                   const isActive = !!matchRoute({
