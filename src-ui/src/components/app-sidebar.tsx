@@ -212,7 +212,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                       />
                       <span className="grid flex-1 text-left text-sm leading-tight">
                         <span>{route.label}</span>
-                        <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                        <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground tracking-wide">
+                          {isPixelConnected ? 'Connected' : 'Not connected'}
                           <span
                             className={cn(
                               'size-1.5 rounded-full',
@@ -222,7 +223,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                             )}
                             aria-hidden="true"
                           />
-                          {isPixelConnected ? 'Connected' : 'Not connected'}
                         </span>
                       </span>
                     </SidebarMenuButton>
