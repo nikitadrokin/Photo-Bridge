@@ -21,6 +21,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
@@ -136,11 +137,13 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                       to: route.to,
                       fuzzy: true,
                     });
+                    const isPixelTransfer = route.to === '/transfer';
 
                     return (
                       <SidebarMenuItem key={route.to}>
                         <SidebarMenuButton
                           isActive={isActive}
+                          size={isPixelTransfer ? 'lg' : 'default'}
                           disabled={isRunning}
                           className={cn(isRunning && 'cursor-not-allowed')}
                           tooltip={
@@ -162,7 +165,30 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                           <route.icon
                             className={cn(isActive && 'text-primary')}
                           />
-                          <span>{route.label}</span>
+                          <span
+                            className={cn(
+                              isPixelTransfer &&
+                                'grid flex-1 text-left text-sm leading-tight',
+                            )}
+                          >
+                            <span>{route.label}</span>
+                            {isPixelTransfer ? (
+                              <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                                <span
+                                  className={cn(
+                                    'size-1.5 rounded-full',
+                                    isPixelConnected
+                                      ? 'bg-green-500'
+                                      : 'bg-muted-foreground',
+                                  )}
+                                  aria-hidden="true"
+                                />
+                                {isPixelConnected
+                                  ? 'Connected'
+                                  : 'Not connected'}
+                              </span>
+                            ) : null}
+                          </span>
                           {'badge' in route ? (
                             <Badge
                               variant="secondary"
@@ -172,42 +198,24 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                             </Badge>
                           ) : null}
                         </SidebarMenuButton>
+                        {isPixelTransfer ? (
+                          <SidebarMenuAction
+                            aria-label="Check Pixel connection"
+                            disabled={isRunning || isConnectionCheckPending}
+                            onClick={() => {
+                              onCheckConnection({ interactive: true });
+                            }}
+                            className={cn(
+                              isRunning && 'cursor-not-allowed',
+                              isConnectionCheckPending && 'animate-spin',
+                            )}
+                          >
+                            <IconRefresh />
+                          </SidebarMenuAction>
+                        ) : null}
                       </SidebarMenuItem>
                     );
                   })}
-                {group.label === 'Device' ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      onClick={() => {
-                        onCheckConnection({ interactive: true });
-                      }}
-                      disabled={isRunning || isConnectionCheckPending}
-                      className={cn(isRunning && 'cursor-not-allowed')}
-                      tooltip={
-                        isRunning
-                          ? processRunningTooltip
-                          : 'Check Pixel connection via ADB'
-                      }
-                    >
-                      <IconDeviceMobile
-                        className={cn(
-                          isPixelConnected
-                            ? 'text-green-500'
-                            : 'text-muted-foreground',
-                        )}
-                      />
-                      <span>
-                        {isPixelConnected ? 'Connected' : 'Not Connected'}
-                      </span>
-                      <IconRefresh
-                        className={cn(
-                          'ml-auto h-4 w-4',
-                          isConnectionCheckPending && 'animate-spin',
-                        )}
-                      />
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
