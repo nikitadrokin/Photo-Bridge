@@ -83,6 +83,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
+  const processRunningTooltip = 'Please wait for the current process to finish';
 
   useEffect(() => {
     getVersion()
@@ -114,8 +115,26 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   <SidebarMenuItem key={route.to}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      tooltip={route.tooltip}
-                      onClick={() => navigate({ to: route.to })}
+                      aria-disabled={isRunning}
+                      className={cn(
+                        isRunning &&
+                          'cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto',
+                      )}
+                      tooltip={
+                        isRunning
+                          ? {
+                              children: processRunningTooltip,
+                              hidden: false,
+                            }
+                          : route.tooltip
+                      }
+                      onClick={(event) => {
+                        if (isRunning) {
+                          event.preventDefault();
+                          return;
+                        }
+                        void navigate({ to: route.to });
+                      }}
                     >
                       <route.icon className={cn(isActive && 'text-primary')} />
                       <span>{route.label}</span>
