@@ -113,96 +113,164 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
       <SidebarContent>
-        {[
-          { label: 'Media', routes: mediaRoutes },
-          { label: 'Device', routes: deviceRoutes },
-          { label: 'App', routes: appRoutes },
-        ].map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.routes
-                  .filter(
-                    (route) =>
-                      !('hideInProd' in route && route.hideInProd && import.meta.env.PROD),
-                  )
-                  .map((route) => {
-                    const isActive = !!matchRoute({
-                      to: route.to,
-                      fuzzy: true,
-                    });
-                    const isPixelTransfer = route.to === '/transfer';
+        <SidebarGroup>
+          <SidebarGroupLabel>Media</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {mediaRoutes
+                .filter(
+                  (route) =>
+                    !(
+                      'hideInProd' in route &&
+                      route.hideInProd &&
+                      import.meta.env.PROD
+                    ),
+                )
+                .map((route) => {
+                  const isActive = !!matchRoute({
+                    to: route.to,
+                    fuzzy: true,
+                  });
 
-                    return (
-                      <SidebarMenuItem key={route.to}>
-                        <SidebarMenuButton
-                          isActive={isActive}
-                          size={isPixelTransfer ? 'lg' : 'default'}
-                          disabled={isRunning}
-                          className={cn(isRunning && 'cursor-not-allowed')}
-                          tooltip={
-                            isRunning
-                              ? {
-                                  children: processRunningTooltip,
-                                  hidden: false,
-                                }
-                              : route.tooltip
+                  return (
+                    <SidebarMenuItem key={route.to}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        disabled={isRunning}
+                        className={cn(isRunning && 'cursor-not-allowed')}
+                        tooltip={
+                          isRunning
+                            ? {
+                                children: processRunningTooltip,
+                                hidden: false,
+                              }
+                            : route.tooltip
+                        }
+                        onClick={(event) => {
+                          if (isRunning) {
+                            event.preventDefault();
+                            return;
                           }
-                          onClick={(event) => {
-                            if (isRunning) {
-                              event.preventDefault();
-                              return;
-                            }
-                            void navigate({ to: route.to });
-                          }}
-                        >
-                          <route.icon
-                            className={cn(
-                              isActive && 'text-primary',
-                              isPixelTransfer && 'self-start h-lh',
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              isPixelTransfer &&
-                                'grid flex-1 text-left text-sm leading-tight',
-                            )}
+                          void navigate({ to: route.to });
+                        }}
+                      >
+                        <route.icon
+                          className={cn(isActive && 'text-primary')}
+                        />
+                        <span className="grid flex-1 text-left text-sm leading-tight">
+                          <span>{route.label}</span>
+                        </span>
+                        {'badge' in route ? (
+                          <Badge
+                            variant="secondary"
+                            className="ml-auto h-4 rounded px-1.5 text-[10px]"
                           >
-                            <span>{route.label}</span>
-                            {isPixelTransfer ? (
-                              <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
-                                <span
-                                  className={cn(
-                                    'size-1.5 rounded-full',
-                                    isPixelConnected
-                                      ? 'bg-green-500'
-                                      : 'bg-muted-foreground',
-                                  )}
-                                  aria-hidden="true"
-                                />
-                                {isPixelConnected
-                                  ? 'Connected'
-                                  : 'Not connected'}
-                              </span>
-                            ) : null}
+                            {route.badge}
+                          </Badge>
+                        ) : null}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Device</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {deviceRoutes
+                .filter(
+                  (route) =>
+                    !(
+                      'hideInProd' in route &&
+                      route.hideInProd &&
+                      import.meta.env.PROD
+                    ),
+                )
+                .map((route) => {
+                  const isActive = !!matchRoute({
+                    to: route.to,
+                    fuzzy: true,
+                  });
+
+                  return (
+                    <SidebarMenuItem key={route.to}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        disabled={isRunning}
+                        size="lg"
+                        className={cn(isRunning && 'cursor-not-allowed')}
+                        tooltip={
+                          isRunning
+                            ? {
+                                children: processRunningTooltip,
+                                hidden: false,
+                              }
+                            : route.tooltip
+                        }
+                        onClick={(event) => {
+                          if (isRunning) {
+                            event.preventDefault();
+                            return;
+                          }
+                          void navigate({ to: route.to });
+                        }}
+                      >
+                        <route.icon
+                          className={cn(
+                            'self-start h-lh',
+                            isActive && 'text-primary',
+                          )}
+                        />
+                        <span className="grid flex-1 text-left text-sm leading-tight">
+                          <span>{route.label}</span>
+                          <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                            <span
+                              className={cn(
+                                'size-1.5 rounded-full',
+                                isPixelConnected
+                                  ? 'bg-green-500'
+                                  : 'bg-muted-foreground',
+                              )}
+                              aria-hidden="true"
+                            />
+                            {isPixelConnected ? 'Connected' : 'Not connected'}
                           </span>
-                          {'badge' in route ? (
-                            <Badge
-                              variant="secondary"
-                              className="ml-auto h-4 rounded px-1.5 text-[10px]"
-                            >
-                              {route.badge}
-                            </Badge>
-                          ) : null}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+                        </span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>App</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {appRoutes.map((route) => {
+                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
+
+                return (
+                  <SidebarMenuItem key={route.to}>
+                    <SidebarMenuButton isActive={isActive}>
+                      <route.icon
+                        className={cn(
+                          'self-start h-lh',
+                          isActive && 'text-primary',
+                        )}
+                      />
+                      {route.label}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4">
