@@ -1,4 +1,9 @@
-import { IconClock, IconFile, IconPlayerPlay, IconLoader2, IconX } from '@tabler/icons-react';
+import {
+  IconFile,
+  IconLoader2,
+  IconPlayerPlay,
+  IconX,
+} from '@tabler/icons-react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
@@ -105,17 +110,6 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
             : mediaJob === 'convert'
               ? 'Convert Media'
               : 'Copy Media'}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          title="Restore embedded media timestamps"
-          onClick={() => pixel.fixDates(selectedPaths)}
-          disabled={pixel.isRunning}
-          className="gap-2"
-        >
-          <IconClock size={18} />
-          Fix Dates
         </Button>
       </div>
 
