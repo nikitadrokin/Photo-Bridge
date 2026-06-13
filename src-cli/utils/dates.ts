@@ -98,14 +98,11 @@ export async function preserveFilesystemDatesFromSource(
       '-FileModifyDate<FileModifyDate',
       targetPath,
     ]);
-
-    return;
   } catch {
     // Fall back to mtime/atime when FileCreateDate cannot be written.
+    const stat = await fs.stat(sourcePath);
+    await fs.utimes(targetPath, stat.atime, stat.mtime);
   }
-
-  const stat = await fs.stat(sourcePath);
-  await fs.utimes(targetPath, stat.atime, stat.mtime);
 }
 
 /**
