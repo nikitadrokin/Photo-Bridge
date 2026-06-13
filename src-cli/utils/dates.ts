@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { execa } from 'execa';
 
 /**
@@ -76,6 +77,35 @@ export async function copyDatesFromSource(
     ...DATE_COPY_ARGS,
     targetPath,
   ]);
+}
+
+/**
+ * Preserve only filesystem create/modify dates on a copied file.
+ * This does not rewrite embedded media metadata, so Copy mode can remain a
+ * byte-for-byte media copy while avoiding "created today" output files.
+ */
+export async function preserveFilesystemDatesFromSource(
+  sourcePath: string,
+  targetPath: string,
+): Promise<void> {
+  try {
+    await execa('exiftool', [
+      '-quiet',
+      '-overwrite_original',
+      '-TagsFromFile',
+      sourcePath,
+      '-FileCreateDate<FileCreateDate',
+      '-FileModifyDate<FileModifyDate',
+      targetPath,
+    ]);
+
+    return;
+  } catch {
+    // Fall back to mtime/atime when FileCreateDate cannot be written.
+  }
+
+  const stat = await fs.stat(sourcePath);
+  await fs.utimes(targetPath, stat.atime, stat.mtime);
 }
 
 /**
@@ -422,16 +452,16 @@ export async function readMediaCaptureUnixSeconds(
     mediaKind === 'video'
       ? [...VIDEO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
       : mediaKind === 'photo'
-        ? [...PHOTO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
-        : [...uniqueVideoPhotoTags, ...FILESYSTEM_DATE_TAGS];
+      ? [...PHOTO_DATE_SOURCE_TAGS, ...FILESYSTEM_DATE_TAGS]
+      : [...uniqueVideoPhotoTags, ...FILESYSTEM_DATE_TAGS];
 
   const tagValues = await readExifDateTagMap(filePath, tagsForKind);
   const winnerId =
     mediaKind === 'video'
       ? videoExifWinnerId(tagValues)
       : mediaKind === 'photo'
-        ? photoExifWinnerId(tagValues)
-        : videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
+      ? photoExifWinnerId(tagValues)
+      : videoExifWinnerId(tagValues) ?? photoExifWinnerId(tagValues);
 
   if (winnerId) {
     const tag = winnerId.replace(/^exif:/, '');

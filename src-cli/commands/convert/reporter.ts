@@ -64,11 +64,11 @@ export class ConvertRunReporter {
     });
   }
 
-  end(stats: {
-    processed: number;
-    skipped: number;
-    failed: number;
-  }): void {
+  warn(code: string, detail?: string): void {
+    this.output.warn(detail ?? code, code);
+  }
+
+  end(stats: { processed: number; skipped: number; failed: number }): void {
     this.output.event({
       v: 1,
       kind: 'session',

@@ -5,6 +5,7 @@ import type { FileErrorReason, MediaType } from '../../types/protocol.js';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../utils/constants';
 import { createCliOutput, type CliOutput } from '../utils/logger.js';
 import { prepareSiblingDirectory } from '../utils/sibling-directory.js';
+import { preserveFilesystemDatesFromSource } from '../utils/dates.js';
 
 const SUFFIX = '_Copied';
 
@@ -121,10 +122,45 @@ export const copy = new Command()
         const done = i + 1;
 
         try {
-          await fs.copyFile(
+          await fs.access(job.outputPath);
+          throw Object.assign(new Error('Output exists'), { code: 'EEXIST' });
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+              skipped++;
+              output.warn(`Skipped · ${job.name} · output exists`);
+              emitFileProgress(
+                output,
+                job,
+                'skipped',
+                done,
+                jobs.length,
+                'output_exists',
+              );
+
+              continue;
+            }
+
+            failed++;
+            output.error(`Failed · ${job.name}`);
+            emitFileProgress(
+              output,
+              job,
+              'failed',
+              done,
+              jobs.length,
+              'processing_error',
+            );
+
+            continue;
+          }
+        }
+
+        try {
+          await fs.copyFile(job.inputPath, job.outputPath);
+          await preserveFilesystemDatesFromSource(
             job.inputPath,
             job.outputPath,
-            fs.constants.COPYFILE_EXCL,
           );
           copied++;
           output.muted(`Copied · ${job.name}`);

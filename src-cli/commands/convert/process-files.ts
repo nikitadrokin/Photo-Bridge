@@ -3,7 +3,7 @@ import path from 'node:path';
 import { processImage } from '../../processors/image.js';
 import { processVideo } from '../../processors/video.js';
 import { processLegacyVideo } from '../../processors/legacy-video.js';
-import { fixDatesOnPhoto } from '../../utils/dates.js';
+import { fixDatesOnPhoto, hasValidCreateDate } from '../../utils/dates.js';
 import { ConversionFileError } from '../../utils/conversion-file-error.js';
 import type { CliOutput } from '../../utils/logger.js';
 import type { MediaType } from '../../../types/protocol.js';
@@ -274,6 +274,8 @@ async function runVideoLikeConversion(args: {
       }
     }
 
+    await warnIfDateWasNotRecovered(outFile, baseName, reporter);
+
     reporter.fileProgress(
       {
         status: 'done',
@@ -302,4 +304,20 @@ async function runVideoLikeConversion(args: {
       err instanceof Error ? err.message : String(err),
     );
   }
+}
+
+async function warnIfDateWasNotRecovered(
+  outFile: string,
+  baseName: string,
+  reporter: ConvertRunReporter,
+): Promise<void> {
+  try {
+    if (await hasValidCreateDate(outFile)) {
+      return;
+    }
+  } catch {
+    // Keep conversion successful; surface a warning instead of failing the file.
+  }
+
+  reporter.warn('date_not_recovered', baseName);
 }
