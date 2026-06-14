@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { type FixDatesWriteMode, usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
+import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { useMediaStore } from '@/stores/media-store';
 
 export const Route = createFileRoute('/fix-dates')({
@@ -35,21 +36,13 @@ function basenameOf(p: string): string {
   return parts[parts.length - 1] ?? p;
 }
 
-function isLikelyDirectoryPath(path: string): boolean {
-  const name = basenameOf(path);
-  return !name.includes('.');
-}
-
 function FixDatesPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
   const [writeMode, setWriteMode] =
     useState<FixDatesWriteMode>('copy-directory');
 
-  const selectedDirectory =
-    selectedPaths.length === 1 && isLikelyDirectoryPath(selectedPaths[0])
-      ? selectedPaths[0]
-      : null;
+  const selectedDirectory = useSelectedDirectory(selectedPaths);
   const isCopyMode = writeMode === 'copy-directory';
   const isBusy = pixel.isRunning && pixel.activeOperation === 'fix-dates';
 
@@ -73,13 +66,15 @@ function FixDatesPage() {
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
     onDrop: (paths) => {
-      const directory = paths.find(isLikelyDirectoryPath);
-      if (!directory) {
-        toast.error('Drop a folder to fix dates for a directory.');
-        return;
-      }
-      setSelectedPaths([directory]);
-      pixel.clearLogs();
+      void (async () => {
+        const directory = await findDirectoryPath(paths);
+        if (!directory) {
+          toast.error('Drop a folder to fix dates for a directory.');
+          return;
+        }
+        setSelectedPaths([directory]);
+        pixel.clearLogs();
+      })();
     },
   });
 

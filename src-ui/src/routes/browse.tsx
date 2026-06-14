@@ -18,6 +18,7 @@ import { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-a
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
+import { findDirectoryPath } from '@/lib/path';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
@@ -31,11 +32,6 @@ export const Route = createFileRoute('/browse')({
 function basenameOf(p: string): string {
   const parts = p.split('/');
   return parts[parts.length - 1] ?? p;
-}
-
-function isLikelyDirectoryPath(path: string): boolean {
-  const name = basenameOf(path);
-  return !name.includes('.');
 }
 
 function BrowsePage() {
@@ -94,14 +90,16 @@ function BrowsePage() {
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
     onDrop: (paths) => {
-      const directory = paths.find(isLikelyDirectoryPath);
-      if (!directory) {
-        toast.error('Drop a folder to browse by day.');
-        return;
-      }
-      setFolderPath(directory);
-      setPreviewFile(null);
-      void scanDirectory(directory);
+      void (async () => {
+        const directory = await findDirectoryPath(paths);
+        if (!directory) {
+          toast.error('Drop a folder to browse by day.');
+          return;
+        }
+        setFolderPath(directory);
+        setPreviewFile(null);
+        void scanDirectory(directory);
+      })();
     },
   });
 

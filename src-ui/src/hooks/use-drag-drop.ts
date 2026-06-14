@@ -1,12 +1,37 @@
 import { useEffect, useState } from 'react';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { toast } from 'sonner';
+import {
+  fileExtension,
+  hasValidExtension,
+  pathIsDirectory,
+} from '@/lib/path';
 
 interface UseDragDropOptions {
   /** Valid file extensions (without dot) */
   extensions: Array<string>;
   /** Callback when valid paths are dropped */
   onDrop: (paths: Array<string>) => void;
+}
+
+async function filterValidDropPaths(
+  paths: readonly string[],
+  extensions: readonly string[],
+): Promise<Array<string>> {
+  const validPaths: Array<string> = [];
+
+  for (const path of paths) {
+    if (await pathIsDirectory(path)) {
+      validPaths.push(path);
+      continue;
+    }
+
+    if (hasValidExtension(path, extensions)) {
+      validPaths.push(path);
+    }
+  }
+
+  return validPaths;
 }
 
 /**
@@ -28,20 +53,29 @@ export function useDragDrop({ extensions, onDrop }: UseDragDropOptions) {
         setIsDragging(false);
         const paths = event.payload.paths;
 
-        // Filter paths to only include valid extensions (or directories)
-        const validPaths = paths.filter((p) => {
-          const ext = p.split('.').pop()?.toLowerCase() ?? '';
-          // Accept if it's a valid extension or has no extension (likely a directory)
-          return extensions.includes(ext) || !p.includes('.');
-        });
+        void (async () => {
+          const validPaths = await filterValidDropPaths(paths, extensions);
 
-        if (validPaths.length > 0) {
-          onDrop(validPaths);
-        } else if (paths.length > 0) {
-          // User dropped files but none were valid
-          const invalidExts = paths
-            .map((p) => p.split('.').pop()?.toLowerCase())
-            .filter((ext) => ext && !extensions.includes(ext));
+          if (validPaths.length > 0) {
+            onDrop(validPaths);
+            return;
+          }
+
+          if (paths.length === 0) {
+            return;
+          }
+
+          const invalidExts: Array<string> = [];
+          for (const path of paths) {
+            if (await pathIsDirectory(path)) {
+              continue;
+            }
+            const ext = fileExtension(path);
+            if (ext && !extensions.includes(ext)) {
+              invalidExts.push(ext);
+            }
+          }
+
           const uniqueExts = [...new Set(invalidExts)];
           const toastId = toast.error(
             `Unsupported file type${uniqueExts.length > 1 ? 's' : ''}: .${uniqueExts.join(', .')}`,
@@ -52,7 +86,7 @@ export function useDragDrop({ extensions, onDrop }: UseDragDropOptions) {
               },
             },
           );
-        }
+        })();
       } else {
         // leave or cancel
         setIsDragging(false);

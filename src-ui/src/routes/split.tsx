@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
+import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { type SplitMode, splitModeLabel } from '@/lib/split-args';
 import { useMediaStore } from '@/stores/media-store';
 
@@ -59,11 +60,6 @@ function basenameOf(p: string): string {
   return parts[parts.length - 1] ?? p;
 }
 
-function isLikelyDirectoryPath(path: string): boolean {
-  const name = basenameOf(path);
-  return !name.includes('.');
-}
-
 function SplitPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
@@ -71,10 +67,7 @@ function SplitPage() {
   const [limitValue, setLimitValue] = useState('');
   const [dateByDay, setDateByDay] = useState(false);
 
-  const selectedDirectory =
-    selectedPaths.length === 1 && isLikelyDirectoryPath(selectedPaths[0])
-      ? selectedPaths[0]
-      : null;
+  const selectedDirectory = useSelectedDirectory(selectedPaths);
   const isBusy = pixel.isRunning && pixel.activeOperation === 'split';
 
   const needsLimit = mode === 'size' || mode === 'count';
@@ -112,13 +105,15 @@ function SplitPage() {
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
     onDrop: (paths) => {
-      const directory = paths.find(isLikelyDirectoryPath);
-      if (!directory) {
-        toast.error('Drop a folder to split.');
-        return;
-      }
-      setSelectedPaths([directory]);
-      pixel.clearLogs();
+      void (async () => {
+        const directory = await findDirectoryPath(paths);
+        if (!directory) {
+          toast.error('Drop a folder to split.');
+          return;
+        }
+        setSelectedPaths([directory]);
+        pixel.clearLogs();
+      })();
     },
   });
 
