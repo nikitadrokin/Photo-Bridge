@@ -6,7 +6,11 @@ import { usePixel } from '@/hooks/use-pixel';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
 
-const SelectFiles: React.FC = () => {
+interface SelectFilesProps {
+  isDragging?: boolean;
+}
+
+const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
   const { setSelectedPaths } = useMediaStore();
   const pixel = usePixel();
 
@@ -41,7 +45,7 @@ const SelectFiles: React.FC = () => {
   }, [pixel, setSelectedPaths]);
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">
+    <div className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 ${isDragging ? 'border-primary bg-primary/10' : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30'}`}>
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
         <IconPhoto size={32} className="text-primary" />
       </div>
