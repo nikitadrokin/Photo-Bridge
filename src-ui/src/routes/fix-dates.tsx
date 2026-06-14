@@ -3,7 +3,6 @@ import { IconFolder, IconClock, IconLoader2, IconX } from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import ActivityFeed from '@/components/activity-feed';
 import { Button } from '@/components/ui/button';
 import {
   Field,

@@ -6,7 +6,6 @@ import {
   IconAlertTriangle,
   IconTerminal2,
 } from '@tabler/icons-react';
-import ActivityFeed from '@/components/activity-feed';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
 import { PIXEL_CAMERA_DIR } from '@/lib/constants';

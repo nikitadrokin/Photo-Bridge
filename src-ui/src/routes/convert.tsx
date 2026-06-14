@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback } from 'react';
-import ActivityFeed from '@/components/activity-feed';
 import ConvertFiles, { type MediaJobMode } from '@/components/convert-files';
 import SelectFiles from '@/components/select-files';
 import { useDragDrop } from '@/hooks/use-drag-drop';
