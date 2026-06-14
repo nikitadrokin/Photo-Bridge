@@ -7,7 +7,7 @@ import {
   IconLoader2,
   IconX,
 } from '@tabler/icons-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { GalleryScanFilePayload } from '@cli-protocol';
 import DayTimeline from '@/components/gallery/day-timeline';
@@ -66,25 +66,28 @@ function BrowsePage() {
     reset();
   }, [reset]);
 
-  useRegisterPageHeaderActions(
-    folderPath ? (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        disabled={isScanning}
-        onClick={rescan}
-      >
-        {isScanning ? (
-          <IconLoader2 size={16} className="animate-spin" />
-        ) : (
-          <IconSearch size={16} />
-        )}
-        Rescan
-      </Button>
-    ) : null,
+  const headerActions = useMemo(
+    () =>
+      folderPath ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={isScanning}
+          onClick={rescan}
+        >
+          {isScanning ? (
+            <IconLoader2 size={16} className="animate-spin" />
+          ) : (
+            <IconSearch size={16} />
+          )}
+          Rescan
+        </Button>
+      ) : null,
+    [folderPath, isScanning, rescan],
   );
+  useRegisterPageHeaderActions(headerActions);
 
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
