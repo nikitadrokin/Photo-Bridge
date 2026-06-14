@@ -12,11 +12,7 @@ import { usePixel } from '@/hooks/use-pixel';
 import { PIXEL_CAMERA_DIR } from '@/lib/constants';
 import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/transfer')({
@@ -49,10 +45,10 @@ function TransferPage() {
                 <IconAlertTriangle className="size-4" />
                 <AlertTitle>Transfer interrupted</AlertTitle>
                 <AlertDescription>
-                  The Pixel disconnected while files were transferring. The
-                  last file may be incomplete or corrupted on the device.
-                  Reconnect the Pixel, remove the partial file if needed, and
-                  run the transfer again.
+                  The Pixel disconnected while files were transferring. The last
+                  file may be incomplete or corrupted on the device. Reconnect
+                  the Pixel, remove the partial file if needed, and run the
+                  transfer again.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -155,8 +151,6 @@ function TransferPage() {
                 void pixel.refreshAvailableStorage();
               }}
             />
-
-            <ActivityFeed emptyMessage="Connect your Pixel to get started" />
           </div>
         </div>
       </main>

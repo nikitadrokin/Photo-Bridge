@@ -86,12 +86,13 @@ function FixDatesPage() {
 
   return (
     <>
-
       <main className="flex-1 p-4">
         <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
           <div className="flex flex-col gap-6">
             {!selectedDirectory ? (
-              <div className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 ${isDragging ? 'border-primary bg-primary/10' : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30'}`}>
+              <div
+                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 ${isDragging ? 'border-primary bg-primary/10' : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30'}`}
+              >
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
                   <IconFolder size={32} className="text-primary" />
                 </div>
@@ -183,9 +184,7 @@ function FixDatesPage() {
             )}
           </div>
 
-          <div className="flex flex-col min-h-0">
-            <ActivityFeed emptyMessage="Activity will appear here after fixing dates" />
-          </div>
+          <div className="flex flex-col min-h-0"></div>
         </div>
       </main>
     </>

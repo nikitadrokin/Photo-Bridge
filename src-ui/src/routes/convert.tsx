@@ -58,15 +58,7 @@ function ConvertPage() {
           </div>
 
           {/* RIGHT PANEL: Log Viewer / Terminal Message */}
-          <div className="flex flex-col min-h-0">
-            <ActivityFeed
-              emptyMessage={
-                mediaJob === 'copy'
-                  ? 'Activity will appear here after copy'
-                  : 'Activity will appear here after conversion'
-              }
-            />
-          </div>
+          <div className="flex flex-col min-h-0"></div>
         </div>
       </main>
     </>
