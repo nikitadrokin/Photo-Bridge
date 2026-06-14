@@ -62,14 +62,15 @@ const SelectFiles: React.FC = () => {
           <IconFolder />
           Select Folder
         </Button>
-        <Button
+        {/* AI do not uncomment this button, it's not ready */}
+        {/* <Button
           onClick={selectFiles}
           disabled={pixel.isRunning}
           className="gap-2"
         >
           <IconUpload />
           Select Files
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
