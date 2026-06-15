@@ -1,477 +1,335 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import { Command } from 'commander';
-import { z } from 'zod';
-import type { MediaType } from '../../types/protocol.js';
-import { processImage } from '../processors/image.js';
-import { copyVideo } from '../processors/video.js';
-import { logger } from '../utils/logger.js';
+import path from 'node:path';
+import { promises as fs } from 'node:fs';
+import type { FileErrorReason, MediaType } from '../../types/protocol.js';
+import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../utils/constants';
+import { createCliOutput, type CliOutput } from '../utils/logger.js';
 import { prepareSiblingDirectory } from '../utils/sibling-directory.js';
-import { validateTools } from '../utils/validation.js';
-import { fixDatesOnPhoto } from '../utils/dates.js';
-import { ConversionFileError } from '../utils/conversion-file-error.js';
+import { preserveFilesystemDatesFromSource } from '../utils/dates.js';
+import {
+  resolveConvertInputs,
+  type ConvertResolveErrorCode,
+} from './convert/resolve-inputs.js';
 
-const copyOptionsSchema = z.object({
-  cwd: z.string(),
-  jsonl: z.boolean().optional(),
-});
+const SUFFIX = '_Copied';
 
-type CopyOptions = z.infer<typeof copyOptionsSchema>;
+const RESOLVE_ERROR_TEXT: Record<ConvertResolveErrorCode, string> = {
+  no_valid_paths: 'No valid paths provided.',
+  multiple_directories:
+    'Multiple directories provided. Please provide only one directory.',
+  no_valid_inputs: 'No valid files or directories provided.',
+};
 
-// prettier-ignore
-const IMAGE_EXTENSIONS = ['heic', 'heif', 'jpg', 'jpeg', 'png', 'gif', 'dng', 'webp'];
-const VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
+interface CopyJob {
+  ext: string;
+  inputPath: string;
+  media: MediaType;
+  name: string;
+  outputPath: string;
+}
 
-function cliMediaKind(ext: string): MediaType {
-  if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
-  return 'video';
+function extensionOf(fileName: string): string {
+  return path.extname(fileName).toLowerCase().slice(1);
+}
+
+function targetPathFor(fileName: string, outputDir: string): string | null {
+  const ext = extensionOf(fileName);
+  if (IMAGE_EXTENSIONS.includes(ext)) return path.join(outputDir, fileName);
+  if (!VIDEO_EXTENSIONS.includes(ext)) return null;
+
+  const stem = path.basename(fileName, path.extname(fileName));
+  return path.join(outputDir, `${stem}.mp4`);
+}
+
+function copyJobForFile(inputPath: string, outputDir: string): CopyJob | null {
+  const name = path.basename(inputPath);
+  const ext = extensionOf(name);
+  const outputPath = targetPathFor(name, outputDir);
+  if (outputPath === null) return null;
+
+  return {
+    ext,
+    inputPath,
+    media: IMAGE_EXTENSIONS.includes(ext) ? 'image' : 'video',
+    name,
+    outputPath,
+  };
+}
+
+async function collectCopyJobs(
+  sourceDir: string,
+  outputDir: string,
+): Promise<CopyJob[]> {
+  const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && !entry.name.startsWith('.'))
+    .flatMap((entry) => {
+      const job = copyJobForFile(path.join(sourceDir, entry.name), outputDir);
+      return job ? [job] : [];
+    });
+}
+
+function emitFileProgress(
+  output: CliOutput,
+  job: CopyJob,
+  status: 'done' | 'skipped' | 'failed',
+  done: number,
+  total: number,
+  reason?: FileErrorReason,
+): void {
+  output.event({
+    v: 1,
+    kind: 'file',
+    status,
+    media: job.media,
+    extIn: job.ext,
+    extOut: job.media === 'video' ? 'mp4' : job.ext,
+    name: job.name,
+    reason,
+  });
+  output.event({ v: 1, kind: 'progress', done, total });
+}
+
+async function runCopyJobs(
+  jobs: CopyJob[],
+  output: CliOutput,
+): Promise<{ copied: number; failed: number; skipped: number }> {
+  let copied = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (let i = 0; i < jobs.length; i++) {
+    const job = jobs[i];
+    const done = i + 1;
+
+    if (path.resolve(job.inputPath) === path.resolve(job.outputPath)) {
+      skipped++;
+      output.muted(`Skipped · ${job.name} · same as output`);
+      emitFileProgress(
+        output,
+        job,
+        'skipped',
+        done,
+        jobs.length,
+        'output_same_as_input',
+      );
+      continue;
+    }
+
+    try {
+      await fs.access(job.outputPath);
+      skipped++;
+      output.warn(`Skipped · ${job.name} · output exists`);
+      emitFileProgress(
+        output,
+        job,
+        'skipped',
+        done,
+        jobs.length,
+        'output_exists',
+      );
+      continue;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        failed++;
+        output.error(`Failed · ${job.name}`);
+        emitFileProgress(
+          output,
+          job,
+          'failed',
+          done,
+          jobs.length,
+          'processing_error',
+        );
+        continue;
+      }
+    }
+
+    try {
+      await fs.copyFile(job.inputPath, job.outputPath);
+      await preserveFilesystemDatesFromSource(job.inputPath, job.outputPath);
+      copied++;
+      output.muted(`Copied · ${job.name}`);
+      emitFileProgress(output, job, 'done', done, jobs.length);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+        skipped++;
+        output.muted(`Skipped · ${job.name} · output exists`);
+        emitFileProgress(
+          output,
+          job,
+          'skipped',
+          done,
+          jobs.length,
+          'output_exists',
+        );
+        continue;
+      }
+      failed++;
+      output.warn(`Failed · ${job.name}`);
+      emitFileProgress(
+        output,
+        job,
+        'failed',
+        done,
+        jobs.length,
+        'processing_error',
+      );
+    }
+  }
+
+  return { copied, skipped, failed };
 }
 
 export const copy = new Command()
   .name('copy')
-  .description(
-    'copy iOS media files to Pixel-compatible format (bit-for-bit video copy, no remux)',
-  )
+  .description('copy media bit-for-bit; videos are renamed to .mp4')
   .argument('[paths...]', 'directory or files to copy')
   .option(
     '-c, --cwd <cwd>',
     'the working directory. defaults to the current directory.',
     process.cwd(),
   )
-  .option('--jsonl', 'enable JSON output for UI integration')
-  .action(async (paths: string[], opts: CopyOptions) => {
-    try {
-      const options = copyOptionsSchema.parse({
-        cwd: path.resolve(opts.cwd),
-        jsonl: opts.jsonl,
-      });
+  .option('--jsonl', 'emit JSONL UI events on stdout')
+  .action(
+    async (paths: string[], options: { cwd: string; jsonl?: boolean }) => {
+      const output = createCliOutput(Boolean(options.jsonl));
 
-      if (options.jsonl) {
-        logger.setMode('json');
-      }
+      try {
+        const cwd = path.resolve(options.cwd);
+        const resolvedPaths = paths.map((p) => path.resolve(cwd, p));
+        const resolved = await resolveConvertInputs(resolvedPaths);
 
-      const resolvedPaths = paths.map((p) => path.resolve(options.cwd, p));
-
-      const pathStats = await Promise.all(
-        resolvedPaths.map(async (p) => {
-          try {
-            const stat = await fs.stat(p);
-            return { path: p, stat, exists: true };
-          } catch {
-            return { path: p, stat: null, exists: false };
-          }
-        }),
-      );
-
-      const existingPaths = pathStats.filter((p) => p.exists);
-      if (existingPaths.length === 0) {
-        if (options.jsonl) {
-          logger.emitJSON({
-            v: 1,
-            kind: 'error',
-            code: 'no_valid_paths',
-          });
-        } else {
-          logger.error('No valid paths provided.');
+        if (!resolved.ok) {
+          const code = resolved.error.code;
+          output.error(RESOLVE_ERROR_TEXT[code], code);
+          process.exit(1);
         }
+
+        if (resolved.plan.mode === 'directory') {
+          await processDirectory(resolved.plan.directoryPath, output);
+        } else {
+          await processIndividualFiles(resolved.plan.filePaths, output);
+        }
+      } catch (error) {
+        output.error(error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
+    },
+  );
 
-      const files = existingPaths.filter((p) => p.stat?.isFile());
-      const directories = existingPaths.filter((p) => p.stat?.isDirectory());
-
-      if (directories.length > 1) {
-        if (options.jsonl) {
-          logger.emitJSON({
-            v: 1,
-            kind: 'error',
-            code: 'multiple_directories',
-          });
-        } else {
-          logger.error(
-            'Multiple directories provided. Please provide only one directory.',
-          );
-        }
-        process.exit(1);
-      }
-
-      if (directories.length === 1 && files.length === 0) {
-        await processDirectory(directories[0].path);
-      } else if (files.length > 0) {
-        await processIndividualFiles(files.map((f) => f.path));
-      } else {
-        if (options.jsonl) {
-          logger.emitJSON({
-            v: 1,
-            kind: 'error',
-            code: 'no_valid_inputs',
-          });
-        } else {
-          logger.error('No valid files or directories provided.');
-        }
-        process.exit(1);
-      }
-    } catch (error) {
-      if (logger.getMode() === 'json') {
-        if (!(error instanceof ConversionFileError)) {
-          logger.emitJSON({
-            v: 1,
-            kind: 'error',
-            code: 'uncaught',
-            detail: error instanceof Error ? error.message : String(error),
-          });
-        }
-      } else {
-        logger.break();
-        logger.error(error instanceof Error ? error.message : String(error));
-      }
-      process.exit(1);
-    }
-  });
-
-/** Prepares the sibling output directory used for directory-mode copy runs. */
-async function processDirectory(dirPath: string): Promise<void> {
-  const inDir = path.resolve(dirPath);
-  const outDir = await prepareSiblingDirectory(inDir, '_Copied', {
+async function processDirectory(
+  sourceDir: string,
+  output: CliOutput,
+): Promise<void> {
+  const outputDir = await prepareSiblingDirectory(sourceDir, SUFFIX, {
     create: true,
+    conflictMode: 'next-available',
+  });
+  const jobs = await collectCopyJobs(sourceDir, outputDir);
+
+  output.event({
+    v: 1,
+    kind: 'session',
+    phase: 'start',
+    command: 'copy',
+    layout: 'directory',
+    outputDir,
+    total: jobs.length,
   });
 
-  if (logger.getMode() !== 'json') {
-    logger.break();
-    logger.log('=========================================================');
-    logger.info(`SOURCE:      ${inDir}`);
-    logger.info(`DESTINATION: ${outDir}`);
-    logger.info('MODE:        Bit-for-bit copy (rename .mov to .mp4)');
-    logger.log('=========================================================');
-    logger.break();
+  if (!output.jsonl) {
+    output.blankLine();
+    output.info('Source');
+    output.indentedMuted(sourceDir);
+    output.info('Destination');
+    output.indentedMuted(outputDir);
+    output.info('Mode');
+    output.indentedMuted('Copy images as-is; videos as .mp4');
+    output.blankLine();
+    output.info('Files');
+    output.indentedMuted(`${jobs.length} supported file(s)`);
+    output.blankLine();
   }
 
-  await validateTools();
-
-  const files = await fs.readdir(inDir, { withFileTypes: true });
-  const regularFiles = files
-    .filter((f) => f.isFile() && !f.name.startsWith('.'))
-    .map((f) => path.join(inDir, f.name));
-
-  const { processedCount, skippedCount } = await processFiles(
-    regularFiles,
-    outDir,
-  );
-
-  if (logger.getMode() !== 'json') {
-    logger.break();
-    logger.log('=========================================================');
-    logger.success(
-      `DONE. Copied ${processedCount} files, skipped ${skippedCount}.`,
-    );
-    logger.info(`Transfer this folder to your Pixel: ${outDir}`);
-    logger.log('=========================================================');
-    logger.break();
-  }
-}
-
-async function processIndividualFiles(filePaths: string[]): Promise<void> {
-  const regularFiles = filePaths.filter((f) => {
-    const ext = path.extname(f).toLowerCase().slice(1);
-    return IMAGE_EXTENSIONS.includes(ext) || VIDEO_EXTENSIONS.includes(ext);
-  });
-
-  if (regularFiles.length === 0) {
-    if (logger.getMode() === 'json') {
-      logger.emitJSON({
-        v: 1,
-        kind: 'error',
-        code: 'no_supported_media',
-      });
-    } else {
-      logger.error('No supported media files provided.');
-    }
-    process.exit(1);
-  }
-
-  if (logger.getMode() !== 'json') {
-    logger.break();
-    logger.log('=========================================================');
-    logger.info(`SOURCE:      ${regularFiles.length} file(s)`);
-    logger.info(`DESTINATION: In-place (Output files next to input files)`);
-    logger.info('MODE:        Bit-for-bit copy (rename .mov to .mp4)');
-    logger.log('=========================================================');
-    logger.break();
-  }
-
-  await validateTools();
-
-  const { processedCount, skippedCount } = await processFiles(
-    regularFiles,
-    null,
-  );
-
-  if (logger.getMode() !== 'json') {
-    logger.break();
-    logger.log('=========================================================');
-    logger.success(
-      `DONE. Copied ${processedCount} files, skipped ${skippedCount}.`,
-    );
-    logger.log('=========================================================');
-    logger.break();
-  }
-}
-
-async function processFiles(
-  files: string[],
-  outDir: string | null,
-): Promise<{ processedCount: number; skippedCount: number }> {
-  let processedCount = 0;
-  let skippedCount = 0;
-  let failedCount = 0;
-  const isJson = logger.getMode() === 'json';
-  const layout = outDir ? 'directory' : 'files';
-
-  if (isJson) {
-    logger.emitJSON({
+  let result = { copied: 0, skipped: 0, failed: 0 };
+  try {
+    result = await runCopyJobs(jobs, output);
+  } finally {
+    output.event({
       v: 1,
       kind: 'session',
-      phase: 'start',
+      phase: 'end',
       command: 'copy',
-      layout,
-      outputDir: outDir ?? undefined,
-      total: files.length,
+      layout: 'directory',
+      outputDir,
+      total: jobs.length,
+      processed: result.copied,
+      skipped: result.skipped,
+      failed: result.failed,
     });
   }
 
-  try {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const baseName = path.basename(file);
-      const ext = path.extname(file).toLowerCase().slice(1);
-      const outputDirectory = outDir ?? path.dirname(file);
-      const media = cliMediaKind(ext);
+  output.blankLine();
+  output.success(
+    `Done · ${result.copied} copied, ${result.skipped} skipped, ${result.failed} failed`,
+  );
+  if (!output.jsonl) output.indentedMuted(outputDir);
+}
 
-      if (IMAGE_EXTENSIONS.includes(ext)) {
-        const outFile = path.join(outputDirectory, baseName);
+async function processIndividualFiles(
+  filePaths: string[],
+  output: CliOutput,
+): Promise<void> {
+  const jobs = filePaths.flatMap((filePath) => {
+    const job = copyJobForFile(filePath, path.dirname(filePath));
+    return job ? [job] : [];
+  });
 
-        if (outFile === file) {
-          skippedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'skipped',
-              media: 'image',
-              extIn: ext,
-              extOut: ext,
-              name: baseName,
-              reason: 'output_same_as_input',
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-          continue;
-        }
-
-        try {
-          await fs.access(outFile);
-          await fixDatesOnPhoto(outFile);
-          skippedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'skipped',
-              media: 'image',
-              extIn: ext,
-              extOut: ext,
-              name: baseName,
-              reason: 'output_exists',
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-          continue;
-        } catch {
-          // File doesn't exist, proceed
-        }
-
-        try {
-          await processImage(file, outFile);
-          processedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'done',
-              media: 'image',
-              extIn: ext,
-              extOut: ext,
-              name: baseName,
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-        } catch (err) {
-          failedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'failed',
-              media: 'image',
-              extIn: ext,
-              extOut: ext,
-              name: baseName,
-              reason: 'processing_error',
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-          throw new ConversionFileError(
-            err instanceof Error ? err.message : String(err),
-          );
-        }
-        continue;
-      }
-
-      if (VIDEO_EXTENSIONS.includes(ext)) {
-        const stem = path.basename(file, path.extname(file));
-        const outFile = path.join(outputDirectory, `${stem}.mp4`);
-
-        if (outFile === file) {
-          skippedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'skipped',
-              media,
-              extIn: ext,
-              extOut: 'mp4',
-              name: baseName,
-              reason: 'output_same_as_input',
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-          continue;
-        }
-
-        try {
-          await fs.access(outFile);
-          skippedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'skipped',
-              media,
-              extIn: ext,
-              extOut: 'mp4',
-              name: baseName,
-              reason: 'output_exists',
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-          continue;
-        } catch {
-          // File doesn't exist, proceed
-        }
-
-        try {
-          await copyVideo(file, outFile);
-          processedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'done',
-              media,
-              extIn: ext,
-              extOut: 'mp4',
-              name: baseName,
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-        } catch (err) {
-          failedCount++;
-          if (isJson) {
-            logger.emitJSON({
-              v: 1,
-              kind: 'file',
-              status: 'failed',
-              media,
-              extIn: ext,
-              extOut: 'mp4',
-              name: baseName,
-              reason: 'processing_error',
-            });
-            logger.emitJSON({
-              v: 1,
-              kind: 'progress',
-              done: i + 1,
-              total: files.length,
-            });
-          }
-          throw new ConversionFileError(
-            err instanceof Error ? err.message : String(err),
-          );
-        }
-        continue;
-      }
-
-      if (isJson) {
-        logger.emitJSON({
-          v: 1,
-          kind: 'progress',
-          done: i + 1,
-          total: files.length,
-        });
-      }
-    }
-
-    return { processedCount, skippedCount };
-  } finally {
-    if (isJson) {
-      logger.emitJSON({
-        v: 1,
-        kind: 'session',
-        phase: 'end',
-        command: 'copy',
-        layout,
-        outputDir: outDir ?? undefined,
-        total: files.length,
-        processed: processedCount,
-        skipped: skippedCount,
-        failed: failedCount,
-      });
-    }
+  if (jobs.length === 0) {
+    output.error('No supported media files provided.', 'no_supported_media');
+    process.exit(1);
   }
+
+  output.event({
+    v: 1,
+    kind: 'session',
+    phase: 'start',
+    command: 'copy',
+    layout: 'files',
+    total: jobs.length,
+  });
+
+  if (!output.jsonl) {
+    output.blankLine();
+    output.info('Source');
+    output.indentedMuted(`${jobs.length} file(s)`);
+    output.info('Destination');
+    output.indentedMuted('In-place (next to each input)');
+    output.info('Mode');
+    output.indentedMuted('Copy images as-is; videos as .mp4');
+    output.blankLine();
+  }
+
+  let result = { copied: 0, skipped: 0, failed: 0 };
+  try {
+    result = await runCopyJobs(jobs, output);
+  } finally {
+    output.event({
+      v: 1,
+      kind: 'session',
+      phase: 'end',
+      command: 'copy',
+      layout: 'files',
+      total: jobs.length,
+      processed: result.copied,
+      skipped: result.skipped,
+      failed: result.failed,
+    });
+  }
+
+  output.blankLine();
+  output.success(
+    `Done · ${result.copied} copied, ${result.skipped} skipped, ${result.failed} failed`,
+  );
 }

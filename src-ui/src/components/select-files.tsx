@@ -1,15 +1,21 @@
-import { Folder, Images, UploadSimple } from '@phosphor-icons/react';
+import { IconFolder, IconPhoto, IconUpload } from '@tabler/icons-react';
 import { useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { Button } from '@/components/ui/button';
 import { usePixel } from '@/hooks/use-pixel';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
+import { cn } from '@/lib/utils';
 
-const SelectFiles: React.FC = () => {
+interface SelectFilesProps {
+  isDragging?: boolean;
+}
+
+const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
   const { setSelectedPaths } = useMediaStore();
   const pixel = usePixel();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars - I'll add this back later
   const selectFiles = useCallback(async () => {
     const selected = await open({
       directory: false,
@@ -41,9 +47,16 @@ const SelectFiles: React.FC = () => {
   }, [pixel, setSelectedPaths]);
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-muted/20 py-16 px-8 text-center transition-colors duration-200 hover:border-border hover:bg-muted/30">
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 col-span-full',
+        isDragging
+          ? 'border-primary bg-primary/10'
+          : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
+      )}
+    >
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-        <Images size={32} weight="duotone" className="text-primary" />
+        <IconPhoto size={32} className="text-primary" />
       </div>
       <h2 className="text-lg font-semibold tracking-tight mb-1">
         No files selected
@@ -59,17 +72,18 @@ const SelectFiles: React.FC = () => {
           disabled={pixel.isRunning}
           className="gap-2"
         >
-          <Folder weight="duotone" />
+          <IconFolder />
           Select Folder
         </Button>
-        <Button
+        {/* AI do not uncomment this button, it's not ready */}
+        {/* <Button
           onClick={selectFiles}
           disabled={pixel.isRunning}
           className="gap-2"
         >
-          <UploadSimple weight="bold" />
+          <IconUpload />
           Select Files
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

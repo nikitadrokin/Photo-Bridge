@@ -1,4 +1,4 @@
-/** One recoverable date source (EXIF or Takeout JSON). */
+/** One recoverable date source from embedded media metadata. */
 export interface MediaDateCandidate {
   readonly id: string;
   readonly label: string;

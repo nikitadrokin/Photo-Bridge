@@ -1,130 +1,83 @@
+import { promises as fs } from 'fs';
+import path from 'path';
 import { Command } from 'commander';
-import * as Fs from 'fs';
-import * as Job from 'path';
 import { Adb } from '@devicefarmer/adbkit';
 import type DeviceClient from '@devicefarmer/adbkit/dist/src/adb/DeviceClient';
-import { logger } from '../utils/logger.js';
+import { createCliOutput } from '../utils/logger.js';
+import type { EventV1 } from '../../types/protocol.js';
 
-/** Resolved ADB sync service from adbkit (Bluebird-promise–based API). */
+/** Resolved ADB sync service (Bluebird-promise–based API). */
 type AdbSyncSession = Awaited<ReturnType<DeviceClient['syncService']>>;
 
-/** One local file to push and its path under the device target directory. */
-interface Job {
-  /** Absolute path on the host filesystem */
+const TARGET_DIR = '/sdcard/DCIM/Camera';
+
+/** One local file to push and its path relative to the device target directory. */
+interface PushJob {
   absolutePath: string;
-  /** Path relative to `targetDir` on the device (uses subdirs for folder pushes) */
   relativePath: string;
 }
 
-export const pushToPixel = new Command()
-  .name('push-to-pixel')
-  .alias('push')
-  .description('Push files or directories to the Pixel Camera folder')
-  .argument('<paths...>', 'one or more files or directories to push')
-  .option('--jsonl', 'enable JSON output for UI integration')
-  .action(async (paths: Array<string>, opts: { jsonl?: boolean }) => {
-    if (opts.jsonl) {
-      logger.setMode('json');
-    }
-
-    if (paths.length === 0) {
-      logger.error('No paths provided');
-      return;
-    }
-
-    const client = Adb.createClient();
-
-    try {
-      const devices = await client.listDevices();
-      if (devices.length === 0) {
-        logger.error('No devices connected');
-        return;
-      }
-
-      const device = devices[0];
-      logger.info(`Using device: ${device.id}`);
-
-      const jobs = await collectPushJobs(paths);
-      if (jobs.length === 0) {
-        logger.error('No files to push');
-        return;
-      }
-
-      const sync: AdbSyncSession = await client
-        .getDevice(device.id)
-        .syncService();
-
-      try {
-        await pushJobs(sync, jobs, '/sdcard/DCIM/Camera');
-        logger.success('Push completed');
-      } finally {
-        sync.end();
-      }
-    } catch (error) {
-      logger.error(
-        `Failed to push: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-      );
-    }
-  });
-
-async function collectPushJobs(paths: Array<string>): Promise<Array<Job>> {
-  const jobs: Array<Job> = [];
+async function collectPushJobs(paths: Array<string>): Promise<Array<PushJob>> {
+  const jobs: Array<PushJob> = [];
 
   for (const inputPath of paths) {
-    let st: Fs.Stats;
+    let st: Awaited<ReturnType<typeof fs.stat>>;
     try {
-      st = await Fs.promises.stat(inputPath);
+      st = await fs.stat(inputPath);
     } catch {
-      logger.error(`Path not found: ${inputPath}`);
       continue;
     }
 
     if (st.isFile()) {
-      jobs.push({
-        absolutePath: inputPath,
-        relativePath: Job.basename(inputPath),
-      });
+      jobs.push({ absolutePath: inputPath, relativePath: path.basename(inputPath) });
     } else if (st.isDirectory()) {
-      const files = await readDirectoryRecursively(inputPath);
+      const files = await collectFilesRecursively(inputPath);
       for (const file of files) {
-        jobs.push({
-          absolutePath: file,
-          relativePath: Job.relative(inputPath, file),
-        });
+        jobs.push({ absolutePath: file, relativePath: path.relative(inputPath, file) });
       }
-    } else {
-      logger.error(`Not a file or directory: ${inputPath}`);
     }
   }
 
   return jobs;
 }
 
+async function collectFilesRecursively(dir: string): Promise<Array<string>> {
+  const files: Array<string> = [];
+
+  async function walk(current: string): Promise<void> {
+    const entries = await fs.readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(current, entry.name);
+      if (entry.isFile()) files.push(full);
+      else if (entry.isDirectory()) await walk(full);
+    }
+  }
+
+  await walk(dir);
+  return files;
+}
+
 async function pushJobs(
   sync: AdbSyncSession,
-  jobs: Array<Job>,
-  targetDir: string,
+  jobs: Array<PushJob>,
+  isJsonl: boolean,
+  onEvent: (event: EventV1) => void,
 ): Promise<void> {
-  let totalFiles = jobs.length;
+  const totalFiles = jobs.length;
   let completedFiles = 0;
-  const isJson = logger.getMode() === 'json';
 
-  for (const job of jobs) {
-    const { absolutePath: localPath, relativePath: relativePath } = job;
-    const targetPath = Job.join(targetDir, relativePath);
-
-    logger.info(`Pushing: ${relativePath}`);
+  for (const { absolutePath, relativePath } of jobs) {
+    const targetPath = path.posix.join(
+      TARGET_DIR,
+      ...relativePath.split(path.sep),
+    );
 
     try {
-      const transfer = sync.pushFile(localPath, targetPath);
+      const transfer = sync.pushFile(absolutePath, targetPath);
 
       transfer.on('progress', (stats: { bytesTransferred: number }) => {
-        if (!isJson) {
-          return;
-        }
-        logger.emitJSON({
+        if (!isJsonl) return;
+        onEvent({
           v: 1,
           kind: 'push_bytes',
           file: relativePath,
@@ -134,64 +87,70 @@ async function pushJobs(
         });
       });
 
-      transfer.on('error', (err: Error) => {
-        if (isJson) {
-          logger.emitJSON({
-            v: 1,
-            kind: 'error',
-            code: 'push_transfer_failed',
-            detail: `${relativePath}: ${err.message}`,
-          });
-        } else {
-          logger.error(`Push failed (${relativePath}): ${err.message}`);
-        }
-      });
-
-      transfer.on('end', () => {
-        completedFiles++;
-        if (isJson) {
-          logger.emitJSON({
-            v: 1,
-            kind: 'progress',
-            done: completedFiles,
-            total: totalFiles,
-          });
-        }
-      });
-
       await new Promise<void>((resolve, reject) => {
-        transfer.on('end', resolve);
+        transfer.on('end', () => {
+          completedFiles++;
+          if (isJsonl) {
+            onEvent({ v: 1, kind: 'progress', done: completedFiles, total: totalFiles });
+          }
+          resolve();
+        });
         transfer.on('error', reject);
       });
-    } catch (error) {
-      logger.error(
-        `Failed to push ${relativePath}: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-      );
+    } catch (err) {
+      const detail = `${relativePath}: ${err instanceof Error ? err.message : String(err)}`;
+      onEvent({ v: 1, kind: 'error', code: 'push_transfer_failed', detail });
     }
   }
 }
 
-async function readDirectoryRecursively(dir: string): Promise<Array<string>> {
-  const files: Array<string> = [];
+export const pushToPixel = new Command()
+  .name('push-to-pixel')
+  .alias('push')
+  .description('Push files or directories to the Pixel Camera folder')
+  .argument('<paths...>', 'one or more files or directories to push')
+  .option('--jsonl', 'enable JSON output for UI integration')
+  .action(async (paths: Array<string>, opts: { jsonl?: boolean }) => {
+    const output = createCliOutput(Boolean(opts.jsonl));
 
-  async function traverse(currentDir: string): Promise<void> {
-    const entries = await Fs.promises.readdir(currentDir, {
-      withFileTypes: true,
-    });
+    if (paths.length === 0) {
+      output.error('No paths provided', 'no_paths');
+      process.exit(1);
+    }
 
-    for (const entry of entries) {
-      const fullPath = Job.join(currentDir, entry.name);
+    const client = Adb.createClient();
 
-      if (entry.isFile()) {
-        files.push(fullPath);
-      } else if (entry.isDirectory()) {
-        await traverse(fullPath);
+    try {
+      const devices = await client.listDevices();
+      if (devices.length === 0) {
+        output.error('No devices connected', 'no_devices');
+        process.exit(1);
       }
-    }
-  }
 
-  await traverse(dir);
-  return files;
-}
+      const device = devices[0];
+      output.info(`Using device: ${device.id}`);
+
+      const jobs = await collectPushJobs(paths);
+      if (jobs.length === 0) {
+        output.error('No files to push', 'no_files');
+        process.exit(1);
+      }
+
+      const sync: AdbSyncSession = await client.getDevice(device.id).syncService();
+
+      try {
+        await pushJobs(sync, jobs, Boolean(opts.jsonl), (event) =>
+          output.event(event),
+        );
+        output.success('Push completed');
+      } finally {
+        sync.end();
+      }
+    } catch (err) {
+      output.error(
+        `Push failed: ${err instanceof Error ? err.message : String(err)}`,
+        'push_failed',
+      );
+      process.exit(1);
+    }
+  });

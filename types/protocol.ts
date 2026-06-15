@@ -3,7 +3,18 @@
  * User-facing copy lives in the Tauri UI; payloads stay minimal (kinds, codes, counts).
  */
 
-export type Command = 'convert' | 'copy';
+export const COMMANDS = [
+  'convert',
+  'copy',
+  'fix-dates',
+  'push-to-pixel',
+  'pull-from-pixel',
+  'shell',
+  'split',
+  'gallery',
+] as const;
+
+export type Command = (typeof COMMANDS)[number];
 
 /** How inputs were resolved: one directory vs explicit file list. */
 export type SessionLayout = 'directory' | 'files';
@@ -107,6 +118,29 @@ export interface ShellStorageEvent {
   readonly exitCode: number;
 }
 
+/** One file row inside {@link GalleryScanEvent}. */
+export interface GalleryScanFilePayload {
+  readonly path: string;
+  readonly basename: string;
+  readonly mediaKind: 'video' | 'photo' | 'unknown';
+  readonly unixSeconds: number | null;
+}
+
+/** One UTC day bucket inside {@link GalleryScanEvent}. */
+export interface GalleryScanDayPayload {
+  readonly dayKey: string;
+  readonly files: readonly GalleryScanFilePayload[];
+}
+
+/** Final grouped scan from `pb gallery scan --jsonl`. */
+export interface GalleryScanEvent {
+  readonly v: 1;
+  readonly kind: 'gallery_scan';
+  readonly root: string;
+  readonly totalFiles: number;
+  readonly days: readonly GalleryScanDayPayload[];
+}
+
 export type EventV1 =
   | SessionEvent
   | FileEvent
@@ -116,7 +150,8 @@ export type EventV1 =
   | BlockedEvent
   | SeverityEvent
   | MessageEvent
-  | ShellStorageEvent;
+  | ShellStorageEvent
+  | GalleryScanEvent;
 
 /** Legacy stdout lines from `logger` before structured events. */
 export interface Log {
@@ -132,6 +167,8 @@ const LEGACY_TYPES = new Set<Log['type']>([
   'log',
 ]);
 
+const COMMAND_SET = new Set<string>(COMMANDS);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -144,7 +181,8 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
     case 'session':
       return (
         (parsed.phase === 'start' || parsed.phase === 'end') &&
-        (parsed.command === 'convert' || parsed.command === 'copy') &&
+        typeof parsed.command === 'string' &&
+        COMMAND_SET.has(parsed.command) &&
         (parsed.layout === 'directory' || parsed.layout === 'files')
       );
     case 'file':
@@ -182,8 +220,13 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
     case 'shell_storage':
       return (
         typeof parsed.availHuman === 'string' &&
-        typeof parsed.raw === 'string' &&
         typeof parsed.exitCode === 'number'
+      );
+    case 'gallery_scan':
+      return (
+        typeof parsed.root === 'string' &&
+        typeof parsed.totalFiles === 'number' &&
+        Array.isArray(parsed.days)
       );
     default:
       return false;

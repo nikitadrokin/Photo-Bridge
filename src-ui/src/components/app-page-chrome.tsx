@@ -1,25 +1,8 @@
-import {
-  type ReactNode,
-  type SetStateAction,
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { type ReactNode, useContext, useMemo, useState } from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { PageHeader } from '@/components/header';
+import { PageHeaderActionsContext } from '@/components/contexts/page-header-actions-context';
 import { useRoutePageMetadata } from '@/lib/route-page-metadata';
-
-interface PageHeaderActionsContextValue {
-  /** Current nodes shown beside the page title. */
-  headerActions: ReactNode;
-  /** Updates `headerActions`; used by `useRegisterPageHeaderActions`. */
-  setHeaderActions: React.Dispatch<SetStateAction<ReactNode>>;
-}
-
-const PageHeaderActionsContext =
-  createContext<PageHeaderActionsContextValue | null>(null);
 
 interface PageHeaderActionsProviderProps {
   children: ReactNode;
@@ -46,21 +29,34 @@ export function PageHeaderActionsProvider({
   );
 }
 
+/** Full-width shell header: route title and registered actions. */
+export function RootPageHeader() {
+  const { title } = useRoutePageMetadata();
+  const ctx = useContext(PageHeaderActionsContext);
+  if (!ctx) {
+    throw new Error(
+      'RootPageHeader must be used within PageHeaderActionsProvider.',
+    );
+  }
+
+  return <PageHeader title={title}>{ctx.headerActions}</PageHeader>;
+}
+
 /**
  * App shell: fixed page header (title from route `staticData`) and scrollable body.
  */
 export function AppPageChrome() {
-  const { title, description } = useRoutePageMetadata();
+  const { title } = useRoutePageMetadata();
   const ctx = useContext(PageHeaderActionsContext);
   if (!ctx) {
-    throw new Error('AppPageChrome must be used within PageHeaderActionsProvider.');
+    throw new Error(
+      'AppPageChrome must be used within PageHeaderActionsProvider.',
+    );
   }
 
   return (
     <>
-      <PageHeader title={title} description={description}>
-        {ctx.headerActions}
-      </PageHeader>
+      <PageHeader title={title}>{ctx.headerActions}</PageHeader>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         <Outlet />
       </div>
@@ -68,24 +64,4 @@ export function AppPageChrome() {
   );
 }
 
-/**
- * Registers nodes rendered beside the title in `PageHeader` for the active route.
- * Clears on unmount.
- */
-export function useRegisterPageHeaderActions(actions: ReactNode): void {
-  const ctx = useContext(PageHeaderActionsContext);
-  if (!ctx) {
-    throw new Error(
-      'useRegisterPageHeaderActions must be used within PageHeaderActionsProvider.',
-    );
-  }
-
-  const { setHeaderActions } = ctx;
-
-  useEffect(() => {
-    setHeaderActions(actions);
-    return () => {
-      setHeaderActions(null);
-    };
-  }, [actions, setHeaderActions]);
-}
+export { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-actions';

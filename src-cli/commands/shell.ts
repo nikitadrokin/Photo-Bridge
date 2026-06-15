@@ -1,35 +1,33 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { logger } from '../utils/logger.js';
-import { formatAvailLabel, parseDfAvailable } from '../utils/df-parse.js';
+import { createCliOutput } from '../utils/logger.js';
+import { parseDfAvailable, formatAvailLabel } from '../utils/df-parse.js';
 
 export const shell = new Command()
   .name('shell')
   .description(
     'Launch an interactive ADB shell session, or run a one-shot remote command',
   )
-  .option('--jsonl', 'enable JSON output for UI integration')
   .argument(
     '[remote...]',
     'remote shell command (omit for an interactive session); use `--` before flags (e.g. `pb shell -- df -h .`)',
   )
+  .option('--jsonl', 'enable JSON output for UI integration')
   .action(async (remote: Array<string>, opts: { jsonl?: boolean }) => {
-    if (opts.jsonl) {
-      logger.setMode('json');
-    }
+    const output = createCliOutput(Boolean(opts.jsonl));
 
     if (remote.length === 0) {
       if (opts.jsonl) {
-        logger.error(
+        output.error(
           'Interactive shell is not available with --jsonl (run without --jsonl in a terminal)',
+          'no_interactive_jsonl',
         );
         process.exit(1);
-        return;
       }
       try {
         await execa('adb', ['shell'], { stdio: 'inherit' });
       } catch {
-        // adb will have printed the error already due to stdio: inherit
+        // adb prints errors via stdio: inherit
       }
       return;
     }
@@ -47,31 +45,22 @@ export const shell = new Command()
           result.stderr.trim().length > 0
             ? result.stderr.trim()
             : `adb shell exited with code ${String(result.exitCode)}`;
-        logger.error(errText);
-        process.exit(result.exitCode === null ? 1 : result.exitCode);
-        return;
+        output.error(errText, 'adb_shell_error');
+        process.exit(result.exitCode ?? 1);
       }
 
       const raw = (result.stdout ?? '').trim();
-      const parsedAvail = parseDfAvailable(raw);
-      const base = parsedAvail ?? '';
-
-      logger.emitJSON({
+      const avail = parseDfAvailable(raw) ?? '';
+      output.event({
         v: 1,
         kind: 'shell_storage',
-        availHuman: formatAvailLabel(base),
+        availHuman: formatAvailLabel(avail),
         exitCode: result.exitCode ?? 0,
       });
-      process.exit(0);
       return;
     }
 
-    if (result.stdout) {
-      process.stdout.write(result.stdout);
-    }
-    if (result.stderr) {
-      process.stderr.write(result.stderr);
-    }
-
-    process.exit(result.exitCode === null ? 1 : result.exitCode);
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    process.exit(result.exitCode ?? 1);
   });

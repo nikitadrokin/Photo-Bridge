@@ -1,8 +1,5 @@
-import { createRootRoute } from '@tanstack/react-router';
-import {
-  AppPageChrome,
-  PageHeaderActionsProvider,
-} from '@/components/app-page-chrome';
+import { createRootRoute, Outlet } from '@tanstack/react-router';
+import { RootPageHeader } from '@/components/app-page-chrome';
 import { Toaster } from '@/components/ui/sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
@@ -17,15 +14,20 @@ function RootComponent() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <PixelProvider>
-        <PageHeaderActionsProvider>
-          <SidebarProvider>
+        <SidebarProvider className="flex min-h-svh w-full flex-col overflow-hidden">
+          <RootPageHeader />
+          <div className="flex min-h-0 min-w-0 flex-1">
             <AppSidebarWithContext />
-            <SidebarInset className="flex flex-col select-none [-webkit-user-select:none] [-webkit-touch-callout:none]">
-              <AppPageChrome />
+            <SidebarInset className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] z-10">
+              <main className="flex-1 p-4">
+                <div className="mx-auto size-full grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
+                  <Outlet />
+                </div>
+              </main>
               <Toaster position="bottom-center" richColors />
             </SidebarInset>
-          </SidebarProvider>
-        </PageHeaderActionsProvider>
+          </div>
+        </SidebarProvider>
       </PixelProvider>
     </ThemeProvider>
   );
@@ -36,9 +38,7 @@ function AppSidebarWithContext() {
   return (
     <AppSidebar
       isPixelConnected={pixel.isConnected}
-      onCheckConnection={pixel.checkConnection}
       isRunning={pixel.isRunning}
-      isConnectionCheckPending={pixel.isConnectionCheckPending}
     />
   );
 }

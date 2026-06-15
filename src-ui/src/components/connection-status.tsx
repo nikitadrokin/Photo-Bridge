@@ -1,8 +1,8 @@
 import {
-  ArrowsClockwise,
-  CheckCircle,
-  WarningCircle,
-} from '@phosphor-icons/react';
+  IconRefresh,
+  IconCircleCheck,
+  IconAlertCircle,
+} from '@tabler/icons-react';
 import {
   Alert,
   AlertAction,
@@ -36,9 +36,9 @@ export function ConnectionStatus({
       )}
     >
       {isConnected ? (
-        <CheckCircle className="size-4" weight="duotone" />
+        <IconCircleCheck className="size-4" />
       ) : (
-        <WarningCircle className="size-4" weight="duotone" />
+        <IconAlertCircle className="size-4" />
       )}
       <AlertTitle className="flex items-center gap-2">
         {isConnected ? 'Pixel Connected' : 'No Device Found'}
@@ -62,12 +62,11 @@ export function ConnectionStatus({
           disabled={disableRefresh || isConnectionCheckPending}
           className="gap-2"
         >
-          <ArrowsClockwise
+          <IconRefresh
             className={cn(
               'size-3.5',
               isConnectionCheckPending && 'animate-spin',
             )}
-            weight="bold"
           />
           {isConnectionCheckPending ? 'Checking…' : 'Refresh'}
         </Button>

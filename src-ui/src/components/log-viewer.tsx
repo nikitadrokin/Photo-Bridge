@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { ArrowRight, Terminal, Trash } from '@phosphor-icons/react';
+import { IconArrowRight, IconTerminal2, IconTrash } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ScrollArea from '@/components/ui/scroll-area';
@@ -90,7 +90,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
                 <span className="truncate min-w-0" title={transferPaths.source}>
                   {truncatePath(transferPaths.source)}
                 </span>
-                <ArrowRight size={10} className="shrink-0 text-white/20" />
+                <IconArrowRight size={10} className="shrink-0 text-white/20" />
                 <span
                   className="truncate min-w-0"
                   title={transferPaths.destination}
@@ -100,7 +100,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs font-medium text-white/50">
-                <Terminal size={14} />
+                <IconTerminal2 size={14} />
                 <span>Output</span>
               </div>
             )}
@@ -113,7 +113,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
                 onClick={clearLogs}
                 className="h-6 text-xs text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors duration-200"
               >
-                <Trash size={12} />
+                <IconTrash size={12} />
                 Clear
               </Button>
             ) : null}

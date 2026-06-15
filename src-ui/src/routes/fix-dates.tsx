@@ -1,16 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import {
-  ArrowClockwise,
-  Clock,
-  File,
-  Play,
-  Spinner,
-  X,
-} from '@phosphor-icons/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { IconFolder, IconClock, IconLoader2, IconX } from '@tabler/icons-react';
+import { open } from '@tauri-apps/plugin-dialog';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Field,
   FieldContent,
@@ -20,397 +13,183 @@ import {
   FieldSet,
   FieldTitle,
 } from '@/components/ui/field';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import DropzoneOverlay from '@/components/dropzone-overlay';
-import SelectFiles from '@/components/select-files';
+import { Switch } from '@/components/ui/switch';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { type FixDatesWriteMode, usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
-import type { MediaDateInspectResult } from '@/lib/media-date-inspect';
+import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { useMediaStore } from '@/stores/media-store';
 import { cn } from '@/lib/utils';
-import { Switch } from '@/components/ui/switch';
 
 export const Route = createFileRoute('/fix-dates')({
   staticData: {
-    pageTitle: 'Fix Dates (Google Photos only)',
+    pageTitle: 'Fix Dates',
     pageDescription:
-      'Experimental: inspect metadata sources and override the automatic date.',
+      'Repair embedded media dates for a folder without converting files.',
   },
   component: FixDatesPage,
 });
 
-/** Returns the trailing path segment for a POSIX-style absolute path. */
 function basenameOf(p: string): string {
   const parts = p.split('/');
   return parts[parts.length - 1] ?? p;
 }
 
-/** Manual date recovery screen for inspecting and applying metadata candidates. */
 function FixDatesPage() {
   const { selectedPaths, setSelectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
-  const [activePath, setActivePath] = useState<string | null>(null);
-  const [inspectResult, setInspectResult] =
-    useState<MediaDateInspectResult | null>(null);
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
-  const [googleTakeoutApply, setGoogleTakeoutApply] = useState(false);
   const [writeMode, setWriteMode] =
     useState<FixDatesWriteMode>('copy-directory');
-  const [inspectBusy, setInspectBusy] = useState(false);
-  const [applyBusy, setApplyBusy] = useState(false);
 
-  useEffect(() => {
-    if (selectedPaths.length === 0) {
-      setActivePath(null);
-      setInspectResult(null);
-      setSelectedCandidateId('');
-      return;
-    }
-    setActivePath((prev) => {
-      if (prev && selectedPaths.includes(prev)) {
-        return prev;
-      }
-      return selectedPaths[0] ?? null;
+  const selectedDirectory = useSelectedDirectory(selectedPaths);
+  const isCopyMode = writeMode === 'copy-directory';
+  const isBusy = pixel.isRunning && pixel.activeOperation === 'fix-dates';
+
+  const selectFolder = useCallback(async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Media Folder',
     });
-  }, [selectedPaths]);
+    if (selected && typeof selected === 'string') {
+      setSelectedPaths([selected]);
+      pixel.clearLogs();
+    }
+  }, [pixel, setSelectedPaths]);
+
+  const runFixDates = useCallback(() => {
+    if (!selectedDirectory) return;
+    void pixel.fixDates([selectedDirectory], { writeMode });
+  }, [pixel, selectedDirectory, writeMode]);
 
   const { isDragging } = useDragDrop({
     extensions: ALL_EXTENSIONS,
     onDrop: (paths) => {
-      setSelectedPaths(paths);
-      pixel.clearLogs();
+      void (async () => {
+        const directory = await findDirectoryPath(paths);
+        if (!directory) {
+          toast.error('Drop a folder to fix dates for a directory.');
+          return;
+        }
+        setSelectedPaths([directory]);
+        pixel.clearLogs();
+      })();
     },
   });
 
-  const loadInspect = useCallback(async () => {
-    if (!activePath) return;
-    setInspectBusy(true);
-    setInspectResult(null);
-    try {
-      const res = await pixel.inspectMediaDateCandidates(activePath);
-      if (!res.ok) {
-        toast.error(res.detail);
-        return;
-      }
-      setInspectResult(res.data);
-      const pick =
-        res.data.suggestedCandidateId ??
-        res.data.candidates.find((c) => c.unixSeconds !== null)?.id ??
-        '';
-      setSelectedCandidateId(pick);
-    } finally {
-      setInspectBusy(false);
+  const modeDescription = useMemo(() => {
+    if (isCopyMode) {
+      return 'Creates a sibling _FixedDates folder and writes metadata into the copied files.';
     }
-  }, [activePath, pixel]);
+    return 'Writes metadata directly into the selected folder.';
+  }, [isCopyMode]);
 
-  const applySelected = useCallback(async () => {
-    if (!activePath || !selectedCandidateId) return;
-    const c = inspectResult?.candidates.find(
-      (x) => x.id === selectedCandidateId,
+  if (!selectedDirectory) {
+    return (
+      <div
+        className={cn(
+          'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 col-span-full',
+          isDragging
+            ? 'border-primary bg-primary/10'
+            : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
+        )}
+      >
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
+          <IconFolder size={32} className="text-primary" />
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight mb-1">
+          Select a media folder
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+          Fix Dates works on one folder at a time. Use this when files are
+          already Pixel-compatible and only need metadata repair.
+        </p>
+        <Button
+          type="button"
+          onClick={() => void selectFolder()}
+          disabled={pixel.isRunning}
+          className="gap-2"
+        >
+          <IconFolder />
+          Select Folder
+        </Button>
+      </div>
     );
-    if (!c || c.unixSeconds === null) {
-      toast.error('Pick a source with a valid timestamp.');
-      return;
-    }
-    setApplyBusy(true);
-    try {
-      const res = await pixel.applyMediaDateUnix(
-        activePath,
-        c.unixSeconds,
-        googleTakeoutApply,
-        writeMode,
-      );
-      if (!res.ok) {
-        toast.error(res.detail);
-        return;
-      }
-      if (writeMode === 'copy-directory') {
-        const copiedFolderName = basenameOf(
-          res.copiedDirectory?.destinationPath ?? res.targetPath,
-        );
-        toast.success(`Date written to copied folder: ${copiedFolderName}`);
-        return;
-      }
-      toast.success('Date written.');
-      await loadInspect();
-    } finally {
-      setApplyBusy(false);
-    }
-  }, [
-    activePath,
-    selectedCandidateId,
-    inspectResult,
-    googleTakeoutApply,
-    writeMode,
-    pixel,
-    loadInspect,
-  ]);
-
-  const autoBusy = pixel.isRunning && pixel.activeOperation === 'fix-dates';
-
-  const candidateOptions = useMemo(() => {
-    if (!inspectResult) return [];
-    return inspectResult.candidates.map((c) => ({
-      value: c.id,
-      title: c.label,
-      description: c.raw,
-      disabled: c.unixSeconds === null,
-      isSuggested: inspectResult.suggestedCandidateId === c.id,
-    }));
-  }, [inspectResult]);
-
-  const hasSelection = selectedPaths.length > 0;
-  const isCopyMode = writeMode === 'copy-directory';
+  }
 
   return (
     <>
-      <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
-
-      <main className="flex-1 p-2">
-        <div className="mx-auto max-w-3xl flex flex-col gap-6">
-          <p className="text-sm text-muted-foreground border-l-2 border-amber-500/80 pl-3 py-1">
-            Experimental: automatic fixing stays on Convert Media. Here you can
-            inspect every embedded or Takeout date and apply one explicitly.
-          </p>
-
-          {!hasSelection ? (
-            <SelectFiles />
-          ) : (
-            <>
-              <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                    <File size={16} weight="duotone" className="text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">
-                      {selectedPaths.length} item
-                      {selectedPaths.length !== 1 ? 's' : ''} selected
-                    </p>
-                    {selectedPaths.length > 1 ? (
-                      <label className="sr-only" htmlFor="fix-dates-active">
-                        Active file
-                      </label>
-                    ) : null}
-                    {selectedPaths.length > 1 ? (
-                      <select
-                        id="fix-dates-active"
-                        className="mt-1 w-full max-w-md text-xs bg-background border rounded-md px-2 py-1.5"
-                        value={activePath ?? ''}
-                        onChange={(e) => {
-                          setActivePath(e.target.value);
-                          setInspectResult(null);
-                          setSelectedCandidateId('');
-                        }}
-                      >
-                        {selectedPaths.map((p) => (
-                          <option key={p} value={p}>
-                            {basenameOf(p)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {basenameOf(selectedPaths[0] ?? '')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSelection}
-                  className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 p-0"
-                  aria-label="Clear selection"
-                >
-                  <X size={16} weight="bold" />
-                </Button>
+      <div className="flex flex-col gap-6">
+        <>
+          <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                <IconFolder size={16} className="text-primary" />
               </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {basenameOf(selectedDirectory)}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {selectedDirectory}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+              className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 p-0"
+              aria-label="Clear selection"
+            >
+              <IconX size={16} />
+            </Button>
+          </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-                <FieldSet className="w-full rounded-lg border bg-card p-3 gap-3">
-                  <FieldLegend variant="label">Write mode</FieldLegend>
-                  <FieldLabel
-                    htmlFor="fix-dates-overwrite-original"
-                    className="w-full"
-                  >
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldTitle className="text-sm">
-                          Overwrite original files
-                        </FieldTitle>
-                        <FieldDescription className="text-xs">
-                          Off by default. Photo Bridge creates a sibling
-                          `_FixedDates` folder first. If you selected individual
-                          files, each parent folder is copied before metadata is
-                          written.
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch
-                        id="fix-dates-overwrite-original"
-                        checked={!isCopyMode}
-                        onCheckedChange={(checked) =>
-                          setWriteMode(checked ? 'overwrite' : 'copy-directory')
-                        }
-                        disabled={pixel.isRunning || applyBusy || inspectBusy}
-                      />
-                    </Field>
-                  </FieldLabel>
-                </FieldSet>
-
-                <Button
-                  type="button"
-                  variant="default"
-                  className="gap-2"
-                  disabled={!activePath || pixel.isRunning || inspectBusy}
-                  onClick={() => void loadInspect()}
-                >
-                  {inspectBusy ? (
-                    <Spinner size={18} className="animate-spin" />
-                  ) : (
-                    <ArrowClockwise size={18} weight="duotone" />
-                  )}
-                  Load date sources
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="gap-2"
-                  disabled={pixel.isRunning || autoBusy}
-                  onClick={() =>
-                    pixel.fixDates(selectedPaths, {
-                      writeMode,
-                    })
+          <FieldSet className="rounded-lg border bg-card p-3 gap-3">
+            <FieldLegend variant="label">Write mode</FieldLegend>
+            <FieldLabel
+              htmlFor="fix-dates-overwrite-original"
+              className="w-full"
+            >
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldTitle className="text-sm">
+                    Overwrite selected folder
+                  </FieldTitle>
+                  <FieldDescription className="text-xs">
+                    {modeDescription}
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="fix-dates-overwrite-original"
+                  checked={!isCopyMode}
+                  onCheckedChange={(checked) =>
+                    setWriteMode(checked ? 'overwrite' : 'copy-directory')
                   }
-                >
-                  {autoBusy ? (
-                    <Spinner size={18} className="animate-spin" />
-                  ) : (
-                    <Clock size={18} weight="duotone" />
-                  )}
-                  Automatically fix dates
-                </Button>
-              </div>
+                  disabled={pixel.isRunning}
+                />
+              </Field>
+            </FieldLabel>
+          </FieldSet>
 
-              {inspectResult ? (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">
-                      {inspectResult.basename}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {inspectResult.mediaKind} ·{' '}
-                      {inspectResult.hasAutomaticDateOk
-                        ? 'Automatic check: embedded date looks OK'
-                        : 'Automatic check: may need a fix'}
-                    </p>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    <FieldSet className="gap-2">
-                      <FieldLegend variant="label">
-                        Pick a source to write
-                      </FieldLegend>
-                      <RadioGroup
-                        value={selectedCandidateId}
-                        onValueChange={(v) => {
-                          if (typeof v === 'string') {
-                            setSelectedCandidateId(v);
-                          }
-                        }}
-                        className="gap-2"
-                        disabled={applyBusy}
-                      >
-                        {candidateOptions.map((opt) => (
-                          <FieldLabel
-                            key={opt.value}
-                            htmlFor={`cand-${opt.value}`}
-                            className={cn(
-                              'w-full',
-                              opt.disabled && 'opacity-50 cursor-not-allowed',
-                            )}
-                          >
-                            <Field orientation="horizontal">
-                              <FieldContent>
-                                <FieldTitle className="text-sm flex items-center gap-2">
-                                  {opt.title}
-                                  {opt.isSuggested ? (
-                                    <span className="text-[10px] font-normal uppercase tracking-wide text-primary">
-                                      suggested
-                                    </span>
-                                  ) : null}
-                                </FieldTitle>
-                                <FieldDescription className="font-mono text-xs break-all">
-                                  {opt.description}
-                                  {opt.disabled
-                                    ? ' · no parseable timestamp'
-                                    : ''}
-                                </FieldDescription>
-                              </FieldContent>
-                              <RadioGroupItem
-                                value={opt.value}
-                                id={`cand-${opt.value}`}
-                                disabled={opt.disabled}
-                              />
-                            </Field>
-                          </FieldLabel>
-                        ))}
-                      </RadioGroup>
-                    </FieldSet>
+          <Button
+            type="button"
+            className="gap-2 w-fit"
+            disabled={pixel.isRunning}
+            onClick={runFixDates}
+          >
+            {isBusy ? (
+              <IconLoader2 size={18} className="animate-spin" />
+            ) : (
+              <IconClock size={18} />
+            )}
+            {isBusy ? 'Fixing dates...' : 'Fix Dates'}
+          </Button>
+        </>
+      </div>
 
-                    <FieldLabel
-                      htmlFor="fix-dates-takeout-apply"
-                      className="w-full"
-                    >
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <FieldTitle className="text-sm">
-                            Also write GPS from Takeout JSON
-                          </FieldTitle>
-                          <FieldDescription className="text-xs">
-                            Uses `geoData` from the sidecar when Google Takeout
-                            exported location metadata.
-                          </FieldDescription>
-                        </FieldContent>
-                        <Switch
-                          id="fix-dates-takeout-apply"
-                          checked={googleTakeoutApply}
-                          onCheckedChange={(checked) =>
-                            setGoogleTakeoutApply(checked)
-                          }
-                          disabled={applyBusy}
-                        />
-                      </Field>
-                    </FieldLabel>
-
-                    <Button
-                      type="button"
-                      className="gap-2 w-fit"
-                      disabled={
-                        applyBusy ||
-                        !selectedCandidateId ||
-                        candidateOptions.find(
-                          (o) => o.value === selectedCandidateId,
-                        )?.disabled
-                      }
-                      onClick={() => void applySelected()}
-                    >
-                      {applyBusy ? (
-                        <Spinner size={18} className="animate-spin" />
-                      ) : (
-                        <Play size={18} weight="fill" />
-                      )}
-                      {isCopyMode
-                        ? 'Apply selected date to copy'
-                        : 'Apply selected date'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : null}
-            </>
-          )}
-        </div>
-      </main>
+      <div className="flex flex-col min-h-0"></div>
     </>
   );
 }

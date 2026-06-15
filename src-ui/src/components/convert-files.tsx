@@ -1,4 +1,9 @@
-import { Clock, File, Play, Spinner, X } from '@phosphor-icons/react';
+import {
+  IconFile,
+  IconLoader2,
+  IconPlayerPlay,
+  IconX,
+} from '@tabler/icons-react';
 import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
@@ -41,7 +46,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
       <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-            <File size={16} weight="duotone" className="text-primary" />
+            <IconFile size={16} className="text-primary" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">
@@ -63,7 +68,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
           className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 p-0"
           aria-label="Clear selection"
         >
-          <X size={16} weight="bold" />
+          <IconX size={16} />
         </Button>
       </div>
 
@@ -94,9 +99,9 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
           className="gap-2"
         >
           {pixel.isRunning ? (
-            <Spinner size={18} className="animate-spin" />
+            <IconLoader2 size={18} className="animate-spin" />
           ) : (
-            <Play size={18} weight="fill" />
+            <IconPlayerPlay size={18} />
           )}
           {pixel.isRunning
             ? mediaJob === 'convert'
@@ -105,17 +110,6 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
             : mediaJob === 'convert'
               ? 'Convert Media'
               : 'Copy Media'}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          title="Restore EXIF or Takeout timestamps"
-          onClick={() => pixel.fixDates(selectedPaths)}
-          disabled={pixel.isRunning}
-          className="gap-2"
-        >
-          <Clock size={18} weight="duotone" />
-          Fix Dates
         </Button>
       </div>
 

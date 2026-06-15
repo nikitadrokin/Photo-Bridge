@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import {
-  CheckCircle,
-  MinusCircle,
-  Stack,
-  XCircle,
-} from '@phosphor-icons/react';
+  IconCircleCheck,
+  IconCircleMinus,
+  IconStack2,
+  IconCircleX,
+} from '@tabler/icons-react';
 import { buildAlertRows, deriveActivityStats } from '@/lib/activity-format';
 import { cn } from '@/lib/utils';
 import { usePixel } from '@/hooks/use-pixel';
@@ -65,15 +65,14 @@ const ConversionStatsPanel: React.FC = () => {
           <StatCard
             label="Total"
             value={totalDisplay}
-            icon={<Stack size={13} weight="duotone" />}
+            icon={<IconStack2 size={13} />}
           />
           <StatCard
             label="Added"
             value={String(stats.added)}
             icon={
-              <CheckCircle
+              <IconCircleCheck
                 size={13}
-                weight="duotone"
                 className="text-emerald-600 dark:text-emerald-400"
               />
             }
@@ -83,9 +82,8 @@ const ConversionStatsPanel: React.FC = () => {
             label="Skipped"
             value={String(stats.skipped)}
             icon={
-              <MinusCircle
+              <IconCircleMinus
                 size={13}
-                weight="duotone"
                 className="text-muted-foreground"
               />
             }
@@ -94,9 +92,8 @@ const ConversionStatsPanel: React.FC = () => {
             label="Failed"
             value={String(stats.failed)}
             icon={
-              <XCircle
+              <IconCircleX
                 size={13}
-                weight="duotone"
                 className="text-destructive"
               />
             }

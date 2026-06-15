@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
-import { GithubLogo } from '@phosphor-icons/react';
+import { IconBrandGithub } from '@tabler/icons-react';
 
 const Footer: React.FC = () => {
   const [version, setVersion] = useState<string>('');
@@ -32,7 +32,7 @@ const Footer: React.FC = () => {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-primary hover:underline"
         >
-          <GithubLogo size={16} />
+          <IconBrandGithub size={16} />
           Repository
         </a>
         {version && (

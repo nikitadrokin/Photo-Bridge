@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useCallback } from 'react';
-import ActivityFeed from '@/components/activity-feed';
 import ConvertFiles, { type MediaJobMode } from '@/components/convert-files';
-import DropzoneOverlay from '@/components/dropzone-overlay';
 import SelectFiles from '@/components/select-files';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
@@ -44,34 +42,20 @@ function ConvertPage() {
     },
   });
 
+  if (!hasSelection) {
+    return <SelectFiles isDragging={isDragging} />;
+  }
+
   return (
     <>
-      <DropzoneOverlay isVisible={isDragging} extensions={ALL_EXTENSIONS} />
+      {/* LEFT PANEL: Controls */}
+      <div className="flex flex-col gap-6">
+        {/* Empty state / File selection */}
+        <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
+      </div>
 
-      <main className="flex-1 p-2">
-        <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
-          {/* LEFT PANEL: Controls */}
-          <div className="flex flex-col gap-6">
-            {/* Empty state / File selection */}
-            {!hasSelection ? (
-              <SelectFiles />
-            ) : (
-              <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
-            )}
-          </div>
-
-          {/* RIGHT PANEL: Log Viewer / Terminal Message */}
-          <div className="flex flex-col min-h-0">
-            <ActivityFeed
-              emptyMessage={
-                mediaJob === 'copy'
-                  ? 'Activity will appear here after copy'
-                  : 'Activity will appear here after conversion'
-              }
-            />
-          </div>
-        </div>
-      </main>
+      {/* RIGHT PANEL: Log Viewer / Terminal Message */}
+      <div className="flex flex-col min-h-0"></div>
     </>
   );
 }

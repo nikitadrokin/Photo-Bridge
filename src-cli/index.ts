@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { convert } from './commands/convert.js';
+import { convert } from './commands/convert/index.js';
 import { copy } from './commands/copy.js';
-import { randomize } from './commands/randomize.js';
 import { checkAdb } from './commands/check-adb.js';
 import { pushToPixel } from './commands/push-to-pixel.js';
 import { pullFromPixel } from './commands/pull-from-pixel.js';
 import { shell } from './commands/shell.js';
-import { fixDates } from './commands/fix-dates/index.js';
+import { fixDates } from './commands/fix-dates.js';
 import { fixSnapchatDates } from './commands/fix-snapchat-dates.js';
+import { split } from './commands/split/index.js';
+import { gallery } from './commands/gallery.js';
 
 // Fix for macOS sidecar process not having access to Homebrew paths
 if (process.platform === 'darwin') {
@@ -30,13 +31,14 @@ async function main() {
 
   program.addCommand(convert);
   program.addCommand(copy);
-  program.addCommand(randomize);
   program.addCommand(checkAdb);
   program.addCommand(pushToPixel);
   program.addCommand(pullFromPixel);
   program.addCommand(shell);
   program.addCommand(fixDates);
   program.addCommand(fixSnapchatDates);
+  program.addCommand(split);
+  program.addCommand(gallery);
 
   program.parse();
 }

@@ -10,10 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransferRouteImport } from './routes/transfer'
+import { Route as SplitRouteImport } from './routes/split'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as FixDatesRouteImport } from './routes/fix-dates'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TransferRoute = TransferRouteImport.update({
@@ -21,14 +22,14 @@ const TransferRoute = TransferRouteImport.update({
   path: '/transfer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SplitRoute = SplitRouteImport.update({
+  id: '/split',
+  path: '/split',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RoadmapRoute = RoadmapRouteImport.update({
-  id: '/roadmap',
-  path: '/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FixDatesRoute = FixDatesRouteImport.update({
@@ -41,6 +42,11 @@ const ConvertRoute = ConvertRouteImport.update({
   path: '/convert',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,56 +55,69 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
-  '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
+  '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
-  '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
+  '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
-  '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
+  '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/browse'
     | '/convert'
     | '/fix-dates'
-    | '/roadmap'
     | '/settings'
+    | '/split'
     | '/transfer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/convert' | '/fix-dates' | '/roadmap' | '/settings' | '/transfer'
+  to:
+    | '/'
+    | '/browse'
+    | '/convert'
+    | '/fix-dates'
+    | '/settings'
+    | '/split'
+    | '/transfer'
   id:
     | '__root__'
     | '/'
+    | '/browse'
     | '/convert'
     | '/fix-dates'
-    | '/roadmap'
     | '/settings'
+    | '/split'
     | '/transfer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrowseRoute: typeof BrowseRoute
   ConvertRoute: typeof ConvertRoute
   FixDatesRoute: typeof FixDatesRoute
-  RoadmapRoute: typeof RoadmapRoute
   SettingsRoute: typeof SettingsRoute
+  SplitRoute: typeof SplitRoute
   TransferRoute: typeof TransferRoute
 }
 
@@ -111,18 +130,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransferRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/split': {
+      id: '/split'
+      path: '/split'
+      fullPath: '/split'
+      preLoaderRoute: typeof SplitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roadmap': {
-      id: '/roadmap'
-      path: '/roadmap'
-      fullPath: '/roadmap'
-      preLoaderRoute: typeof RoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fix-dates': {
@@ -139,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConvertRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -151,10 +177,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrowseRoute: BrowseRoute,
   ConvertRoute: ConvertRoute,
   FixDatesRoute: FixDatesRoute,
-  RoadmapRoute: RoadmapRoute,
   SettingsRoute: SettingsRoute,
+  SplitRoute: SplitRoute,
   TransferRoute: TransferRoute,
 }
 export const routeTree = rootRouteImport

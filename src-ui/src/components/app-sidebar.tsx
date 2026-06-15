@@ -3,15 +3,15 @@ import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import {
-  ArrowCircleUp,
-  ArrowsClockwise,
-  CalendarBlank,
-  DeviceMobile,
-  FilmStrip,
-  Gear,
-  GithubLogo,
-  RoadHorizon,
-} from '@phosphor-icons/react';
+  IconBrandGithub,
+  IconCalendar,
+  IconCircleArrowUp,
+  IconDeviceMobile,
+  IconFolders,
+  IconMovie,
+  IconPhoto,
+  IconSettings,
+} from '@tabler/icons-react';
 import {
   Sidebar,
   SidebarContent,
@@ -19,71 +19,76 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import useIsFullscreen from '@/hooks/use-is-fullscreen';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Badge } from '@/components/ui/badge';
 
 interface AppSidebarProps {
   isPixelConnected: boolean;
-  onCheckConnection: (opts?: { interactive?: boolean }) => void;
   isRunning: boolean;
-  isConnectionCheckPending: boolean;
 }
 
-const isDev = import.meta.env.DEV;
-
-const routes = [
+const mediaRoutes = [
   {
     to: '/convert',
     label: 'Convert Media',
-    icon: FilmStrip,
+    icon: IconMovie,
     tooltip: 'Convert media for Pixel',
   },
   {
-    to: '/fix-dates',
-    label: 'Fix Dates (Google Photos only)',
-    icon: CalendarBlank,
-    tooltip: 'Experimental: inspect dates and apply overrides',
+    to: '/split',
+    label: 'Split Folder',
+    icon: IconFolders,
+    tooltip: 'Organize media into month or hash folders in place',
   },
+  {
+    to: '/fix-dates',
+    label: 'Fix Dates',
+    icon: IconCalendar,
+    tooltip: 'Experimental: inspect dates and apply overrides',
+    badge: 'BETA',
+  },
+  {
+    to: '/browse',
+    label: 'Browse by Day',
+    icon: IconPhoto,
+    tooltip: 'View media grouped and sorted by capture date',
+    badge: 'DEV',
+    hideInProd: true,
+  },
+] as const;
+
+const deviceRoutes = [
   {
     to: '/transfer',
     label: 'Pixel Transfer',
-    icon: DeviceMobile,
+    icon: IconDeviceMobile,
     tooltip: 'Transfer files to Pixel',
   },
-  {
-    to: '/roadmap',
-    label: 'Roadmap',
-    icon: RoadHorizon,
-    tooltip: 'View planned and upcoming features',
-  },
+] as const;
+
+const appRoutes = [
   {
     to: '/settings',
     label: 'Settings',
-    icon: Gear,
+    icon: IconSettings,
     tooltip: 'App settings',
   },
 ] as const;
 
 const AppSidebar: React.FC<AppSidebarProps> = ({
   isPixelConnected,
-  onCheckConnection,
   isRunning,
-  isConnectionCheckPending,
 }) => {
-  const [version, setVersion] = useState<string>('');
+  const [version, setVersion] = useState<string>('0');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
-  const isFullscreen = useIsFullscreen();
-  const isMobile = useIsMobile();
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
+  const processRunningTooltip = 'Please wait for the current process to finish';
 
   useEffect(() => {
     getVersion()
@@ -99,44 +104,123 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <Sidebar
-      variant="floating"
-      className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none]"
+      variant="inset"
+      className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
-      <SidebarHeader className="px-4 pt-2.5" data-tauri-drag-region>
-        <span
-          className={cn(
-            'font-semibold text-sm inline-block',
-            !isFullscreen && 'ml-18',
-            isMobile && 'ml-20 mt-2',
-          )}
-          data-tauri-drag-region
-        >
-          {/* iPhone to Pixel */}&nbsp;
-        </span>
-      </SidebarHeader>
-      <SidebarSeparator className="mt-2.5" />
       <SidebarContent>
-        {/* Core */}
         <SidebarGroup>
-          <SidebarGroupLabel>Core</SidebarGroupLabel>
+          <div className="md:hidden sticky top-0 z-60 w-full h-10 bg-sidebar"></div>
+          <SidebarGroupLabel>Media</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {routes.map((route) => {
-                if (route.to === '/roadmap' && !isDev) return null;
-                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
+              {mediaRoutes
+                .filter(
+                  (route) => !('hideInProd' in route && import.meta.env.PROD),
+                )
+                .map((route) => {
+                  const isActive = !!matchRoute({
+                    to: route.to,
+                    fuzzy: true,
+                  });
+
+                  return (
+                    <SidebarMenuItem key={route.to}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        disabled={isRunning}
+                        className={cn(isRunning && 'cursor-not-allowed')}
+                        tooltip={
+                          isRunning
+                            ? {
+                                children: processRunningTooltip,
+                                hidden: false,
+                              }
+                            : route.tooltip
+                        }
+                        onClick={(event) => {
+                          if (isRunning) {
+                            event.preventDefault();
+                            return;
+                          }
+                          void navigate({ to: route.to });
+                        }}
+                      >
+                        <route.icon
+                          className={cn(isActive && 'text-primary')}
+                        />
+                        <span className="grid flex-1 text-left text-sm leading-tight">
+                          <span>{route.label}</span>
+                        </span>
+                        {'badge' in route ? (
+                          <Badge
+                            variant="secondary"
+                            className="ml-auto h-4 rounded px-1.5 text-[10px]"
+                          >
+                            {route.badge}
+                          </Badge>
+                        ) : null}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Device</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {deviceRoutes.map((route) => {
+                const isActive = !!matchRoute({
+                  to: route.to,
+                  fuzzy: true,
+                });
 
                 return (
                   <SidebarMenuItem key={route.to}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      tooltip={route.tooltip}
-                      onClick={() => navigate({ to: route.to })}
+                      disabled={isRunning}
+                      size="lg"
+                      className={cn(isRunning && 'cursor-not-allowed')}
+                      tooltip={
+                        isRunning
+                          ? {
+                              children: processRunningTooltip,
+                              hidden: false,
+                            }
+                          : route.tooltip
+                      }
+                      onClick={(event) => {
+                        if (isRunning) {
+                          event.preventDefault();
+                          return;
+                        }
+                        void navigate({ to: route.to });
+                      }}
                     >
                       <route.icon
-                        weight={isActive ? 'duotone' : 'regular'}
-                        className={cn(isActive && 'text-primary')}
+                        className={cn(
+                          'self-start h-lh',
+                          isActive && 'text-primary',
+                        )}
                       />
-                      <span>{route.label}</span>
+                      <span className="grid flex-1 text-left text-sm leading-tight">
+                        <span>{route.label}</span>
+                        <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground tracking-wide">
+                          {isPixelConnected ? 'Connected' : 'Not connected'}
+                          <span
+                            className={cn(
+                              'size-1.5 rounded-full',
+                              isPixelConnected
+                                ? 'bg-green-500'
+                                : 'bg-muted-foreground',
+                            )}
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -145,38 +229,33 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Device Status */}
         <SidebarGroup>
-          <SidebarGroupLabel>Device</SidebarGroupLabel>
+          <SidebarGroupLabel>App</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => {
-                    onCheckConnection({ interactive: true });
-                  }}
-                  disabled={isRunning || isConnectionCheckPending}
-                  tooltip="Check Pixel connection via ADB"
-                >
-                  <DeviceMobile
-                    weight={isPixelConnected ? 'duotone' : 'regular'}
-                    className={cn(
-                      isPixelConnected
-                        ? 'text-green-500'
-                        : 'text-muted-foreground',
-                    )}
-                  />
-                  <span>
-                    {isPixelConnected ? 'Connected' : 'Not Connected'}
-                  </span>
-                  <ArrowsClockwise
-                    className={cn(
-                      'ml-auto h-4 w-4',
-                      isConnectionCheckPending && 'animate-spin',
-                    )}
-                  />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {appRoutes.map((route) => {
+                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
+
+                return (
+                  <SidebarMenuItem key={route.to}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      tooltip={route.tooltip}
+                      onClick={() => {
+                        void navigate({ to: route.to });
+                      }}
+                    >
+                      <route.icon
+                        className={cn(
+                          'self-start h-lh',
+                          isActive && 'text-primary',
+                        )}
+                      />
+                      {route.label}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -191,8 +270,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-primary hover:underline"
             >
-              <ArrowCircleUp size={13} weight="duotone" />v{updateVersion}{' '}
-              available
+              <IconCircleArrowUp size={13} />v{updateVersion} available
             </a>
           )}
 
@@ -218,7 +296,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 className="inline-flex items-center gap-1.5 text-primary hover:underline"
                 aria-label="View source on GitHub"
               >
-                <GithubLogo size={14} />
+                <IconBrandGithub size={14} />
               </a>
               {version ? (
                 <span className="text-muted-foreground">v{version}</span>

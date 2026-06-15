@@ -1,6 +1,4 @@
-/**
- * Thrown after a per-file failure UI event so the top-level handler can avoid duplicate `uncaught` errors in JSON mode.
- */
+/** Marks a per-file conversion failure that already produced JSONL `file` rows. */
 export class ConversionFileError extends Error {
   constructor(message: string) {
     super(message);
