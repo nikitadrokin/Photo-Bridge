@@ -108,7 +108,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
       <SidebarContent>
-        <SidebarGroup className="pt-10 md:pt-0">
+        <SidebarGroup>
+          <div className="md:hidden sticky top-0 z-60 w-full h-10 bg-sidebar"></div>
           <SidebarGroupLabel>Media</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
