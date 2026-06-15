@@ -180,26 +180,35 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-        <SheetContent
-          data-sidebar="sidebar"
-          data-slot="sidebar"
-          data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
-          style={
-            {
-              '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
-          side={side}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
+      <>
+        {/* Hidden peer so SidebarInset inset-variant styles apply without the desktop sidebar layout */}
+        <div
+          className="peer hidden"
+          data-variant={variant}
+          data-state={state}
+          aria-hidden="true"
+        />
+        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+          <SheetContent
+            data-sidebar="sidebar"
+            data-slot="sidebar"
+            data-mobile="true"
+            className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
+            style={
+              {
+                '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
+              } as React.CSSProperties
+            }
+            side={side}
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Sidebar</SheetTitle>
+              <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            </SheetHeader>
+            <div className="flex h-full w-full flex-col">{children}</div>
+          </SheetContent>
+        </Sheet>
+      </>
     );
   }
 
@@ -310,7 +319,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
     <main
       data-slot="sidebar-inset"
       className={cn(
-        'bg-background md:peer-data-[state="expanded"]:peer-data-[variant=inset]:m-[0_.5rem_.5rem_0] md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain',
+        'bg-background md:peer-data-[state="expanded"]:peer-data-[variant=inset]:m-[0_.5rem_.5rem_0] peer-data-[variant=inset]:rounded-2xl peer-data-[variant=inset]:shadow-sm relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain',
         !isFullscreen && 'md:peer-data-[variant=inset]:rounded-br-md',
         isFullscreen && !open && 'md:peer-data-[variant=inset]:rounded-b-none',
         className,
