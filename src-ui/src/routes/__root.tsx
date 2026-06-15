@@ -20,7 +20,7 @@ function RootComponent() {
             <AppSidebarWithContext />
             <SidebarInset className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] z-10">
               <main className="flex-1 p-4">
-                <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
+                <div className="mx-auto size-full grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
                   <Outlet />
                 </div>
               </main>
