@@ -321,7 +321,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
       className={cn(
         'bg-background md:peer-data-[state="expanded"]:peer-data-[variant=inset]:m-[0_.5rem_.5rem_0] peer-data-[variant=inset]:rounded-2xl peer-data-[variant=inset]:shadow-sm relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain',
         !isFullscreen && 'md:peer-data-[variant=inset]:rounded-br-md',
-        isFullscreen && !open && 'md:peer-data-[variant=inset]:rounded-b-none',
+        !open && 'peer-data-[variant=inset]:rounded-b-none',
         className,
       )}
       {...props}
