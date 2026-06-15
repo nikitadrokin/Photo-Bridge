@@ -46,19 +46,19 @@ const mediaRoutes = [
     tooltip: 'Organize media into month or hash folders in place',
   },
   {
+    to: '/fix-dates',
+    label: 'Fix Dates',
+    icon: IconCalendar,
+    tooltip: 'Experimental: inspect dates and apply overrides',
+    badge: 'BETA',
+  },
+  {
     to: '/browse',
     label: 'Browse by Day',
     icon: IconPhoto,
     tooltip: 'View media grouped and sorted by capture date',
     badge: 'DEV',
     hideInProd: true,
-  },
-  {
-    to: '/fix-dates',
-    label: 'Fix Dates',
-    icon: IconCalendar,
-    tooltip: 'Experimental: inspect dates and apply overrides',
-    badge: 'BETA',
   },
 ] as const;
 
