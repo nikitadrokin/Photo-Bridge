@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { CliToolsSettings } from '@/components/cli-tools-settings';
 import { Field, FieldLabel } from '@/components/ui/field';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   TERMINAL_APP_SELECT_ITEMS,
@@ -44,6 +46,13 @@ function SettingsPage() {
             </TabsList>
           </Tabs>
         </Field>
+
+        {import.meta.env.DEV && (
+          <>
+            <Separator />
+            <CliToolsSettings />
+          </>
+        )}
       </div>
     </main>
   );
