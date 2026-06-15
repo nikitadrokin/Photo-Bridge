@@ -42,16 +42,16 @@ function ConvertPage() {
     },
   });
 
+  if (!hasSelection) {
+    return <SelectFiles isDragging={isDragging} />;
+  }
+
   return (
     <>
       {/* LEFT PANEL: Controls */}
       <div className="flex flex-col gap-6">
         {/* Empty state / File selection */}
-        {!hasSelection ? (
-          <SelectFiles isDragging={isDragging} />
-        ) : (
-          <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
-        )}
+        <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
       </div>
 
       {/* RIGHT PANEL: Log Viewer / Terminal Message */}

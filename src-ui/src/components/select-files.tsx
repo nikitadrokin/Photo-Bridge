@@ -15,6 +15,7 @@ const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
   const { setSelectedPaths } = useMediaStore();
   const pixel = usePixel();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars - I'll add this back later
   const selectFiles = useCallback(async () => {
     const selected = await open({
       directory: false,
@@ -48,7 +49,7 @@ const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200',
+        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 col-span-full',
         isDragging
           ? 'border-primary bg-primary/10'
           : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
