@@ -18,6 +18,7 @@ import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath } from '@/lib/path';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
@@ -122,7 +123,12 @@ function BrowsePage() {
       <main className="flex min-h-0 flex-1 flex-col p-4">
         {!folderPath ? (
           <div
-            className={`mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-16 text-center transition-colors duration-200 ${isDragging ? 'border-primary bg-primary/10' : 'border-border/60 bg-muted/20'}`}
+            className={cn(
+              'mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-16 text-center transition-colors duration-200',
+              isDragging
+                ? 'border-primary bg-primary/10'
+                : 'border-border/60 bg-muted/20',
+            )}
           >
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <IconPhoto size={32} className="text-primary" />

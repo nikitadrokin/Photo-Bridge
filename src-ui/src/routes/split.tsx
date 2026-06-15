@@ -20,6 +20,7 @@ import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { type SplitMode, splitModeLabel } from '@/lib/split-args';
 import { useMediaStore } from '@/stores/media-store';
+import { cn } from '@/lib/utils';
 
 const SPLIT_MODE_OPTIONS: ReadonlyArray<{
   value: SplitMode;
@@ -127,7 +128,12 @@ function SplitPage() {
           <div className="flex flex-col gap-6">
             {!selectedDirectory ? (
               <div
-                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 ${isDragging ? 'border-primary bg-primary/10' : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30'}`}
+                className={cn(
+                  'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200',
+                  isDragging
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
+                )}
               >
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
                   <IconFolders size={32} className="text-primary" />
