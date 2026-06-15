@@ -44,22 +44,18 @@ function ConvertPage() {
 
   return (
     <>
-      <main className="flex-1 p-4">
-        <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
-          {/* LEFT PANEL: Controls */}
-          <div className="flex flex-col gap-6">
-            {/* Empty state / File selection */}
-            {!hasSelection ? (
-              <SelectFiles isDragging={isDragging} />
-            ) : (
-              <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
-            )}
-          </div>
+      {/* LEFT PANEL: Controls */}
+      <div className="flex flex-col gap-6">
+        {/* Empty state / File selection */}
+        {!hasSelection ? (
+          <SelectFiles isDragging={isDragging} />
+        ) : (
+          <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
+        )}
+      </div>
 
-          {/* RIGHT PANEL: Log Viewer / Terminal Message */}
-          <div className="flex flex-col min-h-0"></div>
-        </div>
-      </main>
+      {/* RIGHT PANEL: Log Viewer / Terminal Message */}
+      <div className="flex flex-col min-h-0"></div>
     </>
   );
 }

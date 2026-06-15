@@ -123,152 +123,147 @@ function SplitPage() {
 
   return (
     <>
-      <main className="flex-1 p-4">
-        <div className="mx-auto grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
-          <div className="flex flex-col gap-6">
-            {!selectedDirectory ? (
-              <div
-                className={cn(
-                  'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200',
-                  isDragging
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
-                )}
-              >
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-                  <IconFolders size={32} className="text-primary" />
-                </div>
-                <h2 className="text-lg font-semibold tracking-tight mb-1">
-                  Select a media folder
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                  Split moves files within the folder you choose. Pick a library
-                  or export directory to organize by month or size.
-                </p>
-                <Button
-                  type="button"
-                  onClick={() => void selectFolder()}
-                  disabled={pixel.isRunning}
-                  className="gap-2"
-                >
-                  <IconFolder />
-                  Select Folder
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                      <IconFolder size={16} className="text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {basenameOf(selectedDirectory)}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {selectedDirectory}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearSelection}
-                    className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 p-0"
-                    aria-label="Clear selection"
-                  >
-                    <IconX size={16} />
-                  </Button>
-                </div>
-
-                <ChoiceCardRadioGroup
-                  legend="Layout"
-                  value={mode}
-                  onValueChange={(value) => {
-                    setMode(value);
-                    setLimitValue('');
-                    setDateByDay(false);
-                  }}
-                  options={SPLIT_MODE_OPTIONS}
-                  disabled={pixel.isRunning}
-                  name="split-mode"
-                />
-
-                {mode === 'date' && (
-                  <Label
-                    htmlFor="date-by-day"
-                    className="flex cursor-pointer items-center justify-between -mt-2 py-1"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium leading-none">
-                        Group by day
-                      </span>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        Adds a DD subfolder inside each YYYY-MM folder
-                      </span>
-                    </div>
-                    <Switch
-                      id="date-by-day"
-                      checked={dateByDay}
-                      onCheckedChange={setDateByDay}
-                      disabled={pixel.isRunning}
-                    />
-                  </Label>
-                )}
-
-                {needsLimit && (
-                  <div className="flex flex-col gap-1.5 -mt-2">
-                    <label
-                      htmlFor="limit-value"
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      {mode === 'size'
-                        ? 'Size limit per folder'
-                        : 'Max files per folder'}
-                    </label>
-                    <Input
-                      id="limit-value"
-                      placeholder={
-                        mode === 'size' ? 'e.g. 4gb, 500mb' : 'e.g. 1000'
-                      }
-                      value={limitValue}
-                      onChange={(e) => setLimitValue(e.target.value)}
-                      disabled={pixel.isRunning}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                )}
-
-                <p className="text-xs text-muted-foreground -mt-2">
-                  {modeSummary}. Files are moved in place under the selected
-                  folder.
-                </p>
-
-                <Button
-                  type="button"
-                  className="gap-2 w-fit"
-                  disabled={pixel.isRunning || !isLimitValid}
-                  onClick={runSplit}
-                >
-                  {isBusy ? (
-                    <IconLoader2 size={18} className="animate-spin" />
-                  ) : (
-                    <IconFolders size={18} />
-                  )}
-                  {isBusy ? 'Splitting folder…' : 'Split Folder'}
-                </Button>
-              </>
+      <div className="flex flex-col gap-6">
+        {!selectedDirectory ? (
+          <div
+            className={cn(
+              'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200',
+              isDragging
+                ? 'border-primary bg-primary/10'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
             )}
-          </div>
-
-          {selectedDirectory && (
-            <div className="flex flex-col min-h-0 gap-4">
-              <SplitStatsPanel />
+          >
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
+              <IconFolders size={32} className="text-primary" />
             </div>
-          )}
+            <h2 className="text-lg font-semibold tracking-tight mb-1">
+              Select a media folder
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+              Split moves files within the folder you choose. Pick a library or
+              export directory to organize by month or size.
+            </p>
+            <Button
+              type="button"
+              onClick={() => void selectFolder()}
+              disabled={pixel.isRunning}
+              className="gap-2"
+            >
+              <IconFolder />
+              Select Folder
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                  <IconFolder size={16} className="text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {basenameOf(selectedDirectory)}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {selectedDirectory}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8 p-0"
+                aria-label="Clear selection"
+              >
+                <IconX size={16} />
+              </Button>
+            </div>
+
+            <ChoiceCardRadioGroup
+              legend="Layout"
+              value={mode}
+              onValueChange={(value) => {
+                setMode(value);
+                setLimitValue('');
+                setDateByDay(false);
+              }}
+              options={SPLIT_MODE_OPTIONS}
+              disabled={pixel.isRunning}
+              name="split-mode"
+            />
+
+            {mode === 'date' && (
+              <Label
+                htmlFor="date-by-day"
+                className="flex cursor-pointer items-center justify-between -mt-2 py-1"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium leading-none">
+                    Group by day
+                  </span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Adds a DD subfolder inside each YYYY-MM folder
+                  </span>
+                </div>
+                <Switch
+                  id="date-by-day"
+                  checked={dateByDay}
+                  onCheckedChange={setDateByDay}
+                  disabled={pixel.isRunning}
+                />
+              </Label>
+            )}
+
+            {needsLimit && (
+              <div className="flex flex-col gap-1.5 -mt-2">
+                <label
+                  htmlFor="limit-value"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  {mode === 'size'
+                    ? 'Size limit per folder'
+                    : 'Max files per folder'}
+                </label>
+                <Input
+                  id="limit-value"
+                  placeholder={
+                    mode === 'size' ? 'e.g. 4gb, 500mb' : 'e.g. 1000'
+                  }
+                  value={limitValue}
+                  onChange={(e) => setLimitValue(e.target.value)}
+                  disabled={pixel.isRunning}
+                  className="h-8 text-sm"
+                />
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground -mt-2">
+              {modeSummary}. Files are moved in place under the selected folder.
+            </p>
+
+            <Button
+              type="button"
+              className="gap-2 w-fit"
+              disabled={pixel.isRunning || !isLimitValid}
+              onClick={runSplit}
+            >
+              {isBusy ? (
+                <IconLoader2 size={18} className="animate-spin" />
+              ) : (
+                <IconFolders size={18} />
+              )}
+              {isBusy ? 'Splitting folder…' : 'Split Folder'}
+            </Button>
+          </>
+        )}
+      </div>
+
+      {selectedDirectory && (
+        <div className="flex flex-col min-h-0 gap-4">
+          <SplitStatsPanel />
         </div>
-      </main>
+      )}
     </>
   );
 }
