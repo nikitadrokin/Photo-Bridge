@@ -10,8 +10,8 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { GalleryScanFilePayload } from '@cli-protocol';
-import DayTimeline from '@/components/gallery/day-timeline';
-import MediaPreviewSheet from '@/components/gallery/media-preview-sheet';
+import DayTreeTable from '@/components/gallery/day-tree-table';
+import Lightbox from '@/components/gallery/lightbox';
 import { Button } from '@/components/ui/button';
 import { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-actions';
 import { useDragDrop } from '@/hooks/use-drag-drop';
@@ -39,8 +39,22 @@ function BrowsePage() {
   const [previewFile, setPreviewFile] = useState<GalleryScanFilePayload | null>(
     null,
   );
+  const [removedPaths, setRemovedPaths] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
   const { result, progress, isScanning, error, scanDirectory, reset } =
     useGalleryScan();
+
+  const visibleDays = useMemo(() => {
+    if (!result) return [];
+    if (removedPaths.size === 0) return result.days;
+    return result.days
+      .map((day) => ({
+        ...day,
+        files: day.files.filter((file) => !removedPaths.has(file.path)),
+      }))
+      .filter((day) => day.files.length > 0);
+  }, [result, removedPaths]);
 
   const selectFolder = useCallback(async () => {
     const selected = await open({
@@ -51,6 +65,7 @@ function BrowsePage() {
     if (selected && typeof selected === 'string') {
       setFolderPath(selected);
       setPreviewFile(null);
+      setRemovedPaths(new Set());
       void scanDirectory(selected);
     }
   }, [scanDirectory]);
@@ -58,12 +73,14 @@ function BrowsePage() {
   const rescan = useCallback(() => {
     if (!folderPath) return;
     setPreviewFile(null);
+    setRemovedPaths(new Set());
     void scanDirectory(folderPath);
   }, [folderPath, scanDirectory]);
 
   const clearFolder = useCallback(() => {
     setFolderPath(null);
     setPreviewFile(null);
+    setRemovedPaths(new Set());
     reset();
   }, [reset]);
 
@@ -101,6 +118,7 @@ function BrowsePage() {
         }
         setFolderPath(directory);
         setPreviewFile(null);
+        setRemovedPaths(new Set());
         void scanDirectory(directory);
       })();
     },
@@ -147,10 +165,13 @@ function BrowsePage() {
 
   return (
     <>
-      <MediaPreviewSheet
+      <Lightbox
         file={previewFile}
         onClose={() => {
           setPreviewFile(null);
+        }}
+        onTrashed={(path) => {
+          setRemovedPaths((prev) => new Set(prev).add(path));
         }}
       />
 
@@ -195,9 +216,9 @@ function BrowsePage() {
               <IconLoader2 size={32} className="animate-spin" />
               <p className="text-sm">{progressLabel}</p>
             </div>
-          ) : result && result.days.length > 0 ? (
-            <DayTimeline
-              days={result.days}
+          ) : result && visibleDays.length > 0 ? (
+            <DayTreeTable
+              days={visibleDays}
               onSelectFile={(file) => {
                 setPreviewFile(file);
               }}

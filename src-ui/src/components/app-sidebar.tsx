@@ -7,6 +7,7 @@ import {
   IconCalendar,
   IconCircleArrowUp,
   IconDeviceMobile,
+  IconDeviceMobileCog,
   IconFolders,
   IconMovie,
   IconPhoto,
@@ -68,6 +69,15 @@ const deviceRoutes = [
     label: 'Pixel Transfer',
     icon: IconDeviceMobile,
     tooltip: 'Transfer files to Pixel',
+  },
+] as const;
+
+const deviceSubRoutes = [
+  {
+    to: '/pixel',
+    label: 'Pixel Device',
+    icon: IconDeviceMobileCog,
+    tooltip: 'Browse storage and purge the Pixel camera roll',
   },
 ] as const;
 
@@ -221,6 +231,40 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                           />
                         </span>
                       </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+
+              {deviceSubRoutes.map((route) => {
+                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
+
+                return (
+                  <SidebarMenuItem key={route.to}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      disabled={isRunning}
+                      className={cn(isRunning && 'cursor-not-allowed')}
+                      tooltip={
+                        isRunning
+                          ? {
+                              children: processRunningTooltip,
+                              hidden: false,
+                            }
+                          : route.tooltip
+                      }
+                      onClick={(event) => {
+                        if (isRunning) {
+                          event.preventDefault();
+                          return;
+                        }
+                        void navigate({ to: route.to });
+                      }}
+                    >
+                      <route.icon
+                        className={cn(isActive && 'text-primary')}
+                      />
+                      {route.label}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

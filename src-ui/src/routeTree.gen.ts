@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransferRouteImport } from './routes/transfer'
 import { Route as SplitRouteImport } from './routes/split'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PixelRouteImport } from './routes/pixel'
 import { Route as FixDatesRouteImport } from './routes/fix-dates'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as BrowseRouteImport } from './routes/browse'
@@ -30,6 +31,11 @@ const SplitRoute = SplitRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PixelRoute = PixelRouteImport.update({
+  id: '/pixel',
+  path: '/pixel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FixDatesRoute = FixDatesRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
+  '/pixel': typeof PixelRoute
   '/settings': typeof SettingsRoute
   '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
+  '/pixel': typeof PixelRoute
   '/settings': typeof SettingsRoute
   '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
+  '/pixel': typeof PixelRoute
   '/settings': typeof SettingsRoute
   '/split': typeof SplitRoute
   '/transfer': typeof TransferRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/convert'
     | '/fix-dates'
+    | '/pixel'
     | '/settings'
     | '/split'
     | '/transfer'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/convert'
     | '/fix-dates'
+    | '/pixel'
     | '/settings'
     | '/split'
     | '/transfer'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/convert'
     | '/fix-dates'
+    | '/pixel'
     | '/settings'
     | '/split'
     | '/transfer'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   ConvertRoute: typeof ConvertRoute
   FixDatesRoute: typeof FixDatesRoute
+  PixelRoute: typeof PixelRoute
   SettingsRoute: typeof SettingsRoute
   SplitRoute: typeof SplitRoute
   TransferRoute: typeof TransferRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pixel': {
+      id: '/pixel'
+      path: '/pixel'
+      fullPath: '/pixel'
+      preLoaderRoute: typeof PixelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fix-dates': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrowseRoute: BrowseRoute,
   ConvertRoute: ConvertRoute,
   FixDatesRoute: FixDatesRoute,
+  PixelRoute: PixelRoute,
   SettingsRoute: SettingsRoute,
   SplitRoute: SplitRoute,
   TransferRoute: TransferRoute,

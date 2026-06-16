@@ -1,7 +1,14 @@
 import type { GalleryScanEvent } from '@cli-protocol';
+import { IMAGE_EXTENSIONS } from '@/lib/constants';
 
 /** Re-export of the CLI gallery scan payload for UI state. */
 export type GalleryScanResult = GalleryScanEvent;
+
+/** True when the path has a browser-renderable image extension. */
+export function isImagePath(filePath: string): boolean {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  return IMAGE_EXTENSIONS.includes(ext);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

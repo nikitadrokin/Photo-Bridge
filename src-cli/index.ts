@@ -10,6 +10,7 @@ import { fixDates } from './commands/fix-dates.js';
 import { fixSnapchatDates } from './commands/fix-snapchat-dates.js';
 import { split } from './commands/split/index.js';
 import { gallery } from './commands/gallery.js';
+import { pixel } from './commands/pixel.js';
 
 // Fix for macOS sidecar process not having access to Homebrew paths
 if (process.platform === 'darwin') {
@@ -39,6 +40,7 @@ async function main() {
   program.addCommand(fixSnapchatDates);
   program.addCommand(split);
   program.addCommand(gallery);
+  program.addCommand(pixel);
 
   program.parse();
 }

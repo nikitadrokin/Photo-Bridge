@@ -9,7 +9,7 @@ import {
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { parseLineFromCLI } from '@cli-protocol';
-import type { ShellStorageEvent } from '@cli-protocol';
+import type { PixelFilePayload, ShellStorageEvent } from '@cli-protocol';
 import { useCommand } from '@/hooks/use-command';
 import { useTerminal } from '@/hooks/use-terminal';
 import {
@@ -327,6 +327,60 @@ function usePixelProviderValue() {
     }
   }, [isConnected, execute]);
 
+  const listPixelFiles = useCallback(async (): Promise<{
+    ok: true;
+    files: PixelFilePayload[];
+  } | { ok: false; detail: string }> => {
+    if (!isConnected) {
+      return { ok: false, detail: 'No device connected.' };
+    }
+    const { stdout } = await captureStdout(['pixel', 'list', '--jsonl']);
+    const lines = stdout
+      .split('\n')
+      .map((line) => line.replace(/\r$/, '').trim())
+      .filter((line) => line.length > 0);
+
+    let errorDetail: string | null = null;
+    for (const line of lines) {
+      const parsed = parseLineFromCLI(line);
+      if (parsed.tag !== 'ui') continue;
+      if (parsed.event.kind === 'pixel_list') {
+        return { ok: true, files: [...parsed.event.files] };
+      }
+      if (parsed.event.kind === 'error') {
+        errorDetail = parsed.event.detail ?? parsed.event.code;
+      }
+    }
+    return { ok: false, detail: errorDetail ?? 'No listing returned.' };
+  }, [isConnected, captureStdout]);
+
+  const purgePixelFiles = useCallback(async (): Promise<{
+    ok: true;
+    deleted: number;
+  } | { ok: false; detail: string }> => {
+    if (!isConnected) {
+      return { ok: false, detail: 'No device connected.' };
+    }
+    const { stdout } = await captureStdout(['pixel', 'purge', '--jsonl']);
+    const lines = stdout
+      .split('\n')
+      .map((line) => line.replace(/\r$/, '').trim())
+      .filter((line) => line.length > 0);
+
+    let errorDetail: string | null = null;
+    for (const line of lines) {
+      const parsed = parseLineFromCLI(line);
+      if (parsed.tag !== 'ui') continue;
+      if (parsed.event.kind === 'pixel_purge') {
+        return { ok: true, deleted: parsed.event.deleted };
+      }
+      if (parsed.event.kind === 'error') {
+        errorDetail = parsed.event.detail ?? parsed.event.code;
+      }
+    }
+    return { ok: false, detail: errorDetail ?? 'Purge did not complete.' };
+  }, [isConnected, captureStdout]);
+
   const openSidecarInTerminal = useCallback(
     async (args: Array<string>) => {
       await openInTerminal({ command: 'pb', args });
@@ -557,6 +611,8 @@ function usePixelProviderValue() {
     isConnectionCheckPending,
     availableStorage,
     refreshAvailableStorage,
+    listPixelFiles,
+    purgePixelFiles,
     isRunning,
     logs,
     activityEvents,
