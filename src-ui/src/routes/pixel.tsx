@@ -8,7 +8,7 @@ import type { PixelFilePayload } from '@cli-protocol';
 import { usePixel } from '@/hooks/use-pixel';
 import { useIsLargeScreen } from '@/hooks/use-is-large-screen';
 import { PIXEL_CAMERA_DIR } from '@/lib/constants';
-import { AvailableStorageCard } from '@/components/available-storage-card';
+import { DeviceInfoCard } from '@/components/device-info-card';
 import { ConnectionStatus } from '@/components/connection-status';
 import PixelFolderTree from '@/components/gallery/pixel-folder-tree';
 import PixelMediaPreview, {
@@ -45,7 +45,7 @@ function PixelPage() {
     listPixelFiles,
     pullPixelFileToCache,
     savePixelFiles,
-    refreshAvailableStorage,
+    refreshDeviceInfo,
   } = pixel;
 
   const isLargeScreen = useIsLargeScreen();
@@ -79,14 +79,14 @@ function PixelPage() {
   useEffect(() => {
     if (isConnected) {
       void loadFiles();
-      void refreshAvailableStorage();
+      void refreshDeviceInfo();
     } else {
       setFiles(null);
       setSelectedFile(null);
       setPreview(null);
       setDialogOpen(false);
     }
-  }, [isConnected, loadFiles, refreshAvailableStorage]);
+  }, [isConnected, loadFiles, refreshDeviceInfo]);
 
   const handleSelectFile = useCallback(
     (file: PixelFilePayload) => {
@@ -184,7 +184,7 @@ function PixelPage() {
             disabled={actionsDisabled || isLoading}
             onClick={() => {
               void loadFiles();
-              void refreshAvailableStorage();
+              void refreshDeviceInfo();
               void pixel.checkConnection({ interactive: false });
             }}
           >
@@ -197,11 +197,11 @@ function PixelPage() {
           </Button>
         </div>
 
-        <AvailableStorageCard
-          storage={pixel.availableStorage}
+        <DeviceInfoCard
+          info={pixel.deviceInfo}
           disabled={!pixel.isConnected || pixel.isRunning}
           onRefresh={() => {
-            void pixel.refreshAvailableStorage();
+            void refreshDeviceInfo();
           }}
         />
 

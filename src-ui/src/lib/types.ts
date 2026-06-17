@@ -12,3 +12,12 @@ export interface AvailableStorageState {
   readonly availLabel?: string;
   readonly errorMessage?: string;
 }
+
+/** Aggregated device info fetched on connect / manual refresh. */
+export interface DeviceInfoState {
+  readonly status: 'idle' | 'loading' | 'ok' | 'error';
+  readonly model?: string;
+  readonly batteryPct?: number;
+  readonly storageAvail?: string;
+  readonly storageTotal?: string;
+}

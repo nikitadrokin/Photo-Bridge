@@ -24,7 +24,7 @@ import {
 } from '@/lib/media-date-inspect';
 import { shJoin, shLines } from '@/lib/shell-formatters';
 import { buildSplitArgs, type SplitMode } from '@/lib/split-args';
-import type { AvailableStorageState } from '@/lib/types';
+import type { AvailableStorageState, DeviceInfoState } from '@/lib/types';
 
 export interface TransferPaths {
   source: string;
@@ -136,6 +136,7 @@ function usePixelProviderValue() {
     useState(false);
   const [availableStorage, setAvailableStorage] =
     useState<AvailableStorageState>({ status: 'idle' });
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfoState>({ status: 'idle' });
   const [transferInterrupted, setTransferInterrupted] = useState(false);
   const activeOperationRef = useRef<ActiveOperation>(null);
   const isRunningRef = useRef(false);
@@ -241,6 +242,55 @@ function usePixelProviderValue() {
   useEffect(() => {
     if (!isConnected) {
       setAvailableStorage({ status: 'idle' });
+    }
+  }, [isConnected]);
+
+  const refreshDeviceInfo = useCallback(async () => {
+    if (!isConnected) {
+      setDeviceInfo({ status: 'idle' });
+      return;
+    }
+    setDeviceInfo((prev) => ({ ...prev, status: 'loading' }));
+
+    const [dfResult, batteryResult, modelResult] = await Promise.all([
+      captureStdout(['shell', '--', 'df', '-h', PIXEL_CAMERA_DIR]),
+      captureStdout(['shell', '--', 'dumpsys', 'battery']),
+      captureStdout(['shell', '--', 'getprop', 'ro.product.model']),
+    ]);
+
+    // Parse df output: Filesystem Size Used Avail Use% Mounted
+    let storageAvail: string | undefined;
+    let storageTotal: string | undefined;
+    for (const line of dfResult.stdout.split('\n')) {
+      const cols = line.trim().split(/\s+/);
+      if (cols.length >= 5 && cols[0] !== 'Filesystem') {
+        storageTotal = cols[1];
+        storageAvail = cols[3];
+        break;
+      }
+    }
+
+    // Parse battery level
+    let batteryPct: number | undefined;
+    const batteryMatch = batteryResult.stdout.match(/\blevel:\s*(\d+)/);
+    if (batteryMatch) {
+      batteryPct = parseInt(batteryMatch[1], 10);
+    }
+
+    // Device model
+    const model = modelResult.stdout.trim() || undefined;
+
+    if (!storageAvail && batteryPct === undefined && !model) {
+      setDeviceInfo({ status: 'error' });
+      return;
+    }
+
+    setDeviceInfo({ status: 'ok', model, batteryPct, storageAvail, storageTotal });
+  }, [isConnected, captureStdout]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setDeviceInfo({ status: 'idle' });
     }
   }, [isConnected]);
 
@@ -692,6 +742,8 @@ function usePixelProviderValue() {
     isConnectionCheckPending,
     availableStorage,
     refreshAvailableStorage,
+    deviceInfo,
+    refreshDeviceInfo,
     listPixelFiles,
     pullPixelFileToCache,
     savePixelFiles,
