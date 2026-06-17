@@ -49,7 +49,7 @@ const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 col-span-full',
+        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed m-1 grow py-16 px-8 text-center transition-colors duration-200 col-span-full',
         isDragging
           ? 'border-primary bg-primary/10'
           : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
