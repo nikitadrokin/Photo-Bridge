@@ -20,8 +20,8 @@ import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { type SplitMode, splitModeLabel } from '@/lib/split-args';
 import { useMediaStore } from '@/stores/media-store';
-import { cn } from '@/lib/utils';
 import SplitColumn from '@/components/ui/split-column';
+import EmptyDropzone from '@/components/empty-dropzone';
 
 const SPLIT_MODE_OPTIONS: ReadonlyArray<{
   value: SplitMode;
@@ -124,14 +124,7 @@ function SplitPage() {
 
   if (!selectedDirectory) {
     return (
-      <div
-        className={cn(
-          'flex flex-col items-center justify-center rounded-xl border-2 m-1 grow border-dashed py-16 px-8 text-center transition-colors duration-200 col-span-full',
-          isDragging
-            ? 'border-primary bg-primary/10'
-            : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
-        )}
-      >
+      <EmptyDropzone isDragging={isDragging}>
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
           <IconFolders size={32} className="text-primary" />
         </div>
@@ -151,7 +144,7 @@ function SplitPage() {
           <IconFolder />
           Select Folder
         </Button>
-      </div>
+      </EmptyDropzone>
     );
   }
 
