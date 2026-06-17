@@ -400,7 +400,7 @@ function usePixelProviderValue() {
       // different folders never clobber each other.
       const destDir = await join(
         cacheRoot,
-        'preview',
+        'pixel-cache',
         `${file.sizeBytes}-${file.mtimeUnix ?? 0}`,
       );
 
