@@ -189,7 +189,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                     <SidebarMenuButton
                       isActive={isActive}
                       disabled={isRunning}
-                      size="lg"
                       className={cn(isRunning && 'cursor-not-allowed')}
                       tooltip={
                         isRunning
@@ -207,31 +206,38 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                         void navigate({ to: route.to });
                       }}
                     >
-                      <route.icon
-                        className={cn(
-                          'self-start h-lh',
-                          isActive && 'text-primary',
-                        )}
-                      />
-                      <span className="grid flex-1 text-left text-sm leading-tight">
-                        <span>{route.label}</span>
-                        <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground tracking-wide">
-                          {isPixelConnected ? 'Connected' : 'Not connected'}
-                          <span
-                            className={cn(
-                              'size-1.5 rounded-full',
-                              isPixelConnected
-                                ? 'bg-green-500'
-                                : 'bg-muted-foreground',
-                            )}
-                            aria-hidden="true"
-                          />
-                        </span>
-                      </span>
+                      <route.icon className={cn(isActive && 'text-primary')} />
+                      <span>{route.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  disabled
+                  className="cursor-default opacity-100 pointer-events-none"
+                  tooltip={
+                    isPixelConnected
+                      ? 'Pixel is connected'
+                      : 'Pixel is not connected'
+                  }
+                >
+                  <span className="flex items-center justify-center size-4">
+                    <span
+                      className={cn(
+                        'size-1.5 rounded-full shrink-0 block',
+                        isPixelConnected
+                          ? 'bg-green-500'
+                          : 'bg-muted-foreground',
+                      )}
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span className="text-muted-foreground">
+                    {isPixelConnected ? 'Connected' : 'Not connected'}
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
