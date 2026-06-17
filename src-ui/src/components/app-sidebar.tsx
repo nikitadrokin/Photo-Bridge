@@ -222,7 +222,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                       : 'Pixel is not connected'
                   }
                 >
-                  <span className="flex items-center justify-center size-4">
+                  <span className="flex items-center justify-center size-4 shrink-0">
                     <span
                       className={cn(
                         'size-1.5 rounded-full shrink-0 block',
