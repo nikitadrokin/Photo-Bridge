@@ -16,17 +16,6 @@ import PixelMediaPreview, {
 } from '@/components/gallery/pixel-media-preview';
 import { Button } from '@/components/ui/button';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -56,7 +45,6 @@ function PixelPage() {
     listPixelFiles,
     pullPixelFileToCache,
     savePixelFiles,
-    purgePixelFiles,
     refreshAvailableStorage,
   } = pixel;
 
@@ -64,8 +52,6 @@ function PixelPage() {
 
   const [files, setFiles] = useState<PixelFilePayload[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isPurging, setIsPurging] = useState(false);
-  const [confirmPurge, setConfirmPurge] = useState(false);
 
   const [selectedFile, setSelectedFile] = useState<PixelFilePayload | null>(
     null,
@@ -131,27 +117,6 @@ function PixelPage() {
     [isLargeScreen, pullPixelFileToCache],
   );
 
-  const handlePurge = useCallback(async () => {
-    setIsPurging(true);
-    const result = await purgePixelFiles();
-    if (result.ok) {
-      toast.success(
-        `Purged ${result.deleted} file${result.deleted === 1 ? '' : 's'} from the Pixel`,
-      );
-      setFiles([]);
-      setSelectedFile(null);
-      setPreview(null);
-      void loadFiles();
-      void refreshAvailableStorage();
-    } else {
-      toast.error('Could not purge device files', {
-        description: result.detail,
-      });
-    }
-    setIsPurging(false);
-    setConfirmPurge(false);
-  }, [purgePixelFiles, loadFiles, refreshAvailableStorage]);
-
   const handleSave = useCallback(() => {
     if (selectedFile) {
       void savePixelFiles([selectedFile.path]);
@@ -169,7 +134,7 @@ function PixelPage() {
     toast.success('Local cache purged');
   }, []);
 
-  const actionsDisabled = !isConnected || pixel.isRunning || isPurging;
+  const actionsDisabled = !isConnected || pixel.isRunning;
   const fileCount = files?.length ?? 0;
 
   return (
@@ -210,6 +175,27 @@ function PixelPage() {
           }}
         />
 
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={actionsDisabled || isLoading}
+            onClick={() => {
+              void loadFiles();
+              void refreshAvailableStorage();
+            }}
+          >
+            {isLoading ? (
+              <IconLoader2 size={16} className="animate-spin" />
+            ) : (
+              <IconRefresh size={16} />
+            )}
+            Refresh
+          </Button>
+        </div>
+
         <AvailableStorageCard
           storage={pixel.availableStorage}
           disabled={!pixel.isConnected || pixel.isRunning}
@@ -229,90 +215,30 @@ function PixelPage() {
                 {files ? ` · ${fileCount} file${fileCount === 1 ? '' : 's'}` : ''}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {import.meta.env.DEV && (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => { void openCacheInFinder(); }}
-                  >
-                    <IconFolderOpen size={16} />
-                    Cache
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => { void purgeLocalCache(); }}
-                  >
-                    <IconTrash size={16} />
-                    Purge Cache
-                  </Button>
-                </>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                disabled={actionsDisabled || isLoading}
-                onClick={() => {
-                  void loadFiles();
-                }}
-              >
-                {isLoading ? (
-                  <IconLoader2 size={16} className="animate-spin" />
-                ) : (
-                  <IconRefresh size={16} />
-                )}
-                Refresh
-              </Button>
-
-              <AlertDialog open={confirmPurge} onOpenChange={setConfirmPurge}>
-                <AlertDialogTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="gap-1.5"
-                      disabled={actionsDisabled || fileCount === 0}
-                    />
-                  }
+            {import.meta.env.DEV && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => { void openCacheInFinder(); }}
+                >
+                  <IconFolderOpen size={16} />
+                  Cache
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => { void purgeLocalCache(); }}
                 >
                   <IconTrash size={16} />
-                  Purge all
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Purge all files?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This permanently deletes every file in {PIXEL_CAMERA_DIR} on
-                      the device. This cannot be undone — pull anything you want to
-                      keep first.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isPurging}>
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      disabled={isPurging}
-                      onClick={() => {
-                        void handlePurge();
-                      }}
-                    >
-                      {isPurging ? 'Purging…' : 'Purge all files'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+                  Purge Cache
+                </Button>
+              </div>
+            )}
           </div>
 
           {!isConnected ? (
