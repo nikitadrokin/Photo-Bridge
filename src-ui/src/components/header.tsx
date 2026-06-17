@@ -20,8 +20,8 @@ export function PageHeader({ title, children, ...props }: PageHeaderProps) {
       )}
       {...props}
     >
-      <div className="flex items-start gap-3" data-tauri-drag-region>
-        <SidebarTrigger className="size-8" />
+      <div className="flex items-start gap-2" data-tauri-drag-region>
+        <SidebarTrigger className={cn('size-8', isFullscreen && '-ml-2')} />
         <div className="flex-1 min-w-0" data-tauri-drag-region>
           <div
             className="flex items-center justify-between gap-4"
