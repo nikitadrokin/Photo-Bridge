@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import type { AvailableStorageState } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { IconRefresh, IconBox } from '@tabler/icons-react';
@@ -19,8 +18,8 @@ export function AvailableStorageCard({
   const showError = storage.status === 'error';
 
   return (
-    <Card size="sm" className="border-border/80">
-      <CardContent className="flex flex-row items-start justify-between space-y-0">
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-row items-center justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary">
             <IconBox className="size-4" />
@@ -52,7 +51,7 @@ export function AvailableStorageCard({
             )}
           />
         </Button>
-      </CardContent>
+      </div>
 
       <StatusMessage
         storage={storage}
@@ -60,11 +59,10 @@ export function AvailableStorageCard({
         disabled={disabled}
         showError={showError}
       />
-    </Card>
+    </div>
   );
 }
 
-/** Second row under the main row: hints, loading, or errors. Omitted when there is nothing to show. */
 const StatusMessage = ({
   storage,
   showValue,
@@ -93,5 +91,5 @@ const StatusMessage = ({
     return null;
   }
 
-  return <CardContent>{body}</CardContent>;
+  return <div className="pl-12">{body}</div>;
 };

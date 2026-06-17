@@ -185,6 +185,7 @@ function PixelPage() {
             onClick={() => {
               void loadFiles();
               void refreshAvailableStorage();
+              void pixel.checkConnection({ interactive: false });
             }}
           >
             {isLoading ? (
