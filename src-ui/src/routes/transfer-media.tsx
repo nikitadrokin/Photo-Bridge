@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import SplitColumn from '@/components/ui/split-column';
 
-export const Route = createFileRoute('/transfer')({
+export const Route = createFileRoute('/transfer-media')({
   staticData: { pageTitle: 'Transfer Media' },
   component: TransferPage,
 });

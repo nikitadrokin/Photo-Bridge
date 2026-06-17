@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import SplitColumn from '@/components/ui/split-column';
 
-export const Route = createFileRoute('/pixel')({
+export const Route = createFileRoute('/manage-device')({
   staticData: {
     pageTitle: 'Manage Device',
     pageDescription:
