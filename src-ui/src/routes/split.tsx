@@ -21,6 +21,7 @@ import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { type SplitMode, splitModeLabel } from '@/lib/split-args';
 import { useMediaStore } from '@/stores/media-store';
 import { cn } from '@/lib/utils';
+import SplitColumn from '@/components/ui/split-column';
 
 const SPLIT_MODE_OPTIONS: ReadonlyArray<{
   value: SplitMode;
@@ -155,7 +156,7 @@ function SplitPage() {
   }
 
   return (
-    <>
+    <SplitColumn>
       <div className="flex flex-col gap-6">
         <>
           <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
@@ -264,6 +265,6 @@ function SplitPage() {
           <SplitStatsPanel />
         </div>
       )}
-    </>
+    </SplitColumn>
   );
 }

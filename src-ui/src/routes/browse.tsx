@@ -22,6 +22,7 @@ import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath } from '@/lib/path';
 import { cn } from '@/lib/utils';
+import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
@@ -190,7 +191,7 @@ function BrowsePage() {
   }
 
   return (
-    <>
+    <SplitColumn>
       <Lightbox
         file={previewFile}
         open={lightboxOpen}
@@ -282,6 +283,6 @@ function BrowsePage() {
           </div>
         )}
       </aside>
-    </>
+    </SplitColumn>
   );
 }

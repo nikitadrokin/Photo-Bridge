@@ -20,6 +20,7 @@ import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { useMediaStore } from '@/stores/media-store';
 import { cn } from '@/lib/utils';
+import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createFileRoute('/fix-dates')({
   staticData: {
@@ -118,7 +119,7 @@ function FixDatesPage() {
   }
 
   return (
-    <>
+    <SplitColumn>
       <div className="flex flex-col gap-6">
         <>
           <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
@@ -190,6 +191,6 @@ function FixDatesPage() {
       </div>
 
       <div className="flex flex-col min-h-0"></div>
-    </>
+    </SplitColumn>
   );
 }

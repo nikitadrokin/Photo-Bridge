@@ -20,9 +20,7 @@ function RootComponent() {
           <div className="flex min-h-0 min-w-0 flex-1">
             <AppSidebarWithContext />
             <SidebarInset className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] z-10">
-              <SplitColumn>
-                <Outlet />
-              </SplitColumn>
+              <Outlet />
               <Toaster position="bottom-center" richColors />
             </SidebarInset>
           </div>

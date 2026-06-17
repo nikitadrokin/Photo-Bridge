@@ -6,6 +6,7 @@ import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
+import SplitColumn from '@/components/ui/split-column';
 
 /** Search params for `/convert` — `mode=copy` selects the copy pipeline. */
 export type ConvertSearch = {
@@ -47,7 +48,7 @@ function ConvertPage() {
   }
 
   return (
-    <>
+    <SplitColumn>
       {/* LEFT PANEL: Controls */}
       <div className="flex flex-col gap-6">
         {/* Empty state / File selection */}
@@ -56,6 +57,6 @@ function ConvertPage() {
 
       {/* RIGHT PANEL: Log Viewer / Terminal Message */}
       <div className="flex flex-col min-h-0"></div>
-    </>
+    </SplitColumn>
   );
 }

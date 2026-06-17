@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createFileRoute('/pixel')({
   staticData: {
@@ -110,7 +111,11 @@ function PixelPage() {
             detail: null,
           });
         } else {
-          setPreview({ status: 'error', localPath: null, detail: result.detail });
+          setPreview({
+            status: 'error',
+            localPath: null,
+            detail: result.detail,
+          });
         }
       })();
     },
@@ -130,14 +135,17 @@ function PixelPage() {
 
   const purgeLocalCache = useCallback(async () => {
     const cacheDir = await appCacheDir();
-    await Command.create('exec-sh', ['-c', `rm -rf ${JSON.stringify(cacheDir)}/*`]).execute();
+    await Command.create('exec-sh', [
+      '-c',
+      `rm -rf ${JSON.stringify(cacheDir)}/*`,
+    ]).execute();
     toast.success('Local cache purged');
   }, []);
 
   const fileCount = files?.length ?? 0;
 
   return (
-    <>
+    <SplitColumn>
       {/* Mobile / small screens: preview opens in a dialog. */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
@@ -193,7 +201,9 @@ function PixelPage() {
               </h2>
               <p className="text-xs text-muted-foreground">
                 {PIXEL_CAMERA_DIR}
-                {files ? ` · ${fileCount} file${fileCount === 1 ? '' : 's'}` : ''}
+                {files
+                  ? ` · ${fileCount} file${fileCount === 1 ? '' : 's'}`
+                  : ''}
               </p>
             </div>
             {import.meta.env.DEV && (
@@ -203,7 +213,9 @@ function PixelPage() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => { void openCacheInFinder(); }}
+                  onClick={() => {
+                    void openCacheInFinder();
+                  }}
                 >
                   <IconFolderOpen size={16} />
                   Cache
@@ -213,7 +225,9 @@ function PixelPage() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => { void purgeLocalCache(); }}
+                  onClick={() => {
+                    void purgeLocalCache();
+                  }}
                 >
                   <IconTrash size={16} />
                   Purge Cache
@@ -250,7 +264,9 @@ function PixelPage() {
         {selectedFile && preview ? (
           <>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{selectedFile.name}</p>
+              <p className="truncate text-sm font-medium">
+                {selectedFile.name}
+              </p>
               <p className="truncate text-xs text-muted-foreground">
                 {selectedFile.relativePath}
               </p>
@@ -271,6 +287,6 @@ function PixelPage() {
           </div>
         )}
       </aside>
-    </>
+    </SplitColumn>
   );
 }
