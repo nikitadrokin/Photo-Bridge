@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconLoader2, IconRefresh, IconTrash } from '@tabler/icons-react';
+import { IconLoader2, IconRefresh, IconTrash, IconFolderOpen } from '@tabler/icons-react';
+import { appCacheDir } from '@tauri-apps/api/path';
+import { Command } from '@tauri-apps/plugin-shell';
 import { toast } from 'sonner';
 import type { PixelFilePayload } from '@cli-protocol';
 import { usePixel } from '@/hooks/use-pixel';
@@ -156,6 +158,17 @@ function PixelPage() {
     }
   }, [selectedFile, savePixelFiles]);
 
+  const openCacheInFinder = useCallback(async () => {
+    const cacheDir = await appCacheDir();
+    await Command.create('open', [cacheDir]).execute();
+  }, []);
+
+  const purgeLocalCache = useCallback(async () => {
+    const cacheDir = await appCacheDir();
+    await Command.create('exec-sh', ['-c', `rm -rf ${JSON.stringify(cacheDir)}/*`]).execute();
+    toast.success('Local cache purged');
+  }, []);
+
   const actionsDisabled = !isConnected || pixel.isRunning || isPurging;
   const fileCount = files?.length ?? 0;
 
@@ -217,6 +230,30 @@ function PixelPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {import.meta.env.DEV && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => { void openCacheInFinder(); }}
+                  >
+                    <IconFolderOpen size={16} />
+                    Cache
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => { void purgeLocalCache(); }}
+                  >
+                    <IconTrash size={16} />
+                    Purge Cache
+                  </Button>
+                </>
+              )}
               <Button
                 type="button"
                 variant="outline"
