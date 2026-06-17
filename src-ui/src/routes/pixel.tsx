@@ -26,7 +26,7 @@ import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createFileRoute('/pixel')({
   staticData: {
-    pageTitle: 'Pixel Device',
+    pageTitle: 'Manage Device',
     pageDescription:
       'Browse, manage storage, and purge the camera roll on your connected Pixel.',
   },

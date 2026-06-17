@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createFileRoute('/transfer')({
-  staticData: { pageTitle: 'Pixel Transfer' },
+  staticData: { pageTitle: 'Transfer Media' },
   component: TransferPage,
 });
 
