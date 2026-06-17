@@ -6,14 +6,15 @@ import {
   IconRefresh,
   IconBox,
   IconBattery2,
-  IconDeviceMobile,
   IconDatabase,
+  IconLoader2,
 } from '@tabler/icons-react';
 
 interface DeviceInfoCardProps {
   readonly info: DeviceInfoState;
   readonly disabled: boolean;
   readonly onRefresh: () => void;
+  readonly refreshing?: boolean;
 }
 
 interface StatTileProps {
@@ -25,21 +26,22 @@ interface StatTileProps {
 
 function StatTile({ icon, label, value, loading }: StatTileProps) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <div className="flex items-center gap-1 text-muted-foreground">
+    <div className="flex flex-1 flex-col gap-1 rounded-lg border bg-card px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
       </div>
-      <p className={cn('truncate text-sm font-semibold tabular-nums', !value && 'text-muted-foreground/50')}>
+      <p className={cn('text-lg font-bold tabular-nums leading-none', !value && 'text-muted-foreground/40')}>
         {loading ? '–' : (value ?? '–')}
       </p>
     </div>
   );
 }
 
-export function DeviceInfoCard({ info, disabled, onRefresh }: DeviceInfoCardProps) {
+export function DeviceInfoCard({ info, disabled, onRefresh, refreshing }: DeviceInfoCardProps) {
   const loading = info.status === 'loading';
   const ok = info.status === 'ok';
+  const busy = loading || refreshing;
 
   const batteryLabel = ok && info.batteryPct !== undefined
     ? `${info.batteryPct}%`
@@ -47,14 +49,27 @@ export function DeviceInfoCard({ info, disabled, onRefresh }: DeviceInfoCardProp
 
   return (
     <Card size="sm" className="border-border/80">
-      <CardContent className="flex flex-row items-center gap-3">
-        <div className="flex min-w-0 flex-1 flex-row gap-4">
-          <StatTile
-            icon={<IconDeviceMobile className="size-3" />}
-            label="Model"
-            value={ok ? info.model : undefined}
-            loading={loading}
-          />
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground">Device</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 px-2.5 text-xs"
+            disabled={disabled || !!busy}
+            onClick={onRefresh}
+          >
+            {busy ? (
+              <IconLoader2 className="size-3 animate-spin" />
+            ) : (
+              <IconRefresh className="size-3" />
+            )}
+            Refresh
+          </Button>
+        </div>
+
+        <div className="flex gap-2">
           <StatTile
             icon={<IconBattery2 className="size-3" />}
             label="Battery"
@@ -74,17 +89,6 @@ export function DeviceInfoCard({ info, disabled, onRefresh }: DeviceInfoCardProp
             loading={loading}
           />
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="size-8 shrink-0 rounded-sm"
-          disabled={disabled || loading}
-          onClick={onRefresh}
-          aria-label="Refresh device info"
-        >
-          <IconRefresh className={cn('size-3.5', loading && 'animate-spin')} />
-        </Button>
       </CardContent>
     </Card>
   );

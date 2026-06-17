@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconLoader2, IconRefresh, IconTrash, IconFolderOpen } from '@tabler/icons-react';
+import { IconLoader2, IconTrash, IconFolderOpen } from '@tabler/icons-react';
 import { appCacheDir } from '@tauri-apps/api/path';
 import { Command } from '@tauri-apps/plugin-shell';
 import { toast } from 'sonner';
@@ -134,7 +134,6 @@ function PixelPage() {
     toast.success('Local cache purged');
   }, []);
 
-  const actionsDisabled = !isConnected || pixel.isRunning;
   const fileCount = files?.length ?? 0;
 
   return (
@@ -175,33 +174,14 @@ function PixelPage() {
           }}
         />
 
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={actionsDisabled || isLoading}
-            onClick={() => {
-              void loadFiles();
-              void refreshDeviceInfo();
-              void pixel.checkConnection({ interactive: false });
-            }}
-          >
-            {isLoading ? (
-              <IconLoader2 size={16} className="animate-spin" />
-            ) : (
-              <IconRefresh size={16} />
-            )}
-            Refresh
-          </Button>
-        </div>
-
         <DeviceInfoCard
           info={pixel.deviceInfo}
           disabled={!pixel.isConnected || pixel.isRunning}
+          refreshing={isLoading}
           onRefresh={() => {
+            void loadFiles();
             void refreshDeviceInfo();
+            void pixel.checkConnection({ interactive: false });
           }}
         />
 
