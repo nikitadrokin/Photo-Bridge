@@ -21,7 +21,7 @@ import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { type SplitMode, splitModeLabel } from '@/lib/split-args';
 import { useMediaStore } from '@/stores/media-store';
 import SplitColumn from '@/components/ui/split-column';
-import EmptyDropzone from '@/components/empty-dropzone';
+import SelectFiles from '@/components/select-files';
 
 const SPLIT_MODE_OPTIONS: ReadonlyArray<{
   value: SplitMode;
@@ -124,27 +124,15 @@ function SplitPage() {
 
   if (!selectedDirectory) {
     return (
-      <EmptyDropzone isDragging={isDragging}>
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-          <IconFolders size={32} className="text-primary" />
-        </div>
-        <h2 className="text-lg font-semibold tracking-tight mb-1">
-          Select a media folder
-        </h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-          Split moves files within the folder you choose. Pick a library or
-          export directory to organize by month or size.
-        </p>
-        <Button
-          type="button"
-          onClick={() => void selectFolder()}
-          disabled={pixel.isRunning}
-          className="gap-2"
-        >
-          <IconFolder />
-          Select Folder
-        </Button>
-      </EmptyDropzone>
+      <SelectFiles
+        icon={<IconFolders size={32} className="text-primary" />}
+        title="No folder selected"
+        description="Split moves files within the folder you choose. Pick a library or
+        export directory to organize by month or size."
+        isDragging={isDragging}
+        onClickFolder={() => void selectFolder()}
+        disabled={pixel.isRunning}
+      />
     );
   }
 
