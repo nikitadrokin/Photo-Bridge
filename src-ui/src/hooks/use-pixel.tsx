@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { appCacheDir, join } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { parseLineFromCLI } from '@cli-protocol';
 import type { PixelFilePayload, ShellStorageEvent } from '@cli-protocol';
@@ -327,6 +328,28 @@ function usePixelProviderValue() {
     }
   }, [isConnected, execute]);
 
+  /** Pulls specific device files/folders to a user-chosen destination. */
+  const savePixelFiles = useCallback(
+    async (devicePaths: string[]) => {
+      if (!isConnected || devicePaths.length === 0) return;
+      const destination = await open({
+        directory: true,
+        multiple: false,
+        title: 'Save to Folder',
+      });
+      if (destination && typeof destination === 'string') {
+        setTransferInterrupted(false);
+        setActiveOperation('pull');
+        setTransferPaths({ source: devicePaths[0], destination });
+        await execute(
+          ['pixel', 'pull', ...devicePaths, '--dest', destination, '--jsonl'],
+          { onFinish: () => setActiveOperation(null) },
+        );
+      }
+    },
+    [isConnected, execute],
+  );
+
   const listPixelFiles = useCallback(async (): Promise<{
     ok: true;
     files: PixelFilePayload[];
@@ -353,6 +376,64 @@ function usePixelProviderValue() {
     }
     return { ok: false, detail: errorDetail ?? 'No listing returned.' };
   }, [isConnected, captureStdout]);
+
+  // Maps a device file (keyed by path+size+mtime so a changed file re-pulls) to
+  // its already-pulled local copy, so revisiting a preview within a session is
+  // instant instead of pulling over adb again.
+  const previewCacheRef = useRef<Map<string, string>>(new Map());
+
+  const pullPixelFileToCache = useCallback(
+    async (
+      file: PixelFilePayload,
+    ): Promise<{ ok: true; localPath: string } | { ok: false; detail: string }> => {
+      if (!isConnected) {
+        return { ok: false, detail: 'No device connected.' };
+      }
+      const key = `${file.path}:${file.sizeBytes}:${file.mtimeUnix ?? 0}`;
+      const cached = previewCacheRef.current.get(key);
+      if (cached) {
+        return { ok: true, localPath: cached };
+      }
+
+      const cacheRoot = await appCacheDir();
+      // Isolate each file version in its own dir so same-named files in
+      // different folders never clobber each other.
+      const destDir = await join(
+        cacheRoot,
+        'preview',
+        `${file.sizeBytes}-${file.mtimeUnix ?? 0}`,
+      );
+
+      const { stdout, code } = await captureStdout([
+        'pixel',
+        'pull',
+        file.path,
+        '--dest',
+        destDir,
+        '--jsonl',
+      ]);
+
+      if (code !== 0) {
+        const lines = stdout
+          .split('\n')
+          .map((line) => line.replace(/\r$/, '').trim())
+          .filter((line) => line.length > 0);
+        let detail: string | null = null;
+        for (const line of lines) {
+          const parsed = parseLineFromCLI(line);
+          if (parsed.tag === 'ui' && parsed.event.kind === 'error') {
+            detail = parsed.event.detail ?? parsed.event.code;
+          }
+        }
+        return { ok: false, detail: detail ?? `Pull exited with code ${code}` };
+      }
+
+      const localPath = await join(destDir, file.name);
+      previewCacheRef.current.set(key, localPath);
+      return { ok: true, localPath };
+    },
+    [isConnected, captureStdout],
+  );
 
   const purgePixelFiles = useCallback(async (): Promise<{
     ok: true;
@@ -612,6 +693,8 @@ function usePixelProviderValue() {
     availableStorage,
     refreshAvailableStorage,
     listPixelFiles,
+    pullPixelFileToCache,
+    savePixelFiles,
     purgePixelFiles,
     isRunning,
     logs,

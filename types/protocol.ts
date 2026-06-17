@@ -146,6 +146,8 @@ export interface GalleryScanEvent {
 export interface PixelFilePayload {
   readonly name: string;
   readonly path: string;
+  /** Path relative to the listed directory, e.g. `Trip/IMG_0001.jpg`. */
+  readonly relativePath: string;
   readonly sizeBytes: number;
   /** Modification time in unix seconds, or null when unparseable. */
   readonly mtimeUnix: number | null;
