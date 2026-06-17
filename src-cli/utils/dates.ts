@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { execa } from 'execa';
+import { resolveTool } from './tool-paths';
 
 /**
  * @param value exiftool `-T` or `-s3` date value (e.g. `2019:03:20 10:00:00`)
@@ -55,7 +56,7 @@ const DATE_COPY_ARGS = [
  * Check if a file has a valid CreateDate
  */
 export async function hasValidCreateDate(filePath: string): Promise<boolean> {
-  const { stdout } = await execa('exiftool', ['-s3', '-CreateDate', filePath]);
+  const { stdout } = await execa(resolveTool('exiftool'), ['-s3', '-CreateDate', filePath]);
   return isUsableExifDateValue(stdout);
 }
 
@@ -67,7 +68,7 @@ export async function copyDatesFromSource(
   sourcePath: string,
   targetPath: string,
 ): Promise<void> {
-  await execa('exiftool', [
+  await execa(resolveTool('exiftool'), [
     '-quiet',
     '-overwrite_original',
     '-api',
@@ -89,7 +90,7 @@ export async function preserveFilesystemDatesFromSource(
   targetPath: string,
 ): Promise<void> {
   try {
-    await execa('exiftool', [
+    await execa(resolveTool('exiftool'), [
       '-quiet',
       '-overwrite_original',
       '-TagsFromFile',
@@ -109,7 +110,7 @@ export async function preserveFilesystemDatesFromSource(
  * Fix dates on a file in-place by reading from its own metadata.
  */
 export async function fixDatesInPlace(filePath: string): Promise<void> {
-  await execa('exiftool', [
+  await execa(resolveTool('exiftool'), [
     '-overwrite_original',
     '-api',
     'QuickTimeUTC',
@@ -142,7 +143,7 @@ const PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER = [
 export async function readBestExifStringForPhotoFileDates(
   filePath: string,
 ): Promise<string | null> {
-  const { stdout } = await execa('exiftool', [
+  const { stdout } = await execa(resolveTool('exiftool'), [
     '-T',
     ...PHOTO_BEST_EXIF_FILE_DATE_TAG_ORDER.map((tag) => `-${tag}`),
     filePath,
@@ -166,7 +167,7 @@ export async function readBestExifStringForPhotoFileDates(
 export async function fixDatesOnPhoto(filePath: string): Promise<void> {
   const best = await readBestExifStringForPhotoFileDates(filePath);
   if (best === null) return;
-  await execa('exiftool', [
+  await execa(resolveTool('exiftool'), [
     '-quiet',
     '-overwrite_original',
     '-P',
@@ -180,7 +181,7 @@ export async function fixDatesOnPhoto(filePath: string): Promise<void> {
  * `DateTimeOriginal` present and usable (batch “no work” when you care about EXIF capture time only).
  */
 export async function hasValidPhotoDate(filePath: string): Promise<boolean> {
-  const { stdout } = await execa('exiftool', [
+  const { stdout } = await execa(resolveTool('exiftool'), [
     '-s3',
     '-DateTimeOriginal',
     filePath,
@@ -195,7 +196,7 @@ export async function hasValidPhotoDate(filePath: string): Promise<boolean> {
 export async function hasUsablePhotoExifFileDates(
   filePath: string,
 ): Promise<boolean> {
-  const { stdout } = await execa('exiftool', [
+  const { stdout } = await execa(resolveTool('exiftool'), [
     '-T',
     '-FileCreateDate',
     '-FileModifyDate',
@@ -226,7 +227,7 @@ export async function photoEmbeddedFileDatesAlreadyOk(
 
   if (bestUnix === null) return false;
 
-  const { stdout } = await execa('exiftool', [
+  const { stdout } = await execa(resolveTool('exiftool'), [
     '-T',
     '-FileCreateDate',
     '-FileModifyDate',
@@ -323,7 +324,7 @@ async function readExifDateTagMap(
   const args = ['-j', '-charset', 'utf8'];
   for (const t of tags) args.push(`-${t}`);
   args.push(filePath);
-  const { stdout } = await execa('exiftool', args);
+  const { stdout } = await execa(resolveTool('exiftool'), args);
   const parsed: unknown = JSON.parse(stdout);
   if (!Array.isArray(parsed) || parsed.length < 1) return {};
   const row = parsed[0];
@@ -506,7 +507,7 @@ export async function fixDatesFromTimestamp(
   const seconds = String(date.getUTCSeconds()).padStart(2, '0');
   const exifDate = `${year}:${month}:${day} ${hours}:${minutes}:${seconds}`;
 
-  await execa('exiftool', [
+  await execa(resolveTool('exiftool'), [
     '-overwrite_original',
     '-api',
     'QuickTimeUTC',

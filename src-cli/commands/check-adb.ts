@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
+import { resolveTool } from '../utils/tool-paths';
 import { createCliOutput } from '../utils/logger.js';
 
 export const checkAdb = new Command()
@@ -10,7 +11,7 @@ export const checkAdb = new Command()
     const output = createCliOutput(Boolean(options.jsonl));
 
     try {
-      const { stdout } = await execa('adb', ['devices']);
+      const { stdout } = await execa(resolveTool('adb'), ['devices']);
       const lines = stdout.split('\n');
       // Filter out empty lines and the header "List of devices attached"
       const devices = lines

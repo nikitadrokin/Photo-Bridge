@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Command } from 'commander';
 import { execa } from 'execa';
+import { resolveTool } from '../utils/tool-paths';
 import { Adb } from '@devicefarmer/adbkit';
 import type { EventV1, PixelFilePayload } from '../../types/protocol.js';
 import { createCliOutput } from '../utils/logger.js';
@@ -62,7 +63,7 @@ const listCmd = new Command('list')
     // the result, so the `stat` format and the dir must be quoted here or the
     // remote shell splits `%s|%Y|%n` on the pipes and `find` loses its `{}`.
     const result = await execa(
-      'adb',
+      resolveTool('adb'),
       ['shell', `find ${shellQuote(dir)} -type f -exec stat -c '%s|%Y|%n' {} +`],
       { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', reject: false },
     );
@@ -101,14 +102,14 @@ const purgeCmd = new Command('purge')
     const dir = opts.dir;
 
     const countResult = await execa(
-      'adb',
+      resolveTool('adb'),
       ['shell', `find ${shellQuote(dir)} -maxdepth 1 -type f | wc -l`],
       { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', reject: false },
     );
     const deleted = Number.parseInt((countResult.stdout ?? '').trim(), 10);
 
     const rmResult = await execa(
-      'adb',
+      resolveTool('adb'),
       ['shell', `rm -f ${shellQuote(dir)}/*`],
       { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', reject: false },
     );

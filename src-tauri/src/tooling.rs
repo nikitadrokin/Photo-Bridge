@@ -170,8 +170,20 @@ fn manifest(id: &str) -> Option<&'static ToolManifest> {
     MANIFESTS.iter().find(|m| m.id == id)
 }
 
-/// Where this tool's app-managed files live: `<app_data_dir>/bin/<id>`.
+/// Extracted archive contents for a tool: `<app_data_dir>/tools/<id>`.
 fn tool_dir(app: &AppHandle, id: &str) -> Result<PathBuf, String> {
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("no app data dir: {e}"))?;
+    Ok(base.join("tools").join(id))
+}
+
+/// Stable, version-independent entrypoint for a tool:
+/// `<app_data_dir>/bin/<id>`. This is a symlink to the real executable inside
+/// `tool_dir`, kept at a predictable path so the `pb` CLI can resolve
+/// app-managed tools without knowing each archive's internal layout.
+fn bin_link(app: &AppHandle, id: &str) -> Result<PathBuf, String> {
     let base = app
         .path()
         .app_data_dir()
@@ -179,9 +191,10 @@ fn tool_dir(app: &AppHandle, id: &str) -> Result<PathBuf, String> {
     Ok(base.join("bin").join(id))
 }
 
-/// Full path to the app-managed executable, if it exists on disk.
+/// Full path to the app-managed executable, if it exists on disk. Follows the
+/// `bin/<id>` symlink; `is_file` returns true only when its target resolves.
 fn app_managed_bin(app: &AppHandle, m: &ToolManifest) -> Option<PathBuf> {
-    let path = tool_dir(app, m.id).ok()?.join(m.artifact().bin_rel_path);
+    let path = bin_link(app, m.id).ok()?;
     path.is_file().then_some(path)
 }
 
@@ -447,6 +460,18 @@ pub async fn install_cli_tool(app: AppHandle, id: String) -> Result<String, Stri
         ad_hoc_codesign(&bin)?;
     }
 
+    // Publish a stable `bin/<id>` symlink the CLI can resolve.
+    let link = bin_link(&app, &id)?;
+    if let Some(parent) = link.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("create bin dir: {e}"))?;
+    }
+    // Replace any stale link/file from a previous install.
+    let _ = std::fs::remove_file(&link);
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&bin, &link).map_err(|e| format!("link binary: {e}"))?;
+    #[cfg(not(unix))]
+    std::fs::copy(&bin, &link).map(|_| ()).map_err(|e| format!("link binary: {e}"))?;
+
     emit_progress(&app, &id, "done", &format!("{} ready", m.name));
-    Ok(bin.to_string_lossy().into_owned())
+    Ok(link.to_string_lossy().into_owned())
 }

@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { execa } from 'execa';
+import { resolveTool } from '../utils/tool-paths';
 import { copyDatesFromSource } from '../utils/dates.js';
 
 interface CodecInfo {
@@ -12,7 +13,7 @@ async function probeStreamCodec(
   stream: 'a:0' | 'v:0',
 ): Promise<string | null> {
   try {
-    const { stdout } = await execa('ffprobe', [
+    const { stdout } = await execa(resolveTool('ffprobe'), [
       '-v',
       'error',
       '-select_streams',
@@ -59,7 +60,7 @@ export async function processVideo(
   if (codecs.video === 'unknown') return false;
 
   try {
-    await execa('ffmpeg', [
+    await execa(resolveTool('ffmpeg'), [
       '-hide_banner',
       '-loglevel',
       'error',

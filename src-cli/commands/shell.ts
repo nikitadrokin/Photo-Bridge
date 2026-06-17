@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
+import { resolveTool } from '../utils/tool-paths';
 import { createCliOutput } from '../utils/logger.js';
 import { parseDfAvailable, formatAvailLabel } from '../utils/df-parse.js';
 
@@ -25,14 +26,14 @@ export const shell = new Command()
         process.exit(1);
       }
       try {
-        await execa('adb', ['shell'], { stdio: 'inherit' });
+        await execa(resolveTool('adb'), ['shell'], { stdio: 'inherit' });
       } catch {
         // adb prints errors via stdio: inherit
       }
       return;
     }
 
-    const result = await execa('adb', ['shell', ...remote], {
+    const result = await execa(resolveTool('adb'), ['shell', ...remote], {
       stdin: 'ignore',
       stdout: 'pipe',
       stderr: 'pipe',
