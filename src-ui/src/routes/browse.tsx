@@ -22,7 +22,7 @@ import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath } from '@/lib/path';
 import SplitColumn from '@/components/ui/split-column';
-import EmptyDropzone from '@/components/empty-dropzone';
+import SelectFiles from '@/components/select-files';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
@@ -158,28 +158,15 @@ function BrowsePage() {
 
   if (!folderPath) {
     return (
-      <EmptyDropzone isDragging={isDragging}>
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <IconPhoto size={32} className="text-primary" />
-        </div>
-        <h2 className="mb-1 text-lg font-semibold tracking-tight">
-          Browse photos by day
-        </h2>
-        <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-          Pick a folder (for example a month after split). Files stay on disk —
-          this only reads metadata and shows a timeline sorted by capture date.
-        </p>
-        <Button
-          type="button"
-          onClick={() => {
-            void selectFolder();
-          }}
-          className="gap-2"
-        >
-          <IconFolder />
-          Select Folder
-        </Button>
-      </EmptyDropzone>
+      <SelectFiles
+        icon={<IconPhoto size={32} className="text-primary" />}
+        title="No folder selected"
+        description="Pick a folder (for example a month after split). Files stay on disk —
+            this only reads metadata and shows a timeline sorted by capture date."
+        isDragging={isDragging}
+        onClickFolder={() => void selectFolder()}
+        disabled={isScanning}
+      />
     );
   }
 
