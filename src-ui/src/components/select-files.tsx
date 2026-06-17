@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { usePixel } from '@/hooks/use-pixel';
 import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
-import { cn } from '@/lib/utils';
+import EmptyDropzone from './empty-dropzone';
 
 interface SelectFilesProps {
   isDragging?: boolean;
@@ -47,14 +47,7 @@ const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
   }, [pixel, setSelectedPaths]);
 
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed m-1 grow py-16 px-8 text-center transition-colors duration-200 col-span-full',
-        isDragging
-          ? 'border-primary bg-primary/10'
-          : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
-      )}
-    >
+    <EmptyDropzone isDragging={isDragging}>
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
         <IconPhoto size={32} className="text-primary" />
       </div>
@@ -85,7 +78,7 @@ const SelectFiles: React.FC<SelectFilesProps> = ({ isDragging = false }) => {
           Select Files
         </Button> */}
       </div>
-    </div>
+    </EmptyDropzone>
   );
 };
 
