@@ -5,28 +5,9 @@ import {
   IconPackage,
 } from '@tabler/icons-react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@/components/ui/item';
-import { Separator } from '@/components/ui/separator';
+import { FieldDescription, FieldLegend, FieldSet } from '@/components/ui/field';
 
 /** Where a CLI tool binary was resolved from. */
 type CliToolSource = 'system' | 'app' | 'missing';
@@ -107,157 +88,126 @@ function sourceLabel(source: CliToolSource): string {
     case 'system':
       return 'System';
     case 'app':
-      return 'App bundle';
+      return 'App';
     case 'missing':
-      return 'Not installed';
+      return 'Missing';
   }
 }
 
 function sourceBadgeVariant(
   source: CliToolSource,
-): 'default' | 'secondary' | 'destructive' {
+): 'secondary' | 'outline' | 'destructive' {
   switch (source) {
     case 'system':
-      return 'default';
-    case 'app':
       return 'secondary';
+    case 'app':
+      return 'outline';
     case 'missing':
       return 'destructive';
   }
 }
 
 function SourceIcon({ source }: { source: CliToolSource }) {
+  const className = 'size-4 shrink-0';
   if (source === 'missing') {
-    return <IconAlertTriangle className="text-destructive" />;
+    return <IconAlertTriangle className={`${className} text-destructive`} />;
   }
   if (source === 'app') {
-    return <IconPackage className="text-muted-foreground" />;
+    return <IconPackage className={`${className} text-muted-foreground`} />;
   }
-  return <IconCircleCheck className="text-primary" />;
+  return <IconCircleCheck className={`${className} text-primary`} />;
 }
 
+/** One dense, single-line status row per tool. */
 function CliToolRow({ tool }: { tool: CliToolStatus }) {
-  const pathValue =
-    tool.resolvedPath ??
-    'Not found — install into the app to avoid global setup.';
+  const isMissing = tool.source === 'missing';
 
   return (
-    <Item variant="outline" size="sm">
-      <ItemMedia variant="icon">
-        <SourceIcon source={tool.source} />
-      </ItemMedia>
-      <ItemContent>
-        <ItemTitle>
-          {tool.name}
-          <Badge variant={sourceBadgeVariant(tool.source)}>
-            {sourceLabel(tool.source)}
-          </Badge>
-        </ItemTitle>
-        <ItemDescription>{tool.description}</ItemDescription>
-        <Field className="mt-2">
-          <FieldLabel htmlFor={`cli-tool-path-${tool.id}`} className="text-xs">
-            Resolved path
-          </FieldLabel>
-          <Input
-            id={`cli-tool-path-${tool.id}`}
-            readOnly
-            value={pathValue}
-            aria-readonly
-            className="font-mono text-xs"
-          />
-          {tool.version ? (
-            <FieldDescription>Version {tool.version}</FieldDescription>
-          ) : null}
-        </Field>
-      </ItemContent>
-      {tool.source === 'missing' ? (
-        <ItemActions>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled
-            title="Install logic not implemented yet"
-          >
-            <IconDownload data-icon="inline-start" />
-            Install into app
-          </Button>
-        </ItemActions>
-      ) : null}
-    </Item>
+    <div className="flex items-center gap-3 px-3 py-2 text-sm">
+      <SourceIcon source={tool.source} />
+
+      <span className="w-20 shrink-0 font-medium">{tool.name}</span>
+
+      <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">
+        {tool.version ?? '—'}
+      </span>
+
+      <span
+        className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground"
+        title={tool.resolvedPath ?? tool.description}
+      >
+        {tool.resolvedPath ?? 'Not found on PATH'}
+      </span>
+
+      {isMissing ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 shrink-0 px-2 text-xs"
+          disabled
+          title="Install logic not implemented yet"
+        >
+          <IconDownload className="size-3.5" data-icon="inline-start" />
+          Install
+        </Button>
+      ) : (
+        <Badge
+          variant={sourceBadgeVariant(tool.source)}
+          className="shrink-0 text-xs"
+        >
+          {sourceLabel(tool.source)}
+        </Badge>
+      )}
+    </div>
   );
 }
 
 export function CliToolsSettings() {
   const tools = MOCK_CLI_TOOL_STATUS;
   const missingTools = tools.filter((tool) => tool.source === 'missing');
+  const readyCount = tools.length - missingTools.length;
 
   return (
     <FieldSet>
-      <FieldLegend>CLI tools</FieldLegend>
+      <div className="flex items-baseline justify-between gap-4">
+        <FieldLegend>CLI tools</FieldLegend>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {readyCount} of {tools.length} ready
+        </span>
+      </div>
       <FieldDescription>
-        Photo Bridge shells out to a small set of command-line tools. This panel
-        will show where each binary is resolved from once detection is wired up.
+        Command-line tools Photo Bridge shells out to. Tools already on your PATH
+        are used directly; missing ones can be installed into the app bundle.
       </FieldDescription>
 
-      <Alert>
-        <IconPackage />
-        <AlertTitle>Dev note: resolution order</AlertTitle>
-        <AlertDescription>
-          <p>
-            If a tool is already on your PATH (for example{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-              ffmpeg
-            </code>{' '}
-            from Homebrew), Photo Bridge will use that global install.
-          </p>
-          <p>
-            When a required tool is missing, we plan to download it into the app
-            bundle instead of asking users to install it system-wide. That keeps
-            permissions simple and avoids relying on{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-              brew
-            </code>{' '}
-            or other global package managers.
-          </p>
-        </AlertDescription>
-      </Alert>
-
-      <FieldGroup>
-        <ItemGroup>
-          {tools.map((tool) => (
-            <CliToolRow key={tool.id} tool={tool} />
-          ))}
-        </ItemGroup>
-      </FieldGroup>
+      <div className="divide-y rounded-md border">
+        {tools.map((tool) => (
+          <CliToolRow key={tool.id} tool={tool} />
+        ))}
+      </div>
 
       {missingTools.length > 0 ? (
-        <Alert variant="destructive">
-          <IconAlertTriangle />
-          <AlertTitle>
-            {missingTools.length === 1
-              ? '1 tool is not installed'
-              : `${missingTools.length} tools are not installed`}
-          </AlertTitle>
-          <AlertDescription>
-            <p>
-              Missing:{' '}
-              {missingTools.map((tool) => tool.name).join(', ')}. Install them
-              into the app so features work without a global setup step.
-            </p>
-          </AlertDescription>
-          <div className="col-start-2 mt-2">
-            <Button
-              type="button"
-              size="sm"
-              disabled
-              title="Install logic not implemented yet"
-            >
-              <IconDownload data-icon="inline-start" />
-              Install missing tools
-            </Button>
-          </div>
-        </Alert>
+        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>
+            <span className="text-destructive">
+              {missingTools.length === 1
+                ? '1 tool missing'
+                : `${missingTools.length} tools missing`}
+            </span>{' '}
+            · {missingTools.map((tool) => tool.name).join(', ')}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 shrink-0 px-2 text-xs"
+            disabled
+            title="Install logic not implemented yet"
+          >
+            <IconDownload className="size-3.5" data-icon="inline-start" />
+            Install missing
+          </Button>
+        </div>
       ) : null}
     </FieldSet>
   );
