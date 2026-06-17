@@ -65,13 +65,13 @@ const mediaRoutes = [
 
 const deviceRoutes = [
   {
-    to: '/transfer',
+    to: '/transfer-media',
     label: 'Transfer Media',
     icon: IconDeviceMobile,
     tooltip: 'Transfer files to Pixel',
   },
   {
-    to: '/pixel',
+    to: '/manage-device',
     label: 'Manage Device',
     icon: IconDeviceMobileCog,
     tooltip: 'Browse storage and purge the Pixel camera roll',
