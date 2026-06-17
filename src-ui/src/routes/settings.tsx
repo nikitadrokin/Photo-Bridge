@@ -21,7 +21,7 @@ function SettingsPage() {
   const { preferredTerminal, setPreferredTerminal } = useSettingsStore();
 
   return (
-    <SplitColumn>
+    <div className="p-4 grid space-y-6">
       <Field>
         <FieldLabel>Default terminal</FieldLabel>
         <Tabs
@@ -53,6 +53,6 @@ function SettingsPage() {
           <CliToolsSettings />
         </>
       )}
-    </SplitColumn>
+    </div>
   );
 }
