@@ -66,13 +66,13 @@ const mediaRoutes = [
 const deviceRoutes = [
   {
     to: '/transfer',
-    label: 'Pixel Transfer',
+    label: 'Transfer Media',
     icon: IconDeviceMobile,
     tooltip: 'Transfer files to Pixel',
   },
   {
     to: '/pixel',
-    label: 'Pixel Device',
+    label: 'Manage Device',
     icon: IconDeviceMobileCog,
     tooltip: 'Browse storage and purge the Pixel camera roll',
   },
@@ -233,7 +233,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                       aria-hidden="true"
                     />
                   </span>
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     {isPixelConnected ? 'Connected' : 'Not connected'}
                   </span>
                 </SidebarMenuButton>
