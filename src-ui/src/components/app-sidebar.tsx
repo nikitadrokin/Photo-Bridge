@@ -70,9 +70,6 @@ const deviceRoutes = [
     icon: IconDeviceMobile,
     tooltip: 'Transfer files to Pixel',
   },
-] as const;
-
-const deviceSubRoutes = [
   {
     to: '/pixel',
     label: 'Pixel Device',
@@ -231,40 +228,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                           />
                         </span>
                       </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-
-              {deviceSubRoutes.map((route) => {
-                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
-
-                return (
-                  <SidebarMenuItem key={route.to}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      disabled={isRunning}
-                      className={cn(isRunning && 'cursor-not-allowed')}
-                      tooltip={
-                        isRunning
-                          ? {
-                              children: processRunningTooltip,
-                              hidden: false,
-                            }
-                          : route.tooltip
-                      }
-                      onClick={(event) => {
-                        if (isRunning) {
-                          event.preventDefault();
-                          return;
-                        }
-                        void navigate({ to: route.to });
-                      }}
-                    >
-                      <route.icon
-                        className={cn(isActive && 'text-primary')}
-                      />
-                      {route.label}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
