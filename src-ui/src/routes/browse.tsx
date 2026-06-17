@@ -26,7 +26,7 @@ import SelectFiles from '@/components/select-files';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
-    pageTitle: 'Browse by Day',
+    pageTitle: 'Browse Media',
     pageDescription:
       'View photos and videos in capture-date order, grouped by day.',
   },

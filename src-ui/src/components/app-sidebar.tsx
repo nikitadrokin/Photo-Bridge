@@ -55,7 +55,7 @@ const mediaRoutes = [
   },
   {
     to: '/browse',
-    label: 'Browse by Day',
+    label: 'Browse Media',
     icon: IconPhoto,
     tooltip: 'View media grouped and sorted by capture date',
     badge: 'DEV',
