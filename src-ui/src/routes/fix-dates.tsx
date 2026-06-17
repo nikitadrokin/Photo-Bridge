@@ -21,6 +21,7 @@ import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { useMediaStore } from '@/stores/media-store';
 import SplitColumn from '@/components/ui/split-column';
 import EmptyDropzone from '@/components/empty-dropzone';
+import SelectFiles from '@/components/select-files';
 
 export const Route = createFileRoute('/fix-dates')({
   staticData: {
@@ -87,27 +88,15 @@ function FixDatesPage() {
 
   if (!selectedDirectory) {
     return (
-      <EmptyDropzone isDragging={isDragging}>
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-          <IconFolder size={32} className="text-primary" />
-        </div>
-        <h2 className="text-lg font-semibold tracking-tight mb-1">
-          Select a media folder
-        </h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-          Fix Dates works on one folder at a time. Use this when files are
-          already Pixel-compatible and only need metadata repair.
-        </p>
-        <Button
-          type="button"
-          onClick={() => void selectFolder()}
-          disabled={pixel.isRunning}
-          className="gap-2"
-        >
-          <IconFolder />
-          Select Folder
-        </Button>
-      </EmptyDropzone>
+      <SelectFiles
+        icon={<IconFolder size={32} className="text-primary" />}
+        title="No folder selected"
+        description="Fix Dates works on one folder at a time. Use this when files are
+        already Pixel-compatible and only need metadata repair."
+        isDragging={isDragging}
+        onClickFolder={() => void selectFolder()}
+        disabled={pixel.isRunning}
+      />
     );
   }
 
