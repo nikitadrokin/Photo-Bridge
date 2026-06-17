@@ -160,7 +160,7 @@ function BrowsePage() {
     return (
       <div
         className={cn(
-          'mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-16 text-center transition-colors duration-200 col-span-full',
+          'flex flex-col items-center justify-center rounded-xl border-2 m-1 grow border-dashed px-8 py-16 text-center transition-colors duration-200',
           isDragging
             ? 'border-primary bg-primary/10'
             : 'border-border/60 bg-muted/20',
