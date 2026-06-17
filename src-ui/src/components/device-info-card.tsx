@@ -29,27 +29,38 @@ function StatTile({ icon, label, value, loading }: StatTileProps) {
     <div className="flex flex-1 flex-col gap-1 rounded-lg border bg-card px-3 py-2.5">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
-        <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider">
+          {label}
+        </span>
       </div>
-      <p className={cn('text-lg font-bold tabular-nums leading-none', !value && 'text-muted-foreground/40')}>
+      <p
+        className={cn(
+          'text-lg font-bold tabular-nums leading-none',
+          !value && 'text-muted-foreground/40',
+        )}
+      >
         {loading ? '–' : (value ?? '–')}
       </p>
     </div>
   );
 }
 
-export function DeviceInfoCard({ info, disabled, onRefresh, refreshing }: DeviceInfoCardProps) {
+export function DeviceInfoCard({
+  info,
+  disabled,
+  onRefresh,
+  refreshing,
+}: DeviceInfoCardProps) {
   const loading = info.status === 'loading';
   const ok = info.status === 'ok';
   const busy = loading || refreshing;
 
-  const batteryLabel = ok && info.batteryPct !== undefined
-    ? `${info.batteryPct}%`
-    : undefined;
+  const batteryLabel =
+    ok && info.batteryPct !== undefined ? `${info.batteryPct}%` : undefined;
 
   return (
-    <Card size="sm" className="border-border/80">
-      <CardContent className="flex flex-col gap-3">
+    <Card size="sm" className="border-none">
+      <CardContent className="flex flex-col gap-3 px-0!">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">Device</p>
           <Button
