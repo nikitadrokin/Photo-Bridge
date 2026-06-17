@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import { PixelProvider, usePixel } from '@/hooks/use-pixel';
 import { ThemeProvider } from '@/components/theme-provider';
+import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -19,11 +20,7 @@ function RootComponent() {
           <div className="flex min-h-0 min-w-0 flex-1">
             <AppSidebarWithContext />
             <SidebarInset className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] z-10">
-              <main className="flex-1 p-4">
-                <div className="mx-auto size-full grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8">
-                  <Outlet />
-                </div>
-              </main>
+              <Outlet />
               <Toaster position="bottom-center" richColors />
             </SidebarInset>
           </div>

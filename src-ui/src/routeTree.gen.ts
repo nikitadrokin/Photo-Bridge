@@ -9,17 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TransferRouteImport } from './routes/transfer'
+import { Route as TransferMediaRouteImport } from './routes/transfer-media'
 import { Route as SplitRouteImport } from './routes/split'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ManageDeviceRouteImport } from './routes/manage-device'
 import { Route as FixDatesRouteImport } from './routes/fix-dates'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 
-const TransferRoute = TransferRouteImport.update({
-  id: '/transfer',
-  path: '/transfer',
+const TransferMediaRoute = TransferMediaRouteImport.update({
+  id: '/transfer-media',
+  path: '/transfer-media',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplitRoute = SplitRouteImport.update({
@@ -30,6 +31,11 @@ const SplitRoute = SplitRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManageDeviceRoute = ManageDeviceRouteImport.update({
+  id: '/manage-device',
+  path: '/manage-device',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FixDatesRoute = FixDatesRouteImport.update({
@@ -58,18 +64,20 @@ export interface FileRoutesByFullPath {
   '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
+  '/manage-device': typeof ManageDeviceRoute
   '/settings': typeof SettingsRoute
   '/split': typeof SplitRoute
-  '/transfer': typeof TransferRoute
+  '/transfer-media': typeof TransferMediaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
+  '/manage-device': typeof ManageDeviceRoute
   '/settings': typeof SettingsRoute
   '/split': typeof SplitRoute
-  '/transfer': typeof TransferRoute
+  '/transfer-media': typeof TransferMediaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,9 +85,10 @@ export interface FileRoutesById {
   '/browse': typeof BrowseRoute
   '/convert': typeof ConvertRoute
   '/fix-dates': typeof FixDatesRoute
+  '/manage-device': typeof ManageDeviceRoute
   '/settings': typeof SettingsRoute
   '/split': typeof SplitRoute
-  '/transfer': typeof TransferRoute
+  '/transfer-media': typeof TransferMediaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,27 +97,30 @@ export interface FileRouteTypes {
     | '/browse'
     | '/convert'
     | '/fix-dates'
+    | '/manage-device'
     | '/settings'
     | '/split'
-    | '/transfer'
+    | '/transfer-media'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/browse'
     | '/convert'
     | '/fix-dates'
+    | '/manage-device'
     | '/settings'
     | '/split'
-    | '/transfer'
+    | '/transfer-media'
   id:
     | '__root__'
     | '/'
     | '/browse'
     | '/convert'
     | '/fix-dates'
+    | '/manage-device'
     | '/settings'
     | '/split'
-    | '/transfer'
+    | '/transfer-media'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -116,18 +128,19 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   ConvertRoute: typeof ConvertRoute
   FixDatesRoute: typeof FixDatesRoute
+  ManageDeviceRoute: typeof ManageDeviceRoute
   SettingsRoute: typeof SettingsRoute
   SplitRoute: typeof SplitRoute
-  TransferRoute: typeof TransferRoute
+  TransferMediaRoute: typeof TransferMediaRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/transfer': {
-      id: '/transfer'
-      path: '/transfer'
-      fullPath: '/transfer'
-      preLoaderRoute: typeof TransferRouteImport
+    '/transfer-media': {
+      id: '/transfer-media'
+      path: '/transfer-media'
+      fullPath: '/transfer-media'
+      preLoaderRoute: typeof TransferMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/split': {
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manage-device': {
+      id: '/manage-device'
+      path: '/manage-device'
+      fullPath: '/manage-device'
+      preLoaderRoute: typeof ManageDeviceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fix-dates': {
@@ -180,9 +200,10 @@ const rootRouteChildren: RootRouteChildren = {
   BrowseRoute: BrowseRoute,
   ConvertRoute: ConvertRoute,
   FixDatesRoute: FixDatesRoute,
+  ManageDeviceRoute: ManageDeviceRoute,
   SettingsRoute: SettingsRoute,
   SplitRoute: SplitRoute,
-  TransferRoute: TransferRoute,
+  TransferMediaRoute: TransferMediaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

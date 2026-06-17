@@ -10,19 +10,23 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { GalleryScanFilePayload } from '@cli-protocol';
-import DayTimeline from '@/components/gallery/day-timeline';
-import MediaPreviewSheet from '@/components/gallery/media-preview-sheet';
+import DayTreeTable from '@/components/gallery/day-tree-table';
+import Lightbox from '@/components/gallery/lightbox';
+import MediaPreview from '@/components/gallery/media-preview';
 import { Button } from '@/components/ui/button';
 import { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-actions';
+import { useIsLargeScreen } from '@/hooks/use-is-large-screen';
+import { formatGalleryCaptureTime } from '@/lib/gallery-scan';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath } from '@/lib/path';
-import { cn } from '@/lib/utils';
+import SplitColumn from '@/components/ui/split-column';
+import SelectFiles from '@/components/select-files';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
-    pageTitle: 'Browse by Day',
+    pageTitle: 'Browse Media',
     pageDescription:
       'View photos and videos in capture-date order, grouped by day.',
   },
@@ -39,8 +43,41 @@ function BrowsePage() {
   const [previewFile, setPreviewFile] = useState<GalleryScanFilePayload | null>(
     null,
   );
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [removedPaths, setRemovedPaths] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const isLargeScreen = useIsLargeScreen();
   const { result, progress, isScanning, error, scanDirectory, reset } =
     useGalleryScan();
+
+  // On wide screens the second column previews inline; otherwise open the
+  // Lightbox dialog. Either way the row click just selects the file.
+  const handleSelectFile = useCallback(
+    (file: GalleryScanFilePayload) => {
+      setPreviewFile(file);
+      if (!isLargeScreen) {
+        setLightboxOpen(true);
+      }
+    },
+    [isLargeScreen],
+  );
+
+  const handleTrashed = useCallback((path: string) => {
+    setRemovedPaths((prev) => new Set(prev).add(path));
+    setPreviewFile((current) => (current?.path === path ? null : current));
+  }, []);
+
+  const visibleDays = useMemo(() => {
+    if (!result) return [];
+    if (removedPaths.size === 0) return result.days;
+    return result.days
+      .map((day) => ({
+        ...day,
+        files: day.files.filter((file) => !removedPaths.has(file.path)),
+      }))
+      .filter((day) => day.files.length > 0);
+  }, [result, removedPaths]);
 
   const selectFolder = useCallback(async () => {
     const selected = await open({
@@ -51,6 +88,8 @@ function BrowsePage() {
     if (selected && typeof selected === 'string') {
       setFolderPath(selected);
       setPreviewFile(null);
+      setLightboxOpen(false);
+      setRemovedPaths(new Set());
       void scanDirectory(selected);
     }
   }, [scanDirectory]);
@@ -58,12 +97,16 @@ function BrowsePage() {
   const rescan = useCallback(() => {
     if (!folderPath) return;
     setPreviewFile(null);
+    setLightboxOpen(false);
+    setRemovedPaths(new Set());
     void scanDirectory(folderPath);
   }, [folderPath, scanDirectory]);
 
   const clearFolder = useCallback(() => {
     setFolderPath(null);
     setPreviewFile(null);
+    setLightboxOpen(false);
+    setRemovedPaths(new Set());
     reset();
   }, [reset]);
 
@@ -101,6 +144,8 @@ function BrowsePage() {
         }
         setFolderPath(directory);
         setPreviewFile(null);
+        setLightboxOpen(false);
+        setRemovedPaths(new Set());
         void scanDirectory(directory);
       })();
     },
@@ -113,48 +158,30 @@ function BrowsePage() {
 
   if (!folderPath) {
     return (
-      <div
-        className={cn(
-          'mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-16 text-center transition-colors duration-200 col-span-full',
-          isDragging
-            ? 'border-primary bg-primary/10'
-            : 'border-border/60 bg-muted/20',
-        )}
-      >
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <IconPhoto size={32} className="text-primary" />
-        </div>
-        <h2 className="mb-1 text-lg font-semibold tracking-tight">
-          Browse photos by day
-        </h2>
-        <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-          Pick a folder (for example a month after split). Files stay on disk —
-          this only reads metadata and shows a timeline sorted by capture date.
-        </p>
-        <Button
-          type="button"
-          onClick={() => {
-            void selectFolder();
-          }}
-          className="gap-2"
-        >
-          <IconFolder />
-          Select Folder
-        </Button>
-      </div>
+      <SelectFiles
+        icon={<IconPhoto size={32} className="text-primary" />}
+        title="No folder selected"
+        description="Pick a folder (for example a month after split). Files stay on disk —
+            this only reads metadata and shows a timeline sorted by capture date."
+        isDragging={isDragging}
+        onClickFolder={() => void selectFolder()}
+        disabled={isScanning}
+      />
     );
   }
 
   return (
-    <>
-      <MediaPreviewSheet
+    <SplitColumn>
+      <Lightbox
         file={previewFile}
+        open={lightboxOpen}
         onClose={() => {
-          setPreviewFile(null);
+          setLightboxOpen(false);
         }}
+        onTrashed={handleTrashed}
       />
 
-      <div className="mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
         <div className="flex shrink-0 items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -195,13 +222,8 @@ function BrowsePage() {
               <IconLoader2 size={32} className="animate-spin" />
               <p className="text-sm">{progressLabel}</p>
             </div>
-          ) : result && result.days.length > 0 ? (
-            <DayTimeline
-              days={result.days}
-              onSelectFile={(file) => {
-                setPreviewFile(file);
-              }}
-            />
+          ) : result && visibleDays.length > 0 ? (
+            <DayTreeTable days={visibleDays} onSelectFile={handleSelectFile} />
           ) : result ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
               No media files found in this folder.
@@ -209,6 +231,38 @@ function BrowsePage() {
           ) : null}
         </div>
       </div>
-    </>
+
+      {/* Inline preview — fills the second column on large screens. */}
+      <aside className="hidden min-h-0 min-w-0 flex-col gap-3 lg:flex">
+        {previewFile ? (
+          <>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">
+                {previewFile.basename}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {(() => {
+                  const t = formatGalleryCaptureTime(previewFile.unixSeconds);
+                  return t ? `Captured ${t} UTC` : previewFile.path;
+                })()}
+              </p>
+            </div>
+            <MediaPreview
+              key={previewFile.path}
+              file={previewFile}
+              onTrashed={handleTrashed}
+              onExpand={() => {
+                setLightboxOpen(true);
+              }}
+              mediaClassName="flex-1 lg:max-h-[calc(100vh-16rem)]"
+            />
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+            Select a file to preview it here.
+          </div>
+        )}
+      </aside>
+    </SplitColumn>
   );
 }

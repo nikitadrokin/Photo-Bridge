@@ -12,6 +12,7 @@ export const COMMANDS = [
   'shell',
   'split',
   'gallery',
+  'pixel',
 ] as const;
 
 export type Command = (typeof COMMANDS)[number];
@@ -141,6 +142,33 @@ export interface GalleryScanEvent {
   readonly days: readonly GalleryScanDayPayload[];
 }
 
+/** One on-device camera file from `pb pixel list --jsonl`. */
+export interface PixelFilePayload {
+  readonly name: string;
+  readonly path: string;
+  /** Path relative to the listed directory, e.g. `Trip/IMG_0001.jpg`. */
+  readonly relativePath: string;
+  readonly sizeBytes: number;
+  /** Modification time in unix seconds, or null when unparseable. */
+  readonly mtimeUnix: number | null;
+}
+
+/** Final listing from `pb pixel list --jsonl`. */
+export interface PixelListEvent {
+  readonly v: 1;
+  readonly kind: 'pixel_list';
+  readonly dir: string;
+  readonly files: readonly PixelFilePayload[];
+}
+
+/** Result of `pb pixel purge --jsonl`. */
+export interface PixelPurgeEvent {
+  readonly v: 1;
+  readonly kind: 'pixel_purge';
+  readonly dir: string;
+  readonly deleted: number;
+}
+
 export type EventV1 =
   | SessionEvent
   | FileEvent
@@ -151,7 +179,9 @@ export type EventV1 =
   | SeverityEvent
   | MessageEvent
   | ShellStorageEvent
-  | GalleryScanEvent;
+  | GalleryScanEvent
+  | PixelListEvent
+  | PixelPurgeEvent;
 
 /** Legacy stdout lines from `logger` before structured events. */
 export interface Log {
@@ -227,6 +257,12 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
         typeof parsed.root === 'string' &&
         typeof parsed.totalFiles === 'number' &&
         Array.isArray(parsed.days)
+      );
+    case 'pixel_list':
+      return typeof parsed.dir === 'string' && Array.isArray(parsed.files);
+    case 'pixel_purge':
+      return (
+        typeof parsed.dir === 'string' && typeof parsed.deleted === 'number'
       );
     default:
       return false;

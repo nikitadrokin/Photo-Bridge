@@ -13,9 +13,10 @@ import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import SplitColumn from '@/components/ui/split-column';
 
-export const Route = createFileRoute('/transfer')({
-  staticData: { pageTitle: 'Pixel Transfer' },
+export const Route = createFileRoute('/transfer-media')({
+  staticData: { pageTitle: 'Transfer Media' },
   component: TransferPage,
 });
 
@@ -25,7 +26,7 @@ function TransferPage() {
   const isDisabled = pixel.isRunning || !pixel.isConnected;
 
   return (
-    <>
+    <SplitColumn>
       {/* Connection Status */}
       <div className="flex flex-col gap-6">
         <ConnectionStatus
@@ -143,6 +144,6 @@ function TransferPage() {
           }}
         />
       </div>
-    </>
+    </SplitColumn>
   );
 }

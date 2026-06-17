@@ -7,9 +7,10 @@ import {
   useState,
 } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { appCacheDir, join } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { parseLineFromCLI } from '@cli-protocol';
-import type { ShellStorageEvent } from '@cli-protocol';
+import type { PixelFilePayload, ShellStorageEvent } from '@cli-protocol';
 import { useCommand } from '@/hooks/use-command';
 import { useTerminal } from '@/hooks/use-terminal';
 import {
@@ -23,7 +24,7 @@ import {
 } from '@/lib/media-date-inspect';
 import { shJoin, shLines } from '@/lib/shell-formatters';
 import { buildSplitArgs, type SplitMode } from '@/lib/split-args';
-import type { AvailableStorageState } from '@/lib/types';
+import type { AvailableStorageState, DeviceInfoState } from '@/lib/types';
 
 export interface TransferPaths {
   source: string;
@@ -135,6 +136,7 @@ function usePixelProviderValue() {
     useState(false);
   const [availableStorage, setAvailableStorage] =
     useState<AvailableStorageState>({ status: 'idle' });
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfoState>({ status: 'idle' });
   const [transferInterrupted, setTransferInterrupted] = useState(false);
   const activeOperationRef = useRef<ActiveOperation>(null);
   const isRunningRef = useRef(false);
@@ -243,6 +245,55 @@ function usePixelProviderValue() {
     }
   }, [isConnected]);
 
+  const refreshDeviceInfo = useCallback(async () => {
+    if (!isConnected) {
+      setDeviceInfo({ status: 'idle' });
+      return;
+    }
+    setDeviceInfo((prev) => ({ ...prev, status: 'loading' }));
+
+    const [dfResult, batteryResult, modelResult] = await Promise.all([
+      captureStdout(['shell', '--', 'df', '-h', PIXEL_CAMERA_DIR]),
+      captureStdout(['shell', '--', 'dumpsys', 'battery']),
+      captureStdout(['shell', '--', 'getprop', 'ro.product.model']),
+    ]);
+
+    // Parse df output: Filesystem Size Used Avail Use% Mounted
+    let storageAvail: string | undefined;
+    let storageTotal: string | undefined;
+    for (const line of dfResult.stdout.split('\n')) {
+      const cols = line.trim().split(/\s+/);
+      if (cols.length >= 5 && cols[0] !== 'Filesystem') {
+        storageTotal = cols[1];
+        storageAvail = cols[3];
+        break;
+      }
+    }
+
+    // Parse battery level
+    let batteryPct: number | undefined;
+    const batteryMatch = batteryResult.stdout.match(/\blevel:\s*(\d+)/);
+    if (batteryMatch) {
+      batteryPct = parseInt(batteryMatch[1], 10);
+    }
+
+    // Device model
+    const model = modelResult.stdout.trim() || undefined;
+
+    if (!storageAvail && batteryPct === undefined && !model) {
+      setDeviceInfo({ status: 'error' });
+      return;
+    }
+
+    setDeviceInfo({ status: 'ok', model, batteryPct, storageAvail, storageTotal });
+  }, [isConnected, captureStdout]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setDeviceInfo({ status: 'idle' });
+    }
+  }, [isConnected]);
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     void listen<{ connected: boolean }>('adb-device-state', (e) => {
@@ -326,6 +377,140 @@ function usePixelProviderValue() {
       });
     }
   }, [isConnected, execute]);
+
+  /** Pulls specific device files/folders to a user-chosen destination. */
+  const savePixelFiles = useCallback(
+    async (devicePaths: string[]) => {
+      if (!isConnected || devicePaths.length === 0) return;
+      const destination = await open({
+        directory: true,
+        multiple: false,
+        title: 'Save to Folder',
+      });
+      if (destination && typeof destination === 'string') {
+        setTransferInterrupted(false);
+        setActiveOperation('pull');
+        setTransferPaths({ source: devicePaths[0], destination });
+        await execute(
+          ['pixel', 'pull', ...devicePaths, '--dest', destination, '--jsonl'],
+          { onFinish: () => setActiveOperation(null) },
+        );
+      }
+    },
+    [isConnected, execute],
+  );
+
+  const listPixelFiles = useCallback(async (): Promise<{
+    ok: true;
+    files: PixelFilePayload[];
+  } | { ok: false; detail: string }> => {
+    if (!isConnected) {
+      return { ok: false, detail: 'No device connected.' };
+    }
+    const { stdout } = await captureStdout(['pixel', 'list', '--jsonl']);
+    const lines = stdout
+      .split('\n')
+      .map((line) => line.replace(/\r$/, '').trim())
+      .filter((line) => line.length > 0);
+
+    let errorDetail: string | null = null;
+    for (const line of lines) {
+      const parsed = parseLineFromCLI(line);
+      if (parsed.tag !== 'ui') continue;
+      if (parsed.event.kind === 'pixel_list') {
+        return { ok: true, files: [...parsed.event.files] };
+      }
+      if (parsed.event.kind === 'error') {
+        errorDetail = parsed.event.detail ?? parsed.event.code;
+      }
+    }
+    return { ok: false, detail: errorDetail ?? 'No listing returned.' };
+  }, [isConnected, captureStdout]);
+
+  // Maps a device file (keyed by path+size+mtime so a changed file re-pulls) to
+  // its already-pulled local copy, so revisiting a preview within a session is
+  // instant instead of pulling over adb again.
+  const previewCacheRef = useRef<Map<string, string>>(new Map());
+
+  const pullPixelFileToCache = useCallback(
+    async (
+      file: PixelFilePayload,
+    ): Promise<{ ok: true; localPath: string } | { ok: false; detail: string }> => {
+      if (!isConnected) {
+        return { ok: false, detail: 'No device connected.' };
+      }
+      const key = `${file.path}:${file.sizeBytes}:${file.mtimeUnix ?? 0}`;
+      const cached = previewCacheRef.current.get(key);
+      if (cached) {
+        return { ok: true, localPath: cached };
+      }
+
+      const cacheRoot = await appCacheDir();
+      // Isolate each file version in its own dir so same-named files in
+      // different folders never clobber each other.
+      const destDir = await join(
+        cacheRoot,
+        'pixel-cache',
+        `${file.sizeBytes}-${file.mtimeUnix ?? 0}`,
+      );
+
+      const { stdout, code } = await captureStdout([
+        'pixel',
+        'pull',
+        file.path,
+        '--dest',
+        destDir,
+        '--jsonl',
+      ]);
+
+      if (code !== 0) {
+        const lines = stdout
+          .split('\n')
+          .map((line) => line.replace(/\r$/, '').trim())
+          .filter((line) => line.length > 0);
+        let detail: string | null = null;
+        for (const line of lines) {
+          const parsed = parseLineFromCLI(line);
+          if (parsed.tag === 'ui' && parsed.event.kind === 'error') {
+            detail = parsed.event.detail ?? parsed.event.code;
+          }
+        }
+        return { ok: false, detail: detail ?? `Pull exited with code ${code}` };
+      }
+
+      const localPath = await join(destDir, file.name);
+      previewCacheRef.current.set(key, localPath);
+      return { ok: true, localPath };
+    },
+    [isConnected, captureStdout],
+  );
+
+  const purgePixelFiles = useCallback(async (): Promise<{
+    ok: true;
+    deleted: number;
+  } | { ok: false; detail: string }> => {
+    if (!isConnected) {
+      return { ok: false, detail: 'No device connected.' };
+    }
+    const { stdout } = await captureStdout(['pixel', 'purge', '--jsonl']);
+    const lines = stdout
+      .split('\n')
+      .map((line) => line.replace(/\r$/, '').trim())
+      .filter((line) => line.length > 0);
+
+    let errorDetail: string | null = null;
+    for (const line of lines) {
+      const parsed = parseLineFromCLI(line);
+      if (parsed.tag !== 'ui') continue;
+      if (parsed.event.kind === 'pixel_purge') {
+        return { ok: true, deleted: parsed.event.deleted };
+      }
+      if (parsed.event.kind === 'error') {
+        errorDetail = parsed.event.detail ?? parsed.event.code;
+      }
+    }
+    return { ok: false, detail: errorDetail ?? 'Purge did not complete.' };
+  }, [isConnected, captureStdout]);
 
   const openSidecarInTerminal = useCallback(
     async (args: Array<string>) => {
@@ -557,6 +742,12 @@ function usePixelProviderValue() {
     isConnectionCheckPending,
     availableStorage,
     refreshAvailableStorage,
+    deviceInfo,
+    refreshDeviceInfo,
+    listPixelFiles,
+    pullPixelFileToCache,
+    savePixelFiles,
+    purgePixelFiles,
     isRunning,
     logs,
     activityEvents,

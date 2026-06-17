@@ -31,6 +31,16 @@
           "name": "exec-sh",
           "cmd": "sh",
           "args": true
+        },
+        {
+          "name": "open",
+          "cmd": "open",
+          "args": true
+        },
+        {
+          "name": "trash",
+          "cmd": "trash",
+          "args": true
         }
       ]
     },

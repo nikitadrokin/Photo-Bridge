@@ -19,7 +19,8 @@ import { type FixDatesWriteMode, usePixel } from '@/hooks/use-pixel';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { useMediaStore } from '@/stores/media-store';
-import { cn } from '@/lib/utils';
+import SplitColumn from '@/components/ui/split-column';
+import SelectFiles from '@/components/select-files';
 
 export const Route = createFileRoute('/fix-dates')({
   staticData: {
@@ -86,39 +87,20 @@ function FixDatesPage() {
 
   if (!selectedDirectory) {
     return (
-      <div
-        className={cn(
-          'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 px-8 text-center transition-colors duration-200 col-span-full',
-          isDragging
-            ? 'border-primary bg-primary/10'
-            : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/30',
-        )}
-      >
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
-          <IconFolder size={32} className="text-primary" />
-        </div>
-        <h2 className="text-lg font-semibold tracking-tight mb-1">
-          Select a media folder
-        </h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-          Fix Dates works on one folder at a time. Use this when files are
-          already Pixel-compatible and only need metadata repair.
-        </p>
-        <Button
-          type="button"
-          onClick={() => void selectFolder()}
-          disabled={pixel.isRunning}
-          className="gap-2"
-        >
-          <IconFolder />
-          Select Folder
-        </Button>
-      </div>
+      <SelectFiles
+        icon={<IconFolder size={32} className="text-primary" />}
+        title="No folder selected"
+        description="Fix Dates works on one folder at a time. Use this when files are
+        already Pixel-compatible and only need metadata repair."
+        isDragging={isDragging}
+        onClickFolder={() => void selectFolder()}
+        disabled={pixel.isRunning}
+      />
     );
   }
 
   return (
-    <>
+    <SplitColumn>
       <div className="flex flex-col gap-6">
         <>
           <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 gap-3">
@@ -190,6 +172,6 @@ function FixDatesPage() {
       </div>
 
       <div className="flex flex-col min-h-0"></div>
-    </>
+    </SplitColumn>
   );
 }
