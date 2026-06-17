@@ -20,7 +20,6 @@ import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath, useSelectedDirectory } from '@/lib/path';
 import { useMediaStore } from '@/stores/media-store';
 import SplitColumn from '@/components/ui/split-column';
-import EmptyDropzone from '@/components/empty-dropzone';
 import SelectFiles from '@/components/select-files';
 
 export const Route = createFileRoute('/fix-dates')({
