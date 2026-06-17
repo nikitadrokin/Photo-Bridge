@@ -21,8 +21,8 @@ import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useGalleryScan } from '@/hooks/use-gallery-scan';
 import { ALL_EXTENSIONS } from '@/lib/constants';
 import { findDirectoryPath } from '@/lib/path';
-import { cn } from '@/lib/utils';
 import SplitColumn from '@/components/ui/split-column';
+import EmptyDropzone from '@/components/empty-dropzone';
 
 export const Route = createFileRoute('/browse')({
   staticData: {
@@ -158,14 +158,7 @@ function BrowsePage() {
 
   if (!folderPath) {
     return (
-      <div
-        className={cn(
-          'flex flex-col items-center justify-center rounded-xl border-2 m-1 grow border-dashed px-8 py-16 text-center transition-colors duration-200',
-          isDragging
-            ? 'border-primary bg-primary/10'
-            : 'border-border/60 bg-muted/20',
-        )}
-      >
+      <EmptyDropzone isDragging={isDragging}>
         <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
           <IconPhoto size={32} className="text-primary" />
         </div>
@@ -186,7 +179,7 @@ function BrowsePage() {
           <IconFolder />
           Select Folder
         </Button>
-      </div>
+      </EmptyDropzone>
     );
   }
 
