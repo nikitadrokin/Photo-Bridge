@@ -59,8 +59,8 @@ export function DeviceInfoCard({
     ok && info.batteryPct !== undefined ? `${info.batteryPct}%` : undefined;
 
   return (
-    <Card size="sm" className="border-none">
-      <CardContent className="flex flex-col gap-3 px-0!">
+    <Card size="sm" className="dark:border">
+      <CardContent className="flex flex-col gap-3 not-dark:px-0!">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">Device</p>
           <Button
