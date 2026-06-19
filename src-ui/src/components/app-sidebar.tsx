@@ -1,325 +1,146 @@
-import { useEffect, useState } from 'react';
-import { useMatchRoute, useNavigate } from '@tanstack/react-router';
-import { getVersion } from '@tauri-apps/api/app';
-import { invoke } from '@tauri-apps/api/core';
 import {
-  IconBrandGithub,
-  IconCalendar,
-  IconCircleArrowUp,
-  IconDeviceMobile,
-  IconDeviceMobileCog,
-  IconFolders,
-  IconMovie,
-  IconPhoto,
+  IconArchive,
+  IconBell,
+  IconDots,
+  IconHome,
+  IconInbox,
+  IconPlus,
+  IconSearch,
   IconSettings,
+  IconUser,
 } from '@tabler/icons-react';
+import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInput,
   SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarRail,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Badge } from '@/components/ui/badge';
 
-interface AppSidebarProps {
-  isPixelConnected: boolean;
-  isRunning: boolean;
-}
-
-const mediaRoutes = [
-  {
-    to: '/convert',
-    label: 'Convert Media',
-    icon: IconMovie,
-    tooltip: 'Convert media for Pixel',
-  },
-  {
-    to: '/split',
-    label: 'Split Folder',
-    icon: IconFolders,
-    tooltip: 'Organize media into month or hash folders in place',
-  },
-  {
-    to: '/fix-dates',
-    label: 'Fix Dates',
-    icon: IconCalendar,
-    tooltip: 'Experimental: inspect dates and apply overrides',
-    badge: 'BETA',
-  },
-  {
-    to: '/browse',
-    label: 'Browse Media',
-    icon: IconPhoto,
-    tooltip: 'View media grouped and sorted by capture date',
-    badge: 'DEV',
-    hideInProd: true,
-  },
-] as const;
-
-const deviceRoutes = [
-  {
-    to: '/transfer-media',
-    label: 'Transfer Media',
-    icon: IconDeviceMobile,
-    tooltip: 'Transfer files to Pixel',
-  },
-  {
-    to: '/manage-device',
-    label: 'Manage Device',
-    icon: IconDeviceMobileCog,
-    tooltip: 'Browse storage and purge the Pixel camera roll',
-  },
-] as const;
-
-const appRoutes = [
-  {
-    to: '/settings',
-    label: 'Settings',
-    icon: IconSettings,
-    tooltip: 'App settings',
-  },
-] as const;
-
-const AppSidebar: React.FC<AppSidebarProps> = ({
-  isPixelConnected,
-  isRunning,
-}) => {
-  const [version, setVersion] = useState<string>('0');
-  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+export default function AppSidebar() {
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
-  const processRunningTooltip = 'Please wait for the current process to finish';
-
-  useEffect(() => {
-    getVersion()
-      .then(setVersion)
-      .catch(() => setVersion('dev'));
-  }, []);
-
-  useEffect(() => {
-    invoke<string | null>('check_for_update')
-      .then(setUpdateVersion)
-      .catch(() => {});
-  }, []);
+  const isHomeActive = !!matchRoute({ to: '/', fuzzy: false });
 
   return (
     <Sidebar
       variant="inset"
       className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] md:top-10 md:bottom-0 md:h-auto"
     >
+      <SidebarHeader>
+        <SidebarInput placeholder="Search" aria-label="Search" />
+      </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
-          <div className="md:hidden sticky top-0 z-60 w-full h-10 bg-sidebar"></div>
-          <SidebarGroupLabel>Media</SidebarGroupLabel>
+          <div className="md:hidden sticky top-0 z-60 h-10 w-full bg-sidebar" />
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupAction aria-label="Add item">
+            <IconPlus />
+          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mediaRoutes
-                .filter(
-                  (route) => !('hideInProd' in route && import.meta.env.PROD),
-                )
-                .map((route) => {
-                  const isActive = !!matchRoute({
-                    to: route.to,
-                    fuzzy: true,
-                  });
-
-                  return (
-                    <SidebarMenuItem key={route.to}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        disabled={isRunning}
-                        className={cn(isRunning && 'cursor-not-allowed')}
-                        tooltip={
-                          isRunning
-                            ? {
-                                children: processRunningTooltip,
-                                hidden: false,
-                              }
-                            : route.tooltip
-                        }
-                        onClick={(event) => {
-                          if (isRunning) {
-                            event.preventDefault();
-                            return;
-                          }
-                          void navigate({ to: route.to });
-                        }}
-                      >
-                        <route.icon
-                          className={cn(isActive && 'text-primary')}
-                        />
-                        <span className="grid flex-1 text-left text-sm leading-tight">
-                          <span>{route.label}</span>
-                        </span>
-                        {'badge' in route ? (
-                          <Badge
-                            variant="secondary"
-                            className="ml-auto h-4 rounded px-1.5 text-[10px]"
-                          >
-                            {route.badge}
-                          </Badge>
-                        ) : null}
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Device</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {deviceRoutes.map((route) => {
-                const isActive = !!matchRoute({
-                  to: route.to,
-                  fuzzy: true,
-                });
-
-                return (
-                  <SidebarMenuItem key={route.to}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      disabled={isRunning}
-                      className={cn(isRunning && 'cursor-not-allowed')}
-                      tooltip={
-                        isRunning
-                          ? {
-                              children: processRunningTooltip,
-                              hidden: false,
-                            }
-                          : route.tooltip
-                      }
-                      onClick={(event) => {
-                        if (isRunning) {
-                          event.preventDefault();
-                          return;
-                        }
-                        void navigate({ to: route.to });
-                      }}
-                    >
-                      <route.icon className={cn(isActive && 'text-primary')} />
-                      <span>{route.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  disabled
-                  className="cursor-default opacity-100 pointer-events-none"
-                  tooltip={
-                    isPixelConnected
-                      ? 'Pixel is connected'
-                      : 'Pixel is not connected'
-                  }
+                  isActive={isHomeActive}
+                  tooltip="Home"
+                  onClick={() => void navigate({ to: '/' })}
                 >
-                  <span className="flex items-center justify-center size-4 shrink-0">
-                    <span
-                      className={cn(
-                        'size-1.5 rounded-full shrink-0 block',
-                        isPixelConnected
-                          ? 'bg-green-500'
-                          : 'bg-muted-foreground',
-                      )}
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {isPixelConnected ? 'Connected' : 'Not connected'}
-                  </span>
+                  <IconHome />
+                  <span>Home</span>
                 </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Inbox">
+                  <IconInbox />
+                  <span>Inbox</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge>3</SidebarMenuBadge>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Actions">
+                  <IconBell />
+                  <span>With Action</span>
+                </SidebarMenuButton>
+                <SidebarMenuAction showOnHover aria-label="More options">
+                  <IconDots />
+                </SidebarMenuAction>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Projects">
+                  <IconArchive />
+                  <span>Nested Items</span>
+                </SidebarMenuButton>
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton href="#" isActive>
+                      <span>Overview</span>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton href="#" size="sm">
+                      <span>Details</span>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
+        <SidebarSeparator />
+
         <SidebarGroup>
-          <SidebarGroupLabel>App</SidebarGroupLabel>
+          <SidebarGroupLabel>States</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {appRoutes.map((route) => {
-                const isActive = !!matchRoute({ to: route.to, fuzzy: true });
-
-                return (
-                  <SidebarMenuItem key={route.to}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      tooltip={route.tooltip}
-                      onClick={() => {
-                        void navigate({ to: route.to });
-                      }}
-                    >
-                      <route.icon
-                        className={cn(
-                          'self-start h-lh',
-                          isActive && 'text-primary',
-                        )}
-                      />
-                      {route.label}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              <SidebarMenuSkeleton showIcon />
+              <SidebarMenuItem>
+                <SidebarMenuButton disabled tooltip="Disabled item">
+                  <IconSettings />
+                  <span>Disabled</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
-        <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-          {updateVersion && (
-            <a
-              href="https://github.com/nikitadrokin/Photo-Bridge/releases/latest"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-primary hover:underline"
-            >
-              <IconCircleArrowUp size={13} />v{updateVersion} available
-            </a>
-          )}
-
-          <ThemeToggle />
-
-          <div className="flex items-center justify-between">
-            <span>
-              Made with 🫶🏻 by{' '}
-              <a
-                href="https://nkdr.me"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Nikita
-              </a>
-            </span>
-            <div className="flex items-center gap-2">
-              <a
-                href="https://github.com/nikitadrokin/photo-bridge"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-primary hover:underline"
-                aria-label="View source on GitHub"
-              >
-                <IconBrandGithub size={14} />
-              </a>
-              {version ? (
-                <span className="text-muted-foreground">v{version}</span>
-              ) : null}
-            </div>
-          </div>
-        </div>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" tooltip="Account">
+              <IconUser />
+              <span className="grid flex-1 text-left text-sm leading-tight">
+                <span className="font-medium">Template User</span>
+                <span className="text-muted-foreground text-xs">Local</span>
+              </span>
+              <ThemeToggle />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
-};
-
-export default AppSidebar;
+}

@@ -1,19 +1,19 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Photo Bridge",
-  "mainBinaryName": "photo-bridge",
-  "version": "0.0.15",
-  "identifier": "me.nkdr.photo-bridge",
+  "productName": "Tauri Template",
+  "mainBinaryName": "tauri-template",
+  "version": "0.1.0",
+  "identifier": "com.example.tauri-template",
   "build": {
     "frontendDist": "../src-ui/dist",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "bun run build:sidecar && cd src-ui && bun run dev",
-    "beforeBuildCommand": "bun run build:sidecar && cd src-ui && bun run build"
+    "beforeDevCommand": "cd src-ui && bun run dev",
+    "beforeBuildCommand": "cd src-ui && bun run build"
   },
   "app": {
     "windows": [
       {
-        "title": "Photo Bridge",
+        "title": "Tauri Template",
         "width": 800,
         "height": 600,
         "minWidth": 420,
@@ -46,7 +46,6 @@
       "icons/icon.icns",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "externalBin": ["binaries/pb"]
+    ]
   }
 }

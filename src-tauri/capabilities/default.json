@@ -5,69 +5,8 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "core:event:default",
     "shell:default",
     "dialog:default",
-    "core:window:allow-start-dragging",
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "bun",
-          "cmd": "bun",
-          "args": true
-        },
-        {
-          "name": "node",
-          "cmd": "node",
-          "args": true
-        },
-        {
-          "name": "binaries/pb",
-          "sidecar": true,
-          "args": true
-        },
-        {
-          "name": "exec-sh",
-          "cmd": "sh",
-          "args": true
-        },
-        {
-          "name": "open",
-          "cmd": "open",
-          "args": true
-        },
-        {
-          "name": "trash",
-          "cmd": "trash",
-          "args": true
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "bun",
-          "cmd": "bun",
-          "args": true
-        },
-        {
-          "name": "node",
-          "cmd": "node",
-          "args": true
-        },
-        {
-          "name": "binaries/pb",
-          "sidecar": true,
-          "args": true
-        },
-        {
-          "name": "exec-sh",
-          "cmd": "sh",
-          "args": true
-        }
-      ]
-    }
+    "core:window:allow-start-dragging"
   ]
 }

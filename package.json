@@ -1,52 +1,25 @@
 {
-  "name": "photo-bridge",
-  "version": "0.0.15",
-  "description": "Convert iOS media files for Pixel compatibility",
+  "name": "tauri-template",
+  "version": "0.1.0",
+  "description": "Reusable Tauri app template",
   "type": "module",
   "workspaces": [
-    "src-cli",
-    "src-ui",
-    "src-web"
+    "src-ui"
   ],
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
   "scripts": {
-    "dev:cli": "bun run src-cli/index.ts",
-    "build:cli": "bun build ./src-cli/index.ts --outfile dist/index.js --target bun",
-    "build:sidecar": "bun build ./src-cli/index.ts --compile --outfile src-tauri/binaries/pb-aarch64-apple-darwin && codesign --sign - --force --options runtime src-tauri/binaries/pb-aarch64-apple-darwin",
+    "dev:ui": "cd src-ui && bun run dev",
+    "build:ui": "cd src-ui && bun run build",
     "dev:tauri": "APPLE_SIGNING_IDENTITY=- tauri dev",
     "build:tauri": "tauri build",
-    "release:tauri": "bun run scripts/release.ts",
-    "dev:web": "bun run --filter photo-bridge-web dev",
-    "build:web": "bun run --filter photo-bridge-web build",
-    "start": "bun run dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "cd src-ui && tsc --noEmit"
   },
-  "keywords": [
-    "ios",
-    "pixel",
-    "heic",
-    "hevc",
-    "media",
-    "converter"
-  ],
+  "keywords": ["tauri", "react", "template"],
   "author": "dna",
   "license": "MIT",
-  "bin": {
-    "pb": "./dist/index.js"
-  },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.6",
     "@types/bun": "^1.3.11",
     "@types/node": "^22.14.0",
-    "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   }
 }

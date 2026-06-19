@@ -8,7 +8,7 @@ export interface RoutePageStaticData {
   pageDescription?: string;
 }
 
-const DEFAULT_TITLE = 'Photo Bridge';
+const DEFAULT_TITLE = 'Tauri Template';
 
 /**
  * Resolves the active leaf route’s `staticData` page fields for the shell header.

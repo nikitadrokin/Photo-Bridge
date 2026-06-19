@@ -16,12 +16,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src-cli/*"]
-    }
+    "outDir": "./dist"
   },
-  "include": ["src-cli/**/*", "types/protocol.ts"],
+  "include": [],
   "exclude": ["node_modules", "dist", "opensrc"]
 }
