@@ -183,7 +183,7 @@ const pullCmd = new Command('pull')
     const isJsonl = Boolean(opts.jsonl);
     const destDir = path.resolve(opts.dest);
 
-    const client = Adb.createClient();
+    const client = Adb.createClient({ bin: resolveTool('adb') });
     try {
       const devices = await client.listDevices();
       if (devices.length === 0) {
