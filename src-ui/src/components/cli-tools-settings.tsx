@@ -101,12 +101,15 @@ function CliToolRow({ tool, progress, onInstall }: CliToolRowProps) {
       : 'Install';
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 text-sm">
+    <div className="flex min-w-0 items-center gap-3 px-3 py-2 text-sm">
       <SourceIcon source={tool.source} />
 
       <span className="w-20 shrink-0 font-medium">{tool.name}</span>
 
-      <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground select-auto">
+      <span
+        className="w-12 shrink-0 truncate text-xs tabular-nums text-muted-foreground select-auto"
+        title={tool.version ?? undefined}
+      >
         {tool.version ?? '—'}
       </span>
 
@@ -235,7 +238,7 @@ export function CliToolsSettings() {
   const anyInstalling = Object.keys(progress).length > 0;
 
   return (
-    <FieldSet>
+    <FieldSet className="min-w-0">
       <div className="flex items-baseline justify-between gap-4">
         <FieldLegend>CLI tools</FieldLegend>
         <div className="flex items-center gap-2">
