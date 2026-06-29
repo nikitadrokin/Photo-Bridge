@@ -58,8 +58,6 @@ const mediaRoutes = [
     label: 'Browse Media',
     icon: IconPhoto,
     tooltip: 'View media grouped and sorted by capture date',
-    badge: 'DEV',
-    hideInProd: true,
   },
 ] as const;
 
@@ -120,11 +118,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
           <SidebarGroupLabel>Media</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mediaRoutes
-                .filter(
-                  (route) => !('hideInProd' in route && import.meta.env.PROD),
-                )
-                .map((route) => {
+              {mediaRoutes.map((route) => {
                   const isActive = !!matchRoute({
                     to: route.to,
                     fuzzy: true,
