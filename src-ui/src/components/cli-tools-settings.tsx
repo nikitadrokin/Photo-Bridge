@@ -73,6 +73,13 @@ function SourceIcon({ source }: { source: CliToolSource }) {
   return <IconCircleCheck className={`${className} text-primary`} />;
 }
 
+/**
+ * In dev builds we always expose an install action — even for tools already
+ * resolved from System — so we can exercise the bundled-install path end to end.
+ * Production keeps the original behavior: install only what's missing.
+ */
+const DEV_OVERRIDE = import.meta.env.DEV;
+
 interface CliToolRowProps {
   tool: CliToolStatus;
   /** In-flight install message, or `null` when idle. */
@@ -84,6 +91,14 @@ interface CliToolRowProps {
 function CliToolRow({ tool, progress, onInstall }: CliToolRowProps) {
   const isMissing = tool.source === 'missing';
   const isInstalling = progress !== null;
+  // Already-present tools get an install button only under the dev override;
+  // for an app-managed copy the action re-installs over it.
+  const showInstall = isMissing || DEV_OVERRIDE;
+  const installLabel = isInstalling
+    ? 'Installing'
+    : tool.source === 'app'
+      ? 'Reinstall'
+      : 'Install';
 
   return (
     <div className="flex items-center gap-3 px-3 py-2 text-sm">
@@ -91,20 +106,27 @@ function CliToolRow({ tool, progress, onInstall }: CliToolRowProps) {
 
       <span className="w-20 shrink-0 font-medium">{tool.name}</span>
 
-      <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">
+      <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground select-auto">
         {tool.version ?? '—'}
       </span>
 
       <span
-        className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground"
+        className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground select-auto"
         title={tool.resolvedPath ?? tool.description}
       >
-        {isInstalling
-          ? progress
-          : (tool.resolvedPath ?? 'Not found on PATH')}
+        {isInstalling ? progress : (tool.resolvedPath ?? 'Not found on PATH')}
       </span>
 
-      {isMissing ? (
+      {!isMissing ? (
+        <Badge
+          variant={sourceBadgeVariant(tool.source)}
+          className="shrink-0 text-xs"
+        >
+          {sourceLabel(tool.source)}
+        </Badge>
+      ) : null}
+
+      {showInstall ? (
         <Button
           type="button"
           variant="outline"
@@ -114,20 +136,16 @@ function CliToolRow({ tool, progress, onInstall }: CliToolRowProps) {
           onClick={() => onInstall(tool.id)}
         >
           {isInstalling ? (
-            <IconLoader2 className="size-3.5 animate-spin" data-icon="inline-start" />
+            <IconLoader2
+              className="size-3.5 animate-spin"
+              data-icon="inline-start"
+            />
           ) : (
             <IconDownload className="size-3.5" data-icon="inline-start" />
           )}
-          {isInstalling ? 'Installing' : 'Install'}
+          {installLabel}
         </Button>
-      ) : (
-        <Badge
-          variant={sourceBadgeVariant(tool.source)}
-          className="shrink-0 text-xs"
-        >
-          {sourceLabel(tool.source)}
-        </Badge>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -195,8 +213,19 @@ export function CliToolsSettings() {
   );
 
   const handleInstallMissing = useCallback(async () => {
-    const missing = tools.filter((t) => t.source === 'missing' && t.installable);
+    const missing = tools.filter(
+      (t) => t.source === 'missing' && t.installable,
+    );
     for (const tool of missing) {
+      await handleInstall(tool.id);
+    }
+  }, [tools, handleInstall]);
+
+  // Dev override: install every installable tool into the bundle, overwriting
+  // app-managed copies, so the bundled-install path can be exercised in full.
+  const handleInstallAll = useCallback(async () => {
+    const installable = tools.filter((t) => t.installable);
+    for (const tool of installable) {
       await handleInstall(tool.id);
     }
   }, [tools, handleInstall]);
@@ -230,8 +259,9 @@ export function CliToolsSettings() {
         </div>
       </div>
       <FieldDescription>
-        Command-line tools Photo Bridge shells out to. Tools already on your PATH
-        are used directly; missing ones can be installed into the app bundle.
+        Command-line tools Photo Bridge shells out to. Tools already on your
+        PATH are used directly; missing ones can be installed into the app
+        bundle.
       </FieldDescription>
 
       {loading ? (
@@ -253,7 +283,7 @@ export function CliToolsSettings() {
       )}
 
       {error ? (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-xs text-destructive select-auto" role="alert">
           {error}
         </p>
       ) : null}
@@ -276,11 +306,40 @@ export function CliToolsSettings() {
             disabled={anyInstalling}
           >
             {anyInstalling ? (
-              <IconLoader2 className="size-3.5 animate-spin" data-icon="inline-start" />
+              <IconLoader2
+                className="size-3.5 animate-spin"
+                data-icon="inline-start"
+              />
             ) : (
               <IconDownload className="size-3.5" data-icon="inline-start" />
             )}
             Install missing
+          </Button>
+        </div>
+      ) : null}
+
+      {!loading && DEV_OVERRIDE ? (
+        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>
+            Dev override · install bundled copies regardless of System
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0 px-2 text-xs"
+            onClick={() => void handleInstallAll()}
+            disabled={anyInstalling}
+          >
+            {anyInstalling ? (
+              <IconLoader2
+                className="size-3.5 animate-spin"
+                data-icon="inline-start"
+              />
+            ) : (
+              <IconDownload className="size-3.5" data-icon="inline-start" />
+            )}
+            Install all
           </Button>
         </div>
       ) : null}

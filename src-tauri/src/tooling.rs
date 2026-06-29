@@ -45,6 +45,10 @@ struct Artifact {
     /// Pinned SHA-256 (lowercase hex). `None` for rolling-latest sources
     /// (e.g. Google's platform-tools) where no stable hash is published.
     sha256: Option<&'static str>,
+    /// When true, fetch a `<final-url>.sha256` sidecar (after redirects) and
+    /// verify against it. Lets a rolling-latest source stay checksummed without
+    /// a pin that goes stale on every upstream rebuild.
+    sha256_sidecar: bool,
     kind: ArchiveKind,
     /// Path of the executable inside the extracted archive, relative to the
     /// tool's install dir. For single-binary zips this is just the binary name.
@@ -77,9 +81,11 @@ impl ToolManifest {
 
 /// The four tools Photo Bridge depends on.
 ///
-/// Sources: ffmpeg/ffprobe from osxexperts.net (per-arch static builds with
-/// published SHA-256), exiftool from the official versioned tarball (runs in
-/// place via system Perl), adb from Google's canonical latest platform-tools.
+/// Sources: ffmpeg/ffprobe from ffmpeg.martin-riedl.de — per-arch static
+/// builds behind a stable `latest/release` redirect, each with a `.sha256`
+/// sidecar we verify dynamically (so upstream rebuilds never break the pin).
+/// exiftool from the official versioned tarball (runs in place via system
+/// Perl), adb from Google's canonical latest platform-tools.
 const MANIFESTS: &[ToolManifest] = &[
     ToolManifest {
         id: "ffmpeg",
@@ -89,14 +95,16 @@ const MANIFESTS: &[ToolManifest] = &[
         version_arg: "-version",
         needs_codesign: true,
         arm64: Artifact {
-            url: "https://www.osxexperts.net/ffmpeg81arm.zip",
-            sha256: Some("9a08d61f9328e8164ba560ee7a79958e357307fcfeea6fe626b7d66cdc287028"),
+            url: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip",
+            sha256: None,
+            sha256_sidecar: true,
             kind: ArchiveKind::Zip,
             bin_rel_path: "ffmpeg",
         },
         x86_64: Artifact {
-            url: "https://www.osxexperts.net/ffmpeg80intel.zip",
-            sha256: Some("df3f1e3facdc1ae0ad0bd898cdfb072fbc9641bf47b11f172844525a05db8d11"),
+            url: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/amd64/release/ffmpeg.zip",
+            sha256: None,
+            sha256_sidecar: true,
             kind: ArchiveKind::Zip,
             bin_rel_path: "ffmpeg",
         },
@@ -109,14 +117,16 @@ const MANIFESTS: &[ToolManifest] = &[
         version_arg: "-version",
         needs_codesign: true,
         arm64: Artifact {
-            url: "https://www.osxexperts.net/ffprobe81arm.zip",
-            sha256: Some("aab17ac7379c1178aaf400c3ef36cdb67db0b75b1a23eeef2cb9f658be8844e6"),
+            url: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip",
+            sha256: None,
+            sha256_sidecar: true,
             kind: ArchiveKind::Zip,
             bin_rel_path: "ffprobe",
         },
         x86_64: Artifact {
-            url: "https://www.osxexperts.net/ffprobe80intel.zip",
-            sha256: Some("5228e651e2bd67bb55819b27f6138351587b16d2b87446007bf35b7cf930d891"),
+            url: "https://ffmpeg.martin-riedl.de/redirect/latest/macos/amd64/release/ffprobe.zip",
+            sha256: None,
+            sha256_sidecar: true,
             kind: ArchiveKind::Zip,
             bin_rel_path: "ffprobe",
         },
@@ -132,12 +142,14 @@ const MANIFESTS: &[ToolManifest] = &[
         arm64: Artifact {
             url: "https://sourceforge.net/projects/exiftool/files/Image-ExifTool-13.59.tar.gz/download",
             sha256: Some("668ea3acececb7235fbd0f4900e72d5f12c9b07e5c778fd36cb1e9b5828fd65a"),
+            sha256_sidecar: false,
             kind: ArchiveKind::TarGz,
             bin_rel_path: "Image-ExifTool-13.59/exiftool",
         },
         x86_64: Artifact {
             url: "https://sourceforge.net/projects/exiftool/files/Image-ExifTool-13.59.tar.gz/download",
             sha256: Some("668ea3acececb7235fbd0f4900e72d5f12c9b07e5c778fd36cb1e9b5828fd65a"),
+            sha256_sidecar: false,
             kind: ArchiveKind::TarGz,
             bin_rel_path: "Image-ExifTool-13.59/exiftool",
         },
@@ -154,12 +166,14 @@ const MANIFESTS: &[ToolManifest] = &[
         arm64: Artifact {
             url: "https://dl.google.com/android/repository/platform-tools-latest-darwin.zip",
             sha256: None,
+            sha256_sidecar: false,
             kind: ArchiveKind::Zip,
             bin_rel_path: "platform-tools/adb",
         },
         x86_64: Artifact {
             url: "https://dl.google.com/android/repository/platform-tools-latest-darwin.zip",
             sha256: None,
+            sha256_sidecar: false,
             kind: ArchiveKind::Zip,
             bin_rel_path: "platform-tools/adb",
         },
@@ -303,6 +317,29 @@ fn emit_progress(app: &AppHandle, id: &str, phase: &str, message: &str) {
     );
 }
 
+/// Fetch the `<url>.sha256` sidecar and return the expected lowercase-hex
+/// digest. The file is the usual `shasum` format: `<hex>  <filename>`.
+async fn fetch_sidecar_sha256(
+    client: &reqwest::Client,
+    url: &reqwest::Url,
+) -> Result<String, String> {
+    let sidecar = format!("{url}.sha256");
+    let text = client
+        .get(&sidecar)
+        .send()
+        .await
+        .map_err(|e| format!("fetch checksum: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("fetch checksum: {e}"))?
+        .text()
+        .await
+        .map_err(|e| format!("read checksum: {e}"))?;
+    text.split_whitespace()
+        .next()
+        .map(str::to_string)
+        .ok_or_else(|| "empty checksum sidecar".to_string())
+}
+
 fn verify_sha256(bytes: &[u8], expected: &str) -> Result<(), String> {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -422,46 +459,88 @@ pub async fn install_cli_tool(app: AppHandle, id: String) -> Result<String, Stri
         .map_err(|e| format!("download failed: {e}"))?
         .error_for_status()
         .map_err(|e| format!("download failed: {e}"))?;
+    // Capture the post-redirect URL so we can find the matching `.sha256` sidecar.
+    let final_url = resp.url().clone();
     let bytes = resp
         .bytes()
         .await
         .map_err(|e| format!("read body: {e}"))?
         .to_vec();
 
-    // Verify (when a hash is pinned).
+    // Verify: prefer a pinned hash; otherwise fetch the `.sha256` sidecar that
+    // sits next to the (redirect-resolved) artifact and verify against it.
     if let Some(expected) = artifact.sha256 {
         emit_progress(&app, &id, "verifying", "Verifying checksum…");
         verify_sha256(&bytes, expected)?;
+    } else if artifact.sha256_sidecar {
+        emit_progress(&app, &id, "verifying", "Verifying checksum…");
+        let expected = fetch_sidecar_sha256(&client, &final_url).await?;
+        verify_sha256(&bytes, &expected)?;
     }
 
-    // Extract into a clean directory.
-    emit_progress(&app, &id, "extracting", "Extracting…");
-    if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| format!("clear install dir: {e}"))?;
+    // Stage the install in a sibling temp dir, then atomically swap it in only
+    // once everything succeeds. This way a failure never wipes a previously
+    // working app-managed copy, and leaves no half-written dir behind.
+    let staging = dir.with_extension("installing");
+    let outcome = stage_install(&app, &id, m, artifact, &bytes, &staging, &dir);
+    if outcome.is_err() {
+        // Roll back whatever the failed attempt wrote.
+        let _ = std::fs::remove_dir_all(&staging);
     }
-    std::fs::create_dir_all(&dir).map_err(|e| format!("create install dir: {e}"))?;
+    outcome
+}
+
+/// Download-independent half of an install: unpack `bytes` into `staging`,
+/// finalize the binary, swap `staging` into place at `dir`, and publish the
+/// `bin/<id>` symlink. Any `Err` here leaves the live `dir` untouched and is
+/// cleaned up by the caller.
+fn stage_install(
+    app: &AppHandle,
+    id: &str,
+    m: &ToolManifest,
+    artifact: &Artifact,
+    bytes: &[u8],
+    staging: &Path,
+    dir: &Path,
+) -> Result<String, String> {
+    // Extract into a clean staging directory.
+    emit_progress(app, id, "extracting", "Extracting…");
+    if staging.exists() {
+        std::fs::remove_dir_all(staging).map_err(|e| format!("clear staging dir: {e}"))?;
+    }
+    std::fs::create_dir_all(staging).map_err(|e| format!("create staging dir: {e}"))?;
     match artifact.kind {
-        ArchiveKind::Zip => extract_zip(&bytes, &dir)?,
-        ArchiveKind::TarGz => extract_tar_gz(&bytes, &dir)?,
+        ArchiveKind::Zip => extract_zip(bytes, staging)?,
+        ArchiveKind::TarGz => extract_tar_gz(bytes, staging)?,
     }
 
     // Finalize: de-quarantine, mark executable, ad-hoc sign if needed.
-    emit_progress(&app, &id, "finalizing", "Finalizing…");
-    let bin = dir.join(artifact.bin_rel_path);
-    if !bin.is_file() {
+    emit_progress(app, id, "finalizing", "Finalizing…");
+    let staged_bin = staging.join(artifact.bin_rel_path);
+    if !staged_bin.is_file() {
         return Err(format!(
             "expected binary not found after extract: {}",
-            bin.display()
+            staged_bin.display()
         ));
     }
-    strip_quarantine(&dir);
-    make_executable(&bin)?;
+    strip_quarantine(staging);
+    make_executable(&staged_bin)?;
     if m.needs_codesign && host_arch() == Arch::Arm64 {
-        ad_hoc_codesign(&bin)?;
+        ad_hoc_codesign(&staged_bin)?;
     }
 
+    // Swap staging into place: only now do we touch the live install dir.
+    if dir.exists() {
+        std::fs::remove_dir_all(dir).map_err(|e| format!("clear install dir: {e}"))?;
+    }
+    if let Some(parent) = dir.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("create tools dir: {e}"))?;
+    }
+    std::fs::rename(staging, dir).map_err(|e| format!("activate install: {e}"))?;
+
     // Publish a stable `bin/<id>` symlink the CLI can resolve.
-    let link = bin_link(&app, &id)?;
+    let bin = dir.join(artifact.bin_rel_path);
+    let link = bin_link(app, id)?;
     if let Some(parent) = link.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("create bin dir: {e}"))?;
     }
@@ -472,6 +551,6 @@ pub async fn install_cli_tool(app: AppHandle, id: String) -> Result<String, Stri
     #[cfg(not(unix))]
     std::fs::copy(&bin, &link).map(|_| ()).map_err(|e| format!("link binary: {e}"))?;
 
-    emit_progress(&app, &id, "done", &format!("{} ready", m.name));
+    emit_progress(app, id, "done", &format!("{} ready", m.name));
     Ok(link.to_string_lossy().into_owned())
 }
