@@ -4,7 +4,6 @@ import { processImage } from '../../processors/image.js';
 import { processVideo } from '../../processors/video.js';
 import { processLegacyVideo } from '../../processors/legacy-video.js';
 import { fixDatesOnPhoto, hasValidCreateDate } from '../../utils/dates.js';
-import { ConversionFileError } from '../../utils/conversion-file-error.js';
 import type { CliOutput } from '../../utils/logger.js';
 import type { MediaType } from '../../../types/protocol.js';
 import {
@@ -38,10 +37,14 @@ export async function runConvertProcessFiles(
   files: string[],
   outDir: string | null,
   output: CliOutput,
-): Promise<{ processedCount: number; skippedCount: number }> {
+): Promise<{
+  processedCount: number;
+  skippedCount: number;
+  failedCount: number;
+}> {
   let processedCount = 0;
   let skippedCount = 0;
-  /** Shared so a throw after `failed` file events still reports correct `session` end counts. */
+  /** Shared so `failed` file events stay consistent with the `session` end counts. */
   const failureCount = { n: 0 };
   const layout = outDir ? 'directory' : 'files';
   const reporter = new ConvertRunReporter(output, layout, outDir, files.length);
@@ -60,6 +63,8 @@ export async function runConvertProcessFiles(
         reporter.progressOnly(done);
         continue;
       }
+
+      reporter.fileStart(baseName, done);
 
       const media = cliMediaKind(ext);
 
@@ -113,7 +118,7 @@ export async function runConvertProcessFiles(
       }
     }
 
-    return { processedCount, skippedCount };
+    return { processedCount, skippedCount, failedCount: failureCount.n };
   } finally {
     reporter.end({
       processed: processedCount,
@@ -131,7 +136,7 @@ async function runImageConversion(args: {
   reporter: ConvertRunReporter;
   done: number;
   failureCount: { n: number };
-}): Promise<'processed' | 'skipped'> {
+}): Promise<'processed' | 'skipped' | 'failed'> {
   const { file, baseName, ext, outputDirectory, reporter, done, failureCount } =
     args;
   const outFile = path.join(outputDirectory, baseName);
@@ -192,9 +197,11 @@ async function runImageConversion(args: {
       },
       done,
     );
-    throw new ConversionFileError(
+    reporter.fileFailed(
+      baseName,
       err instanceof Error ? err.message : String(err),
     );
+    return 'failed';
   }
 }
 
@@ -208,7 +215,7 @@ async function runVideoLikeConversion(args: {
   done: number;
   legacy: boolean;
   failureCount: { n: number };
-}): Promise<'processed' | 'skipped'> {
+}): Promise<'processed' | 'skipped' | 'failed'> {
   const {
     file,
     baseName,
@@ -300,9 +307,11 @@ async function runVideoLikeConversion(args: {
       },
       done,
     );
-    throw new ConversionFileError(
+    reporter.fileFailed(
+      baseName,
       err instanceof Error ? err.message : String(err),
     );
+    return 'failed';
   }
 }
 

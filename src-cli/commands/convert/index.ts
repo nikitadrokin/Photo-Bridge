@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { createCliOutput, type CliOutput } from '../../utils/logger.js';
 import { prepareSiblingDirectory } from '../../utils/sibling-directory.js';
 import { validateTools } from '../../utils/validation.js';
-import { ConversionFileError } from '../../utils/conversion-file-error.js';
 import { isSupportedMediaExtension } from './media.js';
 import { runConvertProcessFiles } from './process-files.js';
 import {
@@ -61,12 +60,10 @@ export const convert = new Command()
       }
     } catch (error) {
       if (output.jsonl) {
-        if (!(error instanceof ConversionFileError)) {
-          output.error(
-            error instanceof Error ? error.message : String(error),
-            'uncaught',
-          );
-        }
+        output.error(
+          error instanceof Error ? error.message : String(error),
+          'uncaught',
+        );
       } else {
         output.blankLine();
         output.error(error instanceof Error ? error.message : String(error));
@@ -103,16 +100,13 @@ async function processDirectory(
     .filter((f) => f.isFile() && !f.name.startsWith('.'))
     .map((f) => path.join(inDir, f.name));
 
-  const { processedCount, skippedCount } = await runConvertProcessFiles(
-    regularFiles,
-    outDir,
-    output,
-  );
+  const { processedCount, skippedCount, failedCount } =
+    await runConvertProcessFiles(regularFiles, outDir, output);
 
   if (!output.jsonl) {
     output.blankLine();
     output.success(
-      `Done · ${processedCount} processed, ${skippedCount} skipped`,
+      `Done · ${processedCount} processed, ${skippedCount} skipped, ${failedCount} failed`,
     );
     output.indentedMuted(`Copy to Pixel: ${outDir}`);
     output.blankLine();
@@ -146,16 +140,13 @@ async function processIndividualFiles(
 
   await validateTools();
 
-  const { processedCount, skippedCount } = await runConvertProcessFiles(
-    regularFiles,
-    null,
-    output,
-  );
+  const { processedCount, skippedCount, failedCount } =
+    await runConvertProcessFiles(regularFiles, null, output);
 
   if (!output.jsonl) {
     output.blankLine();
     output.success(
-      `Done · ${processedCount} processed, ${skippedCount} skipped`,
+      `Done · ${processedCount} processed, ${skippedCount} skipped, ${failedCount} failed`,
     );
     output.blankLine();
   }
