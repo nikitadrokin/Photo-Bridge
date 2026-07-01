@@ -47,12 +47,8 @@ function SettingsPage() {
         </Tabs>
       </Field>
 
-      {import.meta.env.DEV && (
-        <>
-          <Separator />
-          <CliToolsSettings />
-        </>
-      )}
+      <Separator />
+      <CliToolsSettings />
     </div>
   );
 }
