@@ -247,8 +247,21 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   <SidebarMenuItem key={route.to}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      tooltip={route.tooltip}
-                      onClick={() => {
+                      disabled={isRunning}
+                      className={cn(isRunning && 'cursor-not-allowed')}
+                      tooltip={
+                        isRunning
+                          ? {
+                              children: processRunningTooltip,
+                              hidden: false,
+                            }
+                          : route.tooltip
+                      }
+                      onClick={(event) => {
+                        if (isRunning) {
+                          event.preventDefault();
+                          return;
+                        }
                         void navigate({ to: route.to });
                       }}
                     >
