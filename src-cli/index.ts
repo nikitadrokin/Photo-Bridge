@@ -28,7 +28,7 @@ async function main() {
   const program = new Command()
     .name('pb')
     .description('Convert iOS media files for Google Pixel 1 compatibility')
-    .version('0.0.16');
+    .version('0.0.17');
 
   program.addCommand(convert);
   program.addCommand(copy);
