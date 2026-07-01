@@ -1,8 +1,13 @@
+import { useCallback, useEffect, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import {
   IconAlertTriangle,
   IconCircleCheck,
   IconDownload,
+  IconLoader2,
   IconPackage,
+  IconRefresh,
 } from '@tabler/icons-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -12,76 +17,26 @@ import { FieldDescription, FieldLegend, FieldSet } from '@/components/ui/field';
 /** Where a CLI tool binary was resolved from. */
 type CliToolSource = 'system' | 'app' | 'missing';
 
-/** Static tool definition used by the settings UI. */
-interface CliToolDefinition {
-  /** CLI binary name (e.g. `ffmpeg`). */
+/** Resolved status for one CLI tool, returned by the `resolve_cli_tools` command. */
+interface CliToolStatus {
   id: string;
-  /** Human-readable label. */
   name: string;
-  /** Short description of what the tool is used for in Photo Bridge. */
   description: string;
-}
-
-/** Resolved status for one CLI tool (mock data until wired up). */
-interface CliToolStatus extends CliToolDefinition {
   source: CliToolSource;
   /** Resolved path when installed; `null` when missing. */
   resolvedPath: string | null;
   /** Reported version string when available. */
   version: string | null;
+  /** Whether a 1-click install is available for this tool. */
+  installable: boolean;
 }
 
-/** Tools Photo Bridge shells out to. */
-const CLI_TOOLS: readonly CliToolDefinition[] = [
-  {
-    id: 'ffmpeg',
-    name: 'FFmpeg',
-    description: 'Convert and transcode video files.',
-  },
-  {
-    id: 'ffprobe',
-    name: 'FFprobe',
-    description: 'Read video metadata during conversion.',
-  },
-  {
-    id: 'exiftool',
-    name: 'ExifTool',
-    description: 'Read and write photo and video metadata.',
-  },
-  {
-    id: 'adb',
-    name: 'ADB',
-    description: 'Transfer files to and from a connected Pixel.',
-  },
-] as const;
-
-/** Placeholder resolution state for the dev-only settings UI. */
-const MOCK_CLI_TOOL_STATUS: readonly CliToolStatus[] = [
-  {
-    ...CLI_TOOLS[0],
-    source: 'system',
-    resolvedPath: '/opt/homebrew/bin/ffmpeg',
-    version: '7.1',
-  },
-  {
-    ...CLI_TOOLS[1],
-    source: 'system',
-    resolvedPath: '/opt/homebrew/bin/ffprobe',
-    version: '7.1',
-  },
-  {
-    ...CLI_TOOLS[2],
-    source: 'missing',
-    resolvedPath: null,
-    version: null,
-  },
-  {
-    ...CLI_TOOLS[3],
-    source: 'app',
-    resolvedPath: '~/Library/Application Support/Photo Bridge/bin/adb',
-    version: '35.0.2',
-  },
-];
+/** Progress event streamed from the backend during an install. */
+interface InstallProgress {
+  id: string;
+  phase: 'downloading' | 'verifying' | 'extracting' | 'finalizing' | 'done';
+  message: string;
+}
 
 function sourceLabel(source: CliToolSource): string {
   switch (source) {
@@ -118,76 +73,225 @@ function SourceIcon({ source }: { source: CliToolSource }) {
   return <IconCircleCheck className={`${className} text-primary`} />;
 }
 
+/**
+ * In dev builds we always expose an install action — even for tools already
+ * resolved from System — so we can exercise the bundled-install path end to end.
+ * Production keeps the original behavior: install only what's missing.
+ */
+const DEV_OVERRIDE = import.meta.env.DEV;
+
+interface CliToolRowProps {
+  tool: CliToolStatus;
+  /** In-flight install message, or `null` when idle. */
+  progress: string | null;
+  onInstall: (id: string) => void;
+}
+
 /** One dense, single-line status row per tool. */
-function CliToolRow({ tool }: { tool: CliToolStatus }) {
+function CliToolRow({ tool, progress, onInstall }: CliToolRowProps) {
   const isMissing = tool.source === 'missing';
+  const isInstalling = progress !== null;
+  // Already-present tools get an install button only under the dev override;
+  // for an app-managed copy the action re-installs over it.
+  const showInstall = isMissing || DEV_OVERRIDE;
+  const installLabel = isInstalling
+    ? 'Installing'
+    : tool.source === 'app'
+      ? 'Reinstall'
+      : 'Install';
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 text-sm">
+    <div className="flex min-w-0 items-center gap-3 px-3 py-2 text-sm">
       <SourceIcon source={tool.source} />
 
       <span className="w-20 shrink-0 font-medium">{tool.name}</span>
 
-      <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">
+      <span
+        className="w-12 shrink-0 truncate text-xs tabular-nums text-muted-foreground select-auto"
+        title={tool.version ?? undefined}
+      >
         {tool.version ?? '—'}
       </span>
 
       <span
-        className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground"
+        className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground select-auto"
         title={tool.resolvedPath ?? tool.description}
       >
-        {tool.resolvedPath ?? 'Not found on PATH'}
+        {isInstalling ? progress : (tool.resolvedPath ?? 'Not found on PATH')}
       </span>
 
-      {isMissing ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 shrink-0 px-2 text-xs"
-          disabled
-          title="Install logic not implemented yet"
-        >
-          <IconDownload className="size-3.5" data-icon="inline-start" />
-          Install
-        </Button>
-      ) : (
+      {!isMissing ? (
         <Badge
           variant={sourceBadgeVariant(tool.source)}
           className="shrink-0 text-xs"
         >
           {sourceLabel(tool.source)}
         </Badge>
-      )}
+      ) : null}
+
+      {showInstall ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 shrink-0 px-2 text-xs"
+          disabled={isInstalling || !tool.installable}
+          onClick={() => onInstall(tool.id)}
+        >
+          {isInstalling ? (
+            <IconLoader2
+              className="size-3.5 animate-spin"
+              data-icon="inline-start"
+            />
+          ) : (
+            <IconDownload className="size-3.5" data-icon="inline-start" />
+          )}
+          {installLabel}
+        </Button>
+      ) : null}
     </div>
   );
 }
 
 export function CliToolsSettings() {
-  const tools = MOCK_CLI_TOOL_STATUS;
+  const [tools, setTools] = useState<CliToolStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  /** Map of tool id → current install progress message. */
+  const [progress, setProgress] = useState<Record<string, string>>({});
+
+  const refresh = useCallback(async () => {
+    setError(null);
+    try {
+      const result = await invoke<CliToolStatus[]>('resolve_cli_tools');
+      setTools(result);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  // Stream install progress from the backend into per-tool messages.
+  useEffect(() => {
+    const unlisten = listen<InstallProgress>(
+      'cli-tool-install-progress',
+      (event) => {
+        const { id, phase, message } = event.payload;
+        setProgress((prev) => {
+          if (phase === 'done') {
+            const { [id]: _done, ...rest } = prev;
+            return rest;
+          }
+          return { ...prev, [id]: message };
+        });
+      },
+    );
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  const handleInstall = useCallback(
+    async (id: string) => {
+      setError(null);
+      setProgress((prev) => ({ ...prev, [id]: 'Starting…' }));
+      try {
+        await invoke<string>('install_cli_tool', { id });
+        await refresh();
+      } catch (err) {
+        setError(`Install failed: ${String(err)}`);
+      } finally {
+        setProgress((prev) => {
+          const { [id]: _gone, ...rest } = prev;
+          return rest;
+        });
+      }
+    },
+    [refresh],
+  );
+
+  const handleInstallMissing = useCallback(async () => {
+    const missing = tools.filter(
+      (t) => t.source === 'missing' && t.installable,
+    );
+    for (const tool of missing) {
+      await handleInstall(tool.id);
+    }
+  }, [tools, handleInstall]);
+
+  // Dev override: install every installable tool into the bundle, overwriting
+  // app-managed copies, so the bundled-install path can be exercised in full.
+  const handleInstallAll = useCallback(async () => {
+    const installable = tools.filter((t) => t.installable);
+    for (const tool of installable) {
+      await handleInstall(tool.id);
+    }
+  }, [tools, handleInstall]);
+
   const missingTools = tools.filter((tool) => tool.source === 'missing');
   const readyCount = tools.length - missingTools.length;
+  const anyInstalling = Object.keys(progress).length > 0;
 
   return (
-    <FieldSet>
+    <FieldSet className="min-w-0">
       <div className="flex items-baseline justify-between gap-4">
         <FieldLegend>CLI tools</FieldLegend>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {readyCount} of {tools.length} ready
-        </span>
+        <div className="flex items-center gap-2">
+          {!loading ? (
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {readyCount} of {tools.length} ready
+            </span>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            onClick={() => void refresh()}
+            disabled={anyInstalling}
+            title="Re-scan"
+            aria-label="Re-scan tools"
+          >
+            <IconRefresh className="size-3.5" />
+          </Button>
+        </div>
       </div>
       <FieldDescription>
-        Command-line tools Photo Bridge shells out to. Tools already on your PATH
-        are used directly; missing ones can be installed into the app bundle.
+        Command-line tools Photo Bridge shells out to. Tools already on your
+        PATH are used directly; missing ones can be installed into the app
+        bundle.
       </FieldDescription>
 
-      <div className="divide-y rounded-md border">
-        {tools.map((tool) => (
-          <CliToolRow key={tool.id} tool={tool} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center gap-2 rounded-md border px-3 py-6 text-sm text-muted-foreground">
+          <IconLoader2 className="size-4 animate-spin" />
+          Detecting tools…
+        </div>
+      ) : (
+        <div className="divide-y rounded-md border">
+          {tools.map((tool) => (
+            <CliToolRow
+              key={tool.id}
+              tool={tool}
+              progress={progress[tool.id] ?? null}
+              onInstall={(id) => void handleInstall(id)}
+            />
+          ))}
+        </div>
+      )}
 
-      {missingTools.length > 0 ? (
+      {error ? (
+        <p className="text-xs text-destructive select-auto" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {!loading && missingTools.length > 0 ? (
         <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>
             <span className="text-destructive">
@@ -201,11 +305,44 @@ export function CliToolsSettings() {
             type="button"
             size="sm"
             className="h-7 shrink-0 px-2 text-xs"
-            disabled
-            title="Install logic not implemented yet"
+            onClick={() => void handleInstallMissing()}
+            disabled={anyInstalling}
           >
-            <IconDownload className="size-3.5" data-icon="inline-start" />
+            {anyInstalling ? (
+              <IconLoader2
+                className="size-3.5 animate-spin"
+                data-icon="inline-start"
+              />
+            ) : (
+              <IconDownload className="size-3.5" data-icon="inline-start" />
+            )}
             Install missing
+          </Button>
+        </div>
+      ) : null}
+
+      {!loading && DEV_OVERRIDE ? (
+        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>
+            Dev override · install bundled copies regardless of System
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0 px-2 text-xs"
+            onClick={() => void handleInstallAll()}
+            disabled={anyInstalling}
+          >
+            {anyInstalling ? (
+              <IconLoader2
+                className="size-3.5 animate-spin"
+                data-icon="inline-start"
+              />
+            ) : (
+              <IconDownload className="size-3.5" data-icon="inline-start" />
+            )}
+            Install all
           </Button>
         </div>
       ) : null}

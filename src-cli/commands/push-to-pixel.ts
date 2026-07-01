@@ -3,6 +3,7 @@ import path from 'path';
 import { Command } from 'commander';
 import { Adb } from '@devicefarmer/adbkit';
 import type DeviceClient from '@devicefarmer/adbkit/dist/src/adb/DeviceClient';
+import { resolveTool } from '../utils/tool-paths';
 import { createCliOutput } from '../utils/logger.js';
 import type { EventV1 } from '../../types/protocol.js';
 
@@ -118,7 +119,7 @@ export const pushToPixel = new Command()
       process.exit(1);
     }
 
-    const client = Adb.createClient();
+    const client = Adb.createClient({ bin: resolveTool('adb') });
 
     try {
       const devices = await client.listDevices();

@@ -1,4 +1,5 @@
 mod adb_track;
+mod tooling;
 
 #[tauri::command]
 fn path_is_directory(path: String) -> Result<bool, String> {
@@ -42,7 +43,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![path_is_directory, check_for_update])
+        .invoke_handler(tauri::generate_handler![
+            path_is_directory,
+            check_for_update,
+            tooling::resolve_cli_tools,
+            tooling::install_cli_tool
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

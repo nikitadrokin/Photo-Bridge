@@ -14,14 +14,14 @@ import SplitColumn from '@/components/ui/split-column';
 import { open } from '@tauri-apps/plugin-dialog';
 import { IconPhoto } from '@tabler/icons-react';
 
-/** Search params for `/convert` — `mode=copy` selects the copy pipeline. */
+/** Search params for `/convert` — `mode=convert` selects the remux pipeline; copy is the default. */
 export type ConvertSearch = {
   mode: MediaJobMode;
 };
 
 export const Route = createFileRoute('/convert')({
   validateSearch: (raw: Record<string, unknown>): ConvertSearch => ({
-    mode: raw.mode === 'copy' ? 'copy' : 'convert',
+    mode: raw.mode === 'convert' ? 'convert' : 'copy',
   }),
   staticData: { pageTitle: 'Convert Media' },
   component: ConvertPage,

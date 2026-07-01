@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { execa } from 'execa';
+import { resolveTool } from '../utils/tool-paths';
 import { copyDatesFromSource } from '../utils/dates.js';
 
 /** Transcodes legacy MPEG-style inputs into H.264/AAC MP4 for Pixel playback. */
@@ -8,7 +9,7 @@ export async function processLegacyVideo(
   outputPath: string,
 ): Promise<void> {
   try {
-    await execa('ffmpeg', [
+    await execa(resolveTool('ffmpeg'), [
       '-hide_banner',
       '-loglevel',
       'error',
