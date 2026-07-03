@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.0.17"
+version = "0.0.18"
 description = "PhotoBridge — Convert iOS media for Google Pixel compatibility"
 authors = ["you"]
 license = ""
