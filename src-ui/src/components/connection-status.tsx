@@ -19,6 +19,7 @@ interface ConnectionStatusProps {
   /** Transfer or other sidecar work — disables refresh without showing "Checking…". */
   disableRefresh: boolean;
   onRefresh: () => void;
+  className?: string;
 }
 
 export function ConnectionStatus({
@@ -26,6 +27,7 @@ export function ConnectionStatus({
   isConnectionCheckPending,
   disableRefresh,
   onRefresh,
+  className,
 }: ConnectionStatusProps) {
   return (
     <Alert
@@ -33,6 +35,7 @@ export function ConnectionStatus({
       className={cn(
         isConnected &&
           'border-green-500/25 [&>svg]:text-green-600 dark:[&>svg]:text-green-500',
+        className,
       )}
     >
       {isConnected ? (

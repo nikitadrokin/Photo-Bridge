@@ -13,6 +13,7 @@ interface PixelFolderTreeProps {
   readonly files: readonly PixelFilePayload[];
   readonly selectedPath: string | null;
   readonly onSelectFile: (file: PixelFilePayload) => void;
+  readonly className?: string;
 }
 
 interface FolderNode {
@@ -196,6 +197,7 @@ const PixelFolderTree: React.FC<PixelFolderTreeProps> = ({
   files,
   selectedPath,
   onSelectFile,
+  className,
 }) => {
   const nodes = useMemo(() => buildTree(files), [files]);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -210,7 +212,12 @@ const PixelFolderTree: React.FC<PixelFolderTreeProps> = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border text-sm">
+    <div
+      className={cn(
+        'overflow-y-auto overflow-x-hidden rounded-lg border text-sm',
+        className,
+      )}
+    >
       <NodeRows
         nodes={nodes}
         depth={0}

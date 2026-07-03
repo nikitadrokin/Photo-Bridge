@@ -15,6 +15,7 @@ interface DeviceInfoCardProps {
   readonly disabled: boolean;
   readonly onRefresh: () => void;
   readonly refreshing?: boolean;
+  readonly className?: string;
 }
 
 interface StatTileProps {
@@ -50,6 +51,7 @@ export function DeviceInfoCard({
   disabled,
   onRefresh,
   refreshing,
+  className,
 }: DeviceInfoCardProps) {
   const loading = info.status === 'loading';
   const ok = info.status === 'ok';
@@ -59,7 +61,7 @@ export function DeviceInfoCard({
     ok && info.batteryPct !== undefined ? `${info.batteryPct}%` : undefined;
 
   return (
-    <Card size="sm" className="dark:border">
+    <Card size="sm" className={cn('dark:border', className)}>
       <CardContent className="flex flex-col gap-3 not-dark:px-0!">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">Device</p>

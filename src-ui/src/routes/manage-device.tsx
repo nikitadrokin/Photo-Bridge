@@ -174,6 +174,7 @@ function PixelPage() {
 
       <div className="flex min-h-0 min-w-0 flex-col gap-6">
         <ConnectionStatus
+          className="shrink-0"
           isConnected={pixel.isConnected}
           isConnectionCheckPending={pixel.isConnectionCheckPending}
           disableRefresh={pixel.isRunning}
@@ -183,6 +184,7 @@ function PixelPage() {
         />
 
         <DeviceInfoCard
+          className="shrink-0"
           info={pixel.deviceInfo}
           disabled={!pixel.isConnected || pixel.isRunning}
           refreshing={isLoading}
@@ -193,8 +195,8 @@ function PixelPage() {
           }}
         />
 
-        <section className="flex min-h-0 flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
+        <section className="flex min-h-0 flex-1 flex-col gap-3">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
                 Camera roll
@@ -237,11 +239,11 @@ function PixelPage() {
           </div>
 
           {!isConnected ? (
-            <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
+            <p className="shrink-0 rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
               Connect a Pixel to browse the camera roll.
             </p>
           ) : isLoading && !files ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+            <div className="flex shrink-0 items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
               <IconLoader2 size={18} className="animate-spin" />
               Reading device files…
             </div>
@@ -250,9 +252,10 @@ function PixelPage() {
               files={files}
               selectedPath={selectedFile?.path ?? null}
               onSelectFile={handleSelectFile}
+              className="min-h-0 flex-1"
             />
           ) : (
-            <p className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
+            <p className="shrink-0 rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
               No files in the camera roll.
             </p>
           )}
