@@ -9,10 +9,13 @@ import {
   IconDeviceMobile,
   IconDeviceMobileCog,
   IconFolders,
+  IconLoader2,
   IconMovie,
   IconPhoto,
+  IconRefresh,
   IconSettings,
 } from '@tabler/icons-react';
+import { toast } from 'sonner';
 import {
   Sidebar,
   SidebarContent,
@@ -27,11 +30,24 @@ import {
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface AppSidebarProps {
   isPixelConnected: boolean;
   isRunning: boolean;
 }
+
+type AppUpdateResponse = {
+  status: 'prepared' | 'upToDate' | 'restarting';
+  version: string | null;
+};
+
+type UpdateButtonState =
+  | 'unchecked'
+  | 'preparing'
+  | 'ready'
+  | 'installing'
+  | 'upToDate';
 
 const mediaRoutes = [
   {
@@ -90,10 +106,19 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   isRunning,
 }) => {
   const [version, setVersion] = useState<string>('0');
+  const [updateButtonState, setUpdateButtonState] =
+    useState<UpdateButtonState>('unchecked');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
   const processRunningTooltip = 'Please wait for the current process to finish';
+  const isPreparingUpdate = updateButtonState === 'preparing';
+  const isInstallingUpdate = updateButtonState === 'installing';
+  const isUpdateButtonLoading = isPreparingUpdate || isInstallingUpdate;
+  const updateButtonLabel = getUpdateButtonLabel(
+    updateButtonState,
+    updateVersion,
+  );
 
   useEffect(() => {
     getVersion()
@@ -101,11 +126,82 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       .catch(() => setVersion('dev'));
   }, []);
 
-  useEffect(() => {
-    invoke<string | null>('check_for_update')
-      .then(setUpdateVersion)
-      .catch(() => {});
-  }, []);
+  async function handleUpdateClick() {
+    if (isUpdateButtonLoading) {
+      return;
+    }
+
+    if (updateButtonState === 'ready') {
+      await installPreparedUpdate();
+      return;
+    }
+
+    await prepareUpdate();
+  }
+
+  async function prepareUpdate() {
+    setUpdateButtonState('preparing');
+    const toastId = toast.loading(
+      'Checking for updates...',
+      dismissibleToastOptions(() => toastId),
+    );
+
+    try {
+      const response = await invoke<AppUpdateResponse>('prepare_app_update');
+
+      if (response.status === 'upToDate') {
+        setUpdateVersion(null);
+        setUpdateButtonState('upToDate');
+        toast.success('Photo Bridge is up to date.', { id: toastId });
+        return;
+      }
+
+      setUpdateVersion(response.version);
+      setUpdateButtonState('ready');
+      toast.success(
+        response.version
+          ? `Photo Bridge v${response.version} is downloaded and ready to install.`
+          : 'A Photo Bridge update is downloaded and ready to install.',
+        { id: toastId },
+      );
+    } catch (error) {
+      setUpdateButtonState('unchecked');
+      toast.error(formatUpdateError(error), { id: toastId });
+    }
+  }
+
+  async function installPreparedUpdate() {
+    setUpdateButtonState('installing');
+    const toastId = toast.loading(
+      updateVersion
+        ? `Installing v${updateVersion} and restarting...`
+        : 'Installing update and restarting...',
+      dismissibleToastOptions(() => toastId),
+    );
+
+    try {
+      const response = await invoke<AppUpdateResponse>(
+        'install_prepared_app_update',
+      );
+
+      if (response.status === 'upToDate') {
+        setUpdateVersion(null);
+        setUpdateButtonState('upToDate');
+        toast.success('Photo Bridge is already up to date.', { id: toastId });
+        return;
+      }
+
+      toast.success(
+        response.version
+          ? `Installed v${response.version}. Restarting...`
+          : 'Installed update. Restarting...',
+        { id: toastId, duration: 1500 },
+      );
+    } catch (error) {
+      setUpdateButtonState('ready');
+      toast.error(formatUpdateError(error), { id: toastId });
+    }
+  }
 
   return (
     <Sidebar
@@ -283,16 +379,23 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
       <SidebarFooter className="p-4">
         <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-          {updateVersion && (
-            <a
-              href="https://github.com/nikitadrokin/Photo-Bridge/releases/latest"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-primary hover:underline"
-            >
-              <IconCircleArrowUp size={13} />v{updateVersion} available
-            </a>
-          )}
+          <Button
+            type="button"
+            size="sm"
+            variant={updateButtonState === 'ready' ? 'default' : 'outline'}
+            className="w-full justify-start"
+            disabled={isUpdateButtonLoading}
+            onClick={handleUpdateClick}
+          >
+            {isUpdateButtonLoading ? (
+              <IconLoader2 className="size-3.5 animate-spin" />
+            ) : updateButtonState === 'ready' ? (
+              <IconRefresh className="size-3.5" />
+            ) : (
+              <IconCircleArrowUp className="size-3.5" />
+            )}
+            {updateButtonLabel}
+          </Button>
 
           <ThemeToggle />
 
@@ -328,5 +431,52 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
     </Sidebar>
   );
 };
+
+function getUpdateButtonLabel(
+  state: UpdateButtonState,
+  availableVersion: string | null,
+) {
+  switch (state) {
+    case 'preparing':
+      return 'Checking for updates...';
+    case 'ready':
+      return availableVersion
+        ? `Install v${availableVersion}`
+        : 'Install update';
+    case 'installing':
+      return availableVersion
+        ? `Installing v${availableVersion}...`
+        : 'Installing update...';
+    case 'upToDate':
+      return 'Photo Bridge is up to date';
+    case 'unchecked':
+      return 'Check for updates';
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+function formatUpdateError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  return 'Update failed.';
+}
+
+function dismissibleToastOptions(getToastId: () => string | number) {
+  return {
+    action: {
+      label: 'Dismiss',
+      onClick: () => toast.dismiss(getToastId()),
+    },
+  };
+}
 
 export default AppSidebar;
