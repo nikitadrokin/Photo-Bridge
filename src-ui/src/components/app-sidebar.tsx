@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import {
   IconBrandGithub,
   IconCalendar,
@@ -41,6 +42,13 @@ type AppUpdateResponse = {
   status: 'prepared' | 'upToDate' | 'restarting';
   version: string | null;
 };
+
+type AppUpdateDownloadProgress = {
+  downloaded: number;
+  total: number | null;
+};
+
+const APP_UPDATE_DOWNLOAD_PROGRESS_EVENT = 'app-update://download-progress';
 
 type UpdateButtonState =
   | 'unchecked'
@@ -146,6 +154,19 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       dismissibleToastOptions(() => toastId),
     );
 
+    const unlisten = await listen<AppUpdateDownloadProgress>(
+      APP_UPDATE_DOWNLOAD_PROGRESS_EVENT,
+      (event) => {
+        toast.loading(
+          formatDownloadProgress(
+            event.payload.downloaded,
+            event.payload.total,
+          ),
+          { id: toastId, ...dismissibleToastOptions(() => toastId) },
+        );
+      },
+    );
+
     try {
       const response = await invoke<AppUpdateResponse>('prepare_app_update');
 
@@ -167,6 +188,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
     } catch (error) {
       setUpdateButtonState('unchecked');
       toast.error(formatUpdateError(error), { id: toastId });
+    } finally {
+      unlisten();
     }
   }
 
@@ -184,13 +207,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         'install_prepared_app_update',
       );
 
-      if (response.status === 'upToDate') {
-        setUpdateVersion(null);
-        setUpdateButtonState('upToDate');
-        toast.success('Photo Bridge is already up to date.', { id: toastId });
-        return;
-      }
-
       toast.success(
         response.version
           ? `Installed v${response.version}. Restarting...`
@@ -198,7 +214,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         { id: toastId, duration: 1500 },
       );
     } catch (error) {
-      setUpdateButtonState('ready');
+      // The backend consumes the prepared update on any install attempt, so a
+      // failure means there is nothing left to install — force a re-check.
+      setUpdateVersion(null);
+      setUpdateButtonState('unchecked');
       toast.error(formatUpdateError(error), { id: toastId });
     }
   }
@@ -456,6 +475,20 @@ function getUpdateButtonLabel(
       return _exhaustive;
     }
   }
+}
+
+function formatDownloadProgress(downloaded: number, total: number | null) {
+  if (typeof total === 'number' && total > 0) {
+    const pct = Math.min(100, Math.round((downloaded / total) * 100));
+    return `Downloading update... ${pct}%`;
+  }
+
+  return `Downloading update... ${formatBytes(downloaded)}`;
+}
+
+function formatBytes(bytes: number) {
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(1)} MB`;
 }
 
 function formatUpdateError(error: unknown) {

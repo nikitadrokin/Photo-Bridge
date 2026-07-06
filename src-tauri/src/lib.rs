@@ -7,14 +7,23 @@ use std::{
     path::{Path, PathBuf},
     sync::Mutex,
 };
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_updater::{Update, UpdaterExt};
+
+const APP_UPDATE_DOWNLOAD_PROGRESS_EVENT: &str = "app-update://download-progress";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AppUpdateResponse {
     status: AppUpdateStatus,
     version: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppUpdateDownloadProgress {
+    downloaded: u64,
+    total: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -63,8 +72,21 @@ async fn prepare_app_update(
     };
 
     let version = update.version.clone();
+    let mut downloaded: u64 = 0;
     let bytes = update
-        .download(|_, _| {}, || {})
+        .download(
+            |chunk_length, content_length| {
+                downloaded = downloaded.saturating_add(chunk_length as u64);
+                let _ = app.emit(
+                    APP_UPDATE_DOWNLOAD_PROGRESS_EVENT,
+                    AppUpdateDownloadProgress {
+                        downloaded,
+                        total: content_length,
+                    },
+                );
+            },
+            || {},
+        )
         .await
         .map_err(|error| format!("Failed to download update: {error}"))?;
 
@@ -103,8 +125,16 @@ async fn install_prepared_app_update(
         .install(prepared.bytes)
         .map_err(|error| format!("Failed to install update: {error}"))?;
 
-    clear_installed_app_quarantine(quarantine_target.as_deref())?;
-    repair_installed_app_signature_if_needed(quarantine_target.as_deref())?;
+    // The new bundle is already on disk at this point. The steps below only
+    // harden unsigned/ad-hoc builds against Gatekeeper, so a failure here must
+    // not abort before the restart and strand the user in a half-updated state.
+    // Report problems via logs and continue to the restart regardless.
+    if let Err(error) = clear_installed_app_quarantine(quarantine_target.as_deref()) {
+        log::warn!("Failed to clear quarantine on updated app: {error}");
+    }
+    if let Err(error) = repair_installed_app_signature_if_needed(quarantine_target.as_deref()) {
+        log::warn!("Failed to repair signature on updated app: {error}");
+    }
     app.request_restart();
 
     Ok(AppUpdateResponse {
@@ -160,13 +190,23 @@ fn repair_installed_app_signature_if_needed(app_bundle: Option<&Path>) -> Result
         return Ok(());
     }
 
-    let macos_dir = app_bundle.join("Contents").join("MacOS");
-    let entries = fs::read_dir(&macos_dir)
-        .map_err(|error| format!("Failed to read `{}`: {error}", macos_dir.display()))?;
-
-    for entry in entries {
-        let path = entry.map_err(|error| error.to_string())?.path();
-        if path.is_file() {
+    // Sign nested code (frameworks, plug-ins, helper/sidecar binaries) before
+    // the outer bundle, so the enclosing signature covers valid inner ones.
+    let contents_dir = app_bundle.join("Contents");
+    for nested_dir in ["Frameworks", "PlugIns", "MacOS"] {
+        let dir = contents_dir.join(nested_dir);
+        if !dir.exists() {
+            continue;
+        }
+        let entries = fs::read_dir(&dir)
+            .map_err(|error| format!("Failed to read `{}`: {error}", dir.display()))?;
+        for entry in entries {
+            let path = entry.map_err(|error| error.to_string())?.path();
+            let metadata = fs::symlink_metadata(&path)
+                .map_err(|error| format!("Failed to stat `{}`: {error}", path.display()))?;
+            if metadata.file_type().is_symlink() {
+                continue;
+            }
             ad_hoc_codesign(&path)?;
         }
     }
