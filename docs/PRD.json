@@ -1,0 +1,493 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "document": {
+    "title": "Photo Bridge Product Requirements",
+    "version": "0.1.0",
+    "status": "draft",
+    "created": "2026-07-09",
+    "updated": "2026-07-09",
+    "source": "UI/product audit of src-ui routes, CLI transfer/convert flows, and Pixel 1 + Google Photos use case"
+  },
+  "product": {
+    "name": "Photo Bridge",
+    "summary": "Local macOS app that prepares iOS media for Google Pixel 1 compatibility and ships it over ADB so the official Google Photos app on that device can back up at original quality under Google's grandfathered Pixel unlimited policy.",
+    "positioning": "Local media prep + ADB courier for a real Pixel. Not a cloud uploader, not a Google Photos client, not a storage-limit bypass.",
+    "primaryPersona": "Someone with a large iOS photo library who owns (or can borrow) an original Pixel-class device with unlimited original-quality Google Photos backup, and needs a reliable batch pipeline on tiny device storage.",
+    "constraints": {
+      "withinTos": [
+        "Use real Pixel hardware",
+        "Transfer media via USB/ADB to device storage (e.g. /sdcard/DCIM/Camera)",
+        "Rely on the official Google Photos app on the device for backup",
+        "Keep marketing language as prepare + load a Pixel so the official app can back up"
+      ],
+      "outOfScopeOrDisallowed": [
+        "Spoofing Pixel identity to Google servers",
+        "Unofficial Google Photos APIs or modified clients",
+        "Automating Google account login or Photos web upload from the Mac",
+        "Claiming unlimited Google Photos without the physical grandfathered Pixel path"
+      ]
+    },
+    "coreChainToday": [
+      { "step": "prepare", "route": "/convert", "capability": "Remux/copy for Pixel-friendly containers" },
+      { "step": "shape", "route": "/split", "capability": "Size/count/month batches for tiny Pixel 1 storage" },
+      { "step": "timeline", "route": "/fix-dates", "capability": "Repair capture dates for Google Photos sorting" },
+      { "step": "inspectLocal", "route": "/browse", "capability": "Day-grouped local gallery" },
+      { "step": "ship", "route": "/transfer-media", "capability": "ADB push/pull into DCIM/Camera" },
+      { "step": "inspectDevice", "route": "/manage-device", "capability": "Device camera roll browse + storage/battery" }
+    ]
+  },
+  "ralphLoop": {
+    "name": "Ralph loop",
+    "id": "ralph-loop",
+    "description": "The recommended end-to-end product loop for Photo Bridge: recycle limited Pixel 1 disk by repeatedly preparing a batch that fits free space, pushing it to the device, waiting for official Google Photos backup, then purging the camera roll and repeating until the library is done.",
+    "why": "Pixel 1 free space is the bottleneck, not conversion. The app is already a strong toolkit; what is missing is orchestration of fill → backup → purge so users do not invent the pipeline each time.",
+    "steps": [
+      {
+        "id": "connect",
+        "title": "Connect Pixel",
+        "detail": "USB debugging authorized, device unlocked, connection status green."
+      },
+      {
+        "id": "measure-space",
+        "title": "Measure free space",
+        "detail": "Read device free space and reserve a safety margin so a push cannot fill the disk to zero."
+      },
+      {
+        "id": "choose-source",
+        "title": "Choose source library/folder",
+        "detail": "User picks an iOS export or intermediate folder."
+      },
+      {
+        "id": "prepare",
+        "title": "Convert / remux as needed",
+        "detail": "Make media Pixel-compatible; prefer smart defaults (remux when required)."
+      },
+      {
+        "id": "open-output",
+        "title": "Open output folder after success",
+        "detail": "Reveal the sibling _Remuxed / _Copied (or next-available) folder so the user can verify and feed the next step without hunting paths."
+      },
+      {
+        "id": "fit-batch",
+        "title": "Shape batch to free space",
+        "detail": "Optional split by size/count so Part N fits measured free space (e.g. ~70% of available)."
+      },
+      {
+        "id": "space-check-before-push",
+        "title": "Space check before push",
+        "detail": "Sum bytes to push; block or warn hard if batch will not fit free space; refresh storage immediately before transfer."
+      },
+      {
+        "id": "push",
+        "title": "Push to DCIM/Camera",
+        "detail": "ADB push folder or files; surface progress and disconnect/partial-file recovery."
+      },
+      {
+        "id": "photos-handoff",
+        "title": "Google Photos handoff (manual, on-device)",
+        "detail": "Checklist only: keep phone awake/charging, Wi-Fi, Original quality backup, wait until upload queue is empty. Do not automate Google login or cloud upload from the Mac."
+      },
+      {
+        "id": "purge",
+        "title": "Purge camera roll (user-confirmed)",
+        "detail": "After backup is done, free device storage with explicit confirmation; then loop to measure-space for the next part."
+      }
+    ],
+    "successMetric": "User can move a large iOS library through multiple Pixel-sized batches without overfilling the device, losing track of output folders, or guessing when it is safe to clear the camera roll.",
+    "uiImplication": "Prefer a guided Backup run (Easy mode) that stitches existing routes/CLI, rather than only a flat tool list. Power UI remains for granular control."
+  },
+  "priorities": {
+    "p0": {
+      "label": "P0 — ship first",
+      "items": [
+        {
+          "id": "space-check-before-push",
+          "title": "Space check before push",
+          "priority": "P0",
+          "status": "planned",
+          "ralphLoopStep": "space-check-before-push",
+          "why": "Pixel 1 storage is tiny; a push that does not fit causes failed transfers, partial files, and wasted battery. Highest leverage safety gate in the Ralph loop.",
+          "acceptanceCriteria": [
+            "Before push folder/files, app knows (or refreshes) device free bytes when connected",
+            "App estimates total bytes of the selected transfer set",
+            "If estimated size + safety margin exceeds free space: block push with a clear message, or require explicit override",
+            "If free space cannot be read: warn and allow user to proceed only with acknowledgment",
+            "Available storage card on Transfer stays in sync after refresh and after a completed push"
+          ],
+          "likelySurfaces": [
+            "src-ui/src/routes/transfer-media.tsx",
+            "src-ui/src/hooks/use-pixel.tsx",
+            "src-ui/src/components/available-storage-card.tsx",
+            "src-cli push path / shell storage events"
+          ]
+        },
+        {
+          "id": "open-output-after-convert",
+          "title": "Open new folder after conversion success",
+          "priority": "P0",
+          "status": "planned",
+          "ralphLoopStep": "open-output",
+          "why": "Convert/copy write to sibling folders (_Remuxed, _Copied, numbered variants). Users lose the handoff into push/split if the output path is not revealed. Second highest friction after overfull pushes.",
+          "acceptanceCriteria": [
+            "On successful convert or copy session, UI surfaces the output directory path",
+            "Primary action: Open / Reveal in Finder (macOS) for that folder",
+            "Optional secondary: Push this folder (or navigate to Transfer with that path staged)",
+            "Works for both file-list and directory batch inputs that produce a sibling output root",
+            "Does not open Finder on failure or empty/no-op sessions"
+          ],
+          "likelySurfaces": [
+            "src-ui/src/components/convert-files.tsx",
+            "src-ui/src/components/activity-stats/conversion-panel.tsx",
+            "src-ui/src/hooks/use-pixel.tsx",
+            "CLI session/summary events that include output directory"
+          ]
+        },
+        {
+          "id": "safe-camera-roll-purge-ui",
+          "title": "Expose safe camera-roll purge in UI",
+          "priority": "P0",
+          "status": "planned",
+          "ralphLoopStep": "purge",
+          "why": "CLI purge + purgePixelFiles exist; Manage Device description promises purge but UI does not expose it. Without purge, the Ralph loop cannot recycle Pixel disk.",
+          "acceptanceCriteria": [
+            "Manage Device (and/or Transfer) offers Purge camera roll when connected",
+            "Confirmation requires intentional action (e.g. type-to-confirm or strong dialog with file count)",
+            "Shows path (PIXEL_CAMERA_DIR) and approximate file count before delete",
+            "Never auto-purges; never runs during an active transfer",
+            "Success refreshes file list and storage"
+          ],
+          "likelySurfaces": [
+            "src-ui/src/routes/manage-device.tsx",
+            "src-ui/src/hooks/use-pixel.tsx (purgePixelFiles)",
+            "src-cli/commands/pixel.ts purge"
+          ]
+        },
+        {
+          "id": "marketing-vs-heic-truth",
+          "title": "Align marketing copy with HEIC behavior",
+          "priority": "P0",
+          "status": "planned",
+          "why": "src-web claims HEIC→JPG; convert image path is copy + date fix. Mismatch confuses users and prioritization.",
+          "acceptanceCriteria": [
+            "Landing and README either document current still-image behavior accurately OR product ships optional HEIC→JPEG",
+            "No claim of JPG conversion unless implemented"
+          ],
+          "likelySurfaces": [
+            "src-web/src/App.tsx",
+            "README.md",
+            "optional: image processor + convert UI toggle"
+          ]
+        }
+      ]
+    },
+    "p1": {
+      "label": "P1 — complete the Ralph loop",
+      "items": [
+        {
+          "id": "guided-backup-run",
+          "title": "End-to-end Backup run wizard (Easy mode)",
+          "priority": "P1",
+          "ralphLoopStep": null,
+          "why": "Stitches connect → space → convert → open output → fit batch → space-check → push → Photos checklist → purge into one linear flow.",
+          "acceptanceCriteria": [
+            "User can complete one full Ralph loop cycle without using the sidebar as a checklist",
+            "Power routes remain available for advanced use"
+          ]
+        },
+        {
+          "id": "activity-feed-mounted",
+          "title": "Mount activity feed on convert/transfer (or remove dead code)",
+          "priority": "P1",
+          "why": "ActivityFeed and LogViewer exist but are not used by routes; power-user transparency is half-built."
+        },
+        {
+          "id": "page-descriptions-visible",
+          "title": "Show page descriptions under titles",
+          "priority": "P1",
+          "why": "Routes set pageDescription in staticData; chrome only shows title. Short Pixel-1 context is written but invisible."
+        },
+        {
+          "id": "post-convert-push-handoff",
+          "title": "Post-convert push handoff",
+          "priority": "P1",
+          "dependsOn": ["open-output-after-convert"],
+          "why": "Beyond Finder reveal: one-tap Push this result or Transfer with staged path."
+        }
+      ]
+    },
+    "p2": {
+      "label": "P2 — polish toolkit",
+      "items": [
+        {
+          "id": "per-page-selection",
+          "title": "Per-page selection (or clear store on navigate)",
+          "priority": "P2",
+          "why": "Shared useMediaStore bleeds folder selection across Convert / Split / Fix Dates."
+        },
+        {
+          "id": "convert-select-files",
+          "title": "Enable select individual files on Convert",
+          "priority": "P2",
+          "why": "File picker is implemented but disabled; empty state is folder-only."
+        },
+        {
+          "id": "fix-dates-stats-inspect",
+          "title": "Fix Dates stats + inspect UI",
+          "priority": "P2",
+          "why": "BETA page has empty second column and little feedback; dates matter for Google Photos timeline."
+        },
+        {
+          "id": "split-dry-run",
+          "title": "Split dry-run / preview plan",
+          "priority": "P2",
+          "why": "In-place moves are scary; show N parts and sizes before moving."
+        },
+        {
+          "id": "storage-aware-split",
+          "title": "Storage-aware batch sizing from device free space",
+          "priority": "P2",
+          "dependsOn": ["space-check-before-push"],
+          "why": "Recommend split size from measured free space to feed the Ralph loop."
+        }
+      ]
+    },
+    "p3": {
+      "label": "P3 — later",
+      "items": [
+        { "id": "live-photos", "title": "Live Photos pair handling", "priority": "P3" },
+        { "id": "heic-to-jpeg-toggle", "title": "Optional HEIC→JPEG toggle", "priority": "P3" },
+        { "id": "job-history-resume", "title": "Job history and resume/retry failed", "priority": "P3" },
+        { "id": "compatibility-preflight", "title": "Compatibility preflight report before push", "priority": "P3" },
+        { "id": "smart-convert-defaults", "title": "Auto remux vs copy from codec/container", "priority": "P3" },
+        { "id": "adb-onboarding", "title": "First-run ADB / USB debugging onboarding", "priority": "P3" },
+        { "id": "notifications-shortcuts", "title": "macOS complete notification + keyboard shortcuts", "priority": "P3" },
+        { "id": "recent-folders", "title": "Recent folders history", "priority": "P3" }
+      ]
+    }
+  },
+  "uiRefinementsByPage": [
+    {
+      "page": "shell",
+      "routes": ["__root", "sidebar"],
+      "findings": [
+        {
+          "issue": "No guided job flow",
+          "evidence": "Sidebar is a flat tool list",
+          "impact": "Users invent the Pixel 1 backup pipeline themselves"
+        },
+        {
+          "issue": "Descriptions unused in chrome",
+          "evidence": "staticData.pageDescription set; RootPageHeader only shows title",
+          "impact": "Educational context is invisible"
+        },
+        {
+          "issue": "Global busy locks all nav",
+          "evidence": "Sidebar disables every route while any operation runs",
+          "impact": "Cannot prep next batch while a push runs"
+        },
+        {
+          "issue": "Shared selection store",
+          "evidence": "useMediaStore shared across convert/split/fix-dates",
+          "impact": "Cross-page selection bleed"
+        },
+        {
+          "issue": "Dead components",
+          "evidence": "ActivityFeed / LogViewer never mounted on routes",
+          "impact": "Half-built power-user transparency"
+        },
+        {
+          "issue": "Home stub",
+          "evidence": "/ redirects in Tauri else IndexPage placeholder",
+          "impact": "Missed setup + guided workflow entry"
+        }
+      ]
+    },
+    {
+      "page": "Convert Media",
+      "route": "/convert",
+      "findings": [
+        "Copy vs remux wording understates risk of renaming to .mp4 without remux",
+        "Select Files intentionally disabled",
+        "Right column empty after selection",
+        "No reveal output folder or push-results handoff (addressed by P0 open-output-after-convert)"
+      ]
+    },
+    {
+      "page": "Split Folder",
+      "route": "/split",
+      "findings": [
+        "Strongest Pixel-1-reality page (size/count batches)",
+        "Missing free-space-aware limit suggestions",
+        "Missing dry-run before in-place moves",
+        "Missing post-split open/push Part N"
+      ]
+    },
+    {
+      "page": "Fix Dates",
+      "route": "/fix-dates",
+      "findings": [
+        "BETA badge; little runtime feedback",
+        "Empty second column; no stats panel",
+        "No inspect-before-apply in UI",
+        "Should surface why dates matter for Google Photos timeline"
+      ]
+    },
+    {
+      "page": "Browse Media",
+      "route": "/browse",
+      "findings": [
+        "Polished dual-pane day tree + preview",
+        "No multi-select convert/push",
+        "No problem filters (missing date, HEIC, Live Photo, huge video)",
+        "Local-only; not linked to device roll"
+      ]
+    },
+    {
+      "page": "Transfer Media",
+      "route": "/transfer-media",
+      "findings": [
+        "Push/pull/storage minimum is right",
+        "Missing space preflight (P0 space-check-before-push)",
+        "Missing skip existing / resume",
+        "Missing post-push Photos checklist",
+        "Connection card thin for first-time ADB failures"
+      ]
+    },
+    {
+      "page": "Manage Device",
+      "route": "/manage-device",
+      "findings": [
+        "Description promises purge; UI does not expose it (P0 safe-camera-roll-purge-ui)",
+        "No multi-select subset delete",
+        "DEV-only local cache purge is not the user-facing need"
+      ]
+    },
+    {
+      "page": "Settings",
+      "route": "/settings",
+      "findings": [
+        "Terminal + CLI tools useful",
+        "No defaults for push destination, convert mode, split size, fix-dates write mode, recent folders, completion notifications"
+      ]
+    }
+  ],
+  "quickWinsTable": [
+    {
+      "priority": "P0",
+      "id": "space-check-before-push",
+      "item": "Space check before push",
+      "ralphLoop": true,
+      "userPriority": true
+    },
+    {
+      "priority": "P0",
+      "id": "open-output-after-convert",
+      "item": "Open / reveal new folder after conversion success",
+      "ralphLoop": true,
+      "userPriority": true
+    },
+    {
+      "priority": "P0",
+      "id": "safe-camera-roll-purge-ui",
+      "item": "Expose safe camera-roll purge in UI",
+      "ralphLoop": true,
+      "userPriority": false
+    },
+    {
+      "priority": "P0",
+      "id": "marketing-vs-heic-truth",
+      "item": "Fix marketing vs HEIC behavior (code or copy)",
+      "ralphLoop": false,
+      "userPriority": false
+    },
+    {
+      "priority": "P1",
+      "id": "guided-backup-run",
+      "item": "End-to-end wizard or sticky Next step after convert → push",
+      "ralphLoop": true,
+      "userPriority": false
+    },
+    {
+      "priority": "P1",
+      "id": "activity-feed-mounted",
+      "item": "Mount activity feed on convert/transfer or delete dead code",
+      "ralphLoop": false,
+      "userPriority": false
+    },
+    {
+      "priority": "P1",
+      "id": "page-descriptions-visible",
+      "item": "Show page descriptions under titles; short why for Pixel 1",
+      "ralphLoop": false,
+      "userPriority": false
+    },
+    {
+      "priority": "P1",
+      "id": "post-convert-push-handoff",
+      "item": "Reveal in Finder / open _Remuxed|_Copied after jobs (extends open-output)",
+      "ralphLoop": true,
+      "userPriority": false
+    },
+    {
+      "priority": "P2",
+      "id": "per-page-selection",
+      "item": "Per-page selection or clear store on navigate",
+      "ralphLoop": false,
+      "userPriority": false
+    },
+    {
+      "priority": "P2",
+      "id": "convert-select-files",
+      "item": "Select individual files on Convert",
+      "ralphLoop": false,
+      "userPriority": false
+    },
+    {
+      "priority": "P2",
+      "id": "fix-dates-stats-inspect",
+      "item": "Fix Dates stats + inspect UI",
+      "ralphLoop": false,
+      "userPriority": false
+    },
+    {
+      "priority": "P2",
+      "id": "split-dry-run",
+      "item": "Dry-run for Split",
+      "ralphLoop": false,
+      "userPriority": false
+    }
+  ],
+  "productDirectionOptions": [
+    {
+      "id": "pixel1-backup-station",
+      "title": "Pixel 1 Backup Station identity",
+      "detail": "Optimize every screen for the Ralph loop (fill → backup → purge); de-emphasize generic media tools."
+    },
+    {
+      "id": "two-modes",
+      "title": "Easy wizard vs power UI",
+      "detail": "Guided Backup run for the loop; keep current routes for granular control (see TASKS.md personas)."
+    },
+    {
+      "id": "library-hub",
+      "title": "Browse as hub",
+      "detail": "Flag issues → fix → convert → queue for push from Browse."
+    },
+    {
+      "id": "cli-honest",
+      "title": "Stay CLI-honest",
+      "detail": "UI remains orchestrator over pb; only hold workflow state CLI cannot (history, wizard step, checklists)."
+    }
+  ],
+  "recommendedBuildOrder": [
+    "space-check-before-push",
+    "open-output-after-convert",
+    "safe-camera-roll-purge-ui",
+    "marketing-vs-heic-truth",
+    "post-convert-push-handoff",
+    "guided-backup-run",
+    "storage-aware-split",
+    "remaining-p1-p2-polish"
+  ],
+  "bottomLine": "Photo Bridge is already a strong toolkit for iOS → Pixel 1 → official Google Photos backup. The Ralph loop is the product: storage-aware batches, push preflight, open output after convert, post-backup purge, and eventually a guided path. Ship space check before push and open output after conversion success first."
+}
