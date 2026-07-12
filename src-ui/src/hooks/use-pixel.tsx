@@ -18,13 +18,22 @@ import {
   PIXEL_CAMERA_DIR,
   VIDEO_EXTENSIONS,
 } from '@/lib/constants';
+import { measureLocalBytes } from '@/lib/local-bytes';
 import {
   type MediaDateInspectResult,
   parseMediaDateInspectStdout,
 } from '@/lib/media-date-inspect';
 import { shJoin, shLines } from '@/lib/shell-formatters';
 import { buildSplitArgs, type SplitMode } from '@/lib/split-args';
-import type { AvailableStorageState, DeviceInfoState } from '@/lib/types';
+import {
+  parseHumanSizeToBytes,
+  pushFitsInFreeSpace,
+} from '@/lib/storage-size';
+import type {
+  AvailableStorageState,
+  DeviceInfoState,
+  PushSpaceCheckResult,
+} from '@/lib/types';
 
 export interface TransferPaths {
   source: string;
@@ -225,9 +234,11 @@ function usePixelProviderValue() {
     }
 
     if (storage !== null) {
+      const availBytes = parseHumanSizeToBytes(storage.availHuman) ?? undefined;
       setAvailableStorage({
         status: 'ok',
         availLabel: storage.availHuman,
+        availBytes,
       });
       return;
     }
@@ -314,6 +325,129 @@ function usePixelProviderValue() {
     };
   }, []);
 
+  /**
+   * Refresh free space, measure local payload size, and decide whether a push
+   * is safe for the Pixel's remaining storage.
+   */
+  const checkPushSpace = useCallback(
+    async (paths: readonly string[]): Promise<PushSpaceCheckResult> => {
+      if (paths.length === 0) {
+        return {
+          status: 'unknown',
+          needBytes: 0,
+          reason: 'No paths selected.',
+        };
+      }
+
+      if (!isConnected) {
+        return {
+          status: 'unknown',
+          needBytes: null,
+          reason: 'No device connected.',
+        };
+      }
+
+      setAvailableStorage((prev) => ({ ...prev, status: 'loading' }));
+
+      const [needBytes, storageProbe] = await Promise.all([
+        measureLocalBytes(paths),
+        captureStdout([
+          'shell',
+          '--jsonl',
+          '--',
+          'df',
+          '-h',
+          PIXEL_CAMERA_DIR,
+        ]),
+      ]);
+
+      let freeLabel: string | undefined;
+      let freeBytes: number | undefined;
+      let probeError: string | undefined;
+      for (const line of storageProbe.stdout.split('\n')) {
+        const trimmed = line.replace(/\r$/, '').trim();
+        if (trimmed.length === 0) continue;
+        const parsed = parseLineFromCLI(trimmed);
+        if (parsed.tag !== 'ui') continue;
+        if (parsed.event.kind === 'shell_storage') {
+          freeLabel = parsed.event.availHuman;
+          freeBytes = parseHumanSizeToBytes(parsed.event.availHuman) ?? undefined;
+        }
+        if (parsed.event.kind === 'error') {
+          probeError = parsed.event.detail ?? parsed.event.code;
+        }
+      }
+
+      if (freeLabel !== undefined) {
+        setAvailableStorage({
+          status: 'ok',
+          availLabel: freeLabel,
+          availBytes: freeBytes,
+        });
+      } else {
+        setAvailableStorage({
+          status: 'error',
+          errorMessage: probeError ?? 'Unknown error',
+        });
+      }
+
+      if (needBytes === null) {
+        return {
+          status: 'unknown',
+          needBytes: null,
+          freeLabel,
+          reason: 'Could not measure the size of the selected files.',
+        };
+      }
+
+      if (freeBytes === undefined || freeLabel === undefined) {
+        return {
+          status: 'unknown',
+          needBytes,
+          freeLabel,
+          reason: 'Could not read free space on the Pixel.',
+        };
+      }
+
+      if (!pushFitsInFreeSpace(needBytes, freeBytes)) {
+        return {
+          status: 'insufficient',
+          needBytes,
+          freeBytes,
+          freeLabel,
+        };
+      }
+
+      return {
+        status: 'ok',
+        needBytes,
+        freeBytes,
+        freeLabel,
+      };
+    },
+    [isConnected, captureStdout],
+  );
+
+  /** Push already-chosen local paths to the Pixel camera folder. */
+  const pushPaths = useCallback(
+    async (paths: readonly string[]) => {
+      if (!isConnected || paths.length === 0) return;
+      setTransferInterrupted(false);
+      setActiveOperation('push');
+      setTransferPaths({
+        source: paths[0],
+        destination: PIXEL_CAMERA_DIR,
+      });
+      await execute(['push-to-pixel', '--jsonl', ...paths], {
+        onFinish: () => {
+          setActiveOperation(null);
+          void refreshAvailableStorage();
+        },
+      });
+    },
+    [isConnected, execute, refreshAvailableStorage],
+  );
+
   const pushFiles = useCallback(async () => {
     if (!isConnected) return;
     const selected = await open({
@@ -329,17 +463,9 @@ function usePixelProviderValue() {
     });
     if (selected) {
       const paths = Array.isArray(selected) ? selected : [selected];
-      setTransferInterrupted(false);
-      setActiveOperation('push');
-      setTransferPaths({
-        source: paths[0],
-        destination: PIXEL_CAMERA_DIR,
-      });
-      await execute(['push-to-pixel', '--jsonl', ...paths], {
-        onFinish: () => setActiveOperation(null),
-      });
+      await pushPaths(paths);
     }
-  }, [isConnected, execute]);
+  }, [isConnected, pushPaths]);
 
   const pushFolder = useCallback(async () => {
     if (!isConnected) return;
@@ -349,17 +475,9 @@ function usePixelProviderValue() {
       title: 'Select Folder to Push to Pixel',
     });
     if (selected && typeof selected === 'string') {
-      setTransferInterrupted(false);
-      setActiveOperation('push');
-      setTransferPaths({
-        source: selected,
-        destination: PIXEL_CAMERA_DIR,
-      });
-      await execute(['push-to-pixel', '--jsonl', selected], {
-        onFinish: () => setActiveOperation(null),
-      });
+      await pushPaths([selected]);
     }
-  }, [isConnected, execute]);
+  }, [isConnected, pushPaths]);
 
   const pull = useCallback(async () => {
     if (!isConnected) return;
@@ -753,6 +871,8 @@ function usePixelProviderValue() {
     activityEvents,
     clearLogs: clearAll,
     checkConnection,
+    checkPushSpace,
+    pushPaths,
     pushFiles,
     pushFolder,
     pull,

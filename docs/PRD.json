@@ -104,7 +104,7 @@
           "id": "space-check-before-push",
           "title": "Space check before push",
           "priority": "P0",
-          "status": "planned",
+          "status": "done",
           "ralphLoopStep": "space-check-before-push",
           "why": "Pixel 1 storage is tiny; a push that does not fit causes failed transfers, partial files, and wasted battery. Highest leverage safety gate in the Ralph loop.",
           "acceptanceCriteria": [
@@ -125,7 +125,7 @@
           "id": "open-output-after-convert",
           "title": "Open new folder after conversion success",
           "priority": "P0",
-          "status": "planned",
+          "status": "done",
           "ralphLoopStep": "open-output",
           "why": "Convert/copy write to sibling folders (_Remuxed, _Copied, numbered variants). Users lose the handoff into push/split if the output path is not revealed. Second highest friction after overfull pushes.",
           "acceptanceCriteria": [

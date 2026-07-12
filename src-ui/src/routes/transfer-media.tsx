@@ -1,17 +1,37 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   IconDownload,
   IconFile,
   IconFolder,
   IconAlertTriangle,
   IconTerminal2,
+  IconLoader2,
 } from '@tabler/icons-react';
+import { open } from '@tauri-apps/plugin-dialog';
+import { toast } from 'sonner';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
-import { PIXEL_CAMERA_DIR } from '@/lib/constants';
+import {
+  IMAGE_EXTENSIONS,
+  PIXEL_CAMERA_DIR,
+  VIDEO_EXTENSIONS,
+} from '@/lib/constants';
+import { formatBytes } from '@/lib/storage-size';
+import type { PushSpaceCheckResult } from '@/lib/types';
 import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import SplitColumn from '@/components/ui/split-column';
 
@@ -20,14 +40,145 @@ export const Route = createFileRoute('/transfer-media')({
   component: TransferPage,
 });
 
+type PendingPush = {
+  paths: string[];
+  check: PushSpaceCheckResult;
+};
+
 function TransferPage() {
   const pixel = usePixel();
+  const [isCheckingSpace, setIsCheckingSpace] = useState(false);
+  const [pendingPush, setPendingPush] = useState<PendingPush | null>(null);
 
-  const isDisabled = pixel.isRunning || !pixel.isConnected;
+  const isDisabled =
+    pixel.isRunning || !pixel.isConnected || isCheckingSpace;
+
+  useEffect(() => {
+    if (pixel.isConnected && !pixel.isRunning) {
+      void pixel.refreshAvailableStorage();
+    }
+    // Only re-probe when connection flips on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: connect edge
+  }, [pixel.isConnected]);
+
+  const beginPush = useCallback(
+    async (paths: string[]) => {
+      if (paths.length === 0 || !pixel.isConnected) return;
+
+      setIsCheckingSpace(true);
+      const toastId = toast.loading('Checking free space on Pixel…');
+      try {
+        const check = await pixel.checkPushSpace(paths);
+        toast.dismiss(toastId);
+
+        if (check.status === 'ok') {
+          toast.message(
+            `Pushing ${formatBytes(check.needBytes)} · ${check.freeLabel} free`,
+          );
+          await pixel.pushPaths(paths);
+          return;
+        }
+
+        // Insufficient or unknown: require an explicit decision.
+        setPendingPush({ paths, check });
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Space check failed.',
+          { id: toastId },
+        );
+      } finally {
+        setIsCheckingSpace(false);
+      }
+    },
+    [pixel],
+  );
+
+  const handlePushFolder = useCallback(async () => {
+    if (!pixel.isConnected) return;
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Folder to Push to Pixel',
+    });
+    if (selected && typeof selected === 'string') {
+      await beginPush([selected]);
+    }
+  }, [pixel.isConnected, beginPush]);
+
+  const handlePushFiles = useCallback(async () => {
+    if (!pixel.isConnected) return;
+    const selected = await open({
+      directory: false,
+      multiple: true,
+      filters: [
+        {
+          name: 'Media',
+          extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS],
+        },
+      ],
+      title: 'Select Files to Push to Pixel',
+    });
+    if (selected) {
+      const paths = Array.isArray(selected) ? selected : [selected];
+      await beginPush(paths);
+    }
+  }, [pixel.isConnected, beginPush]);
+
+  const confirmPendingPush = useCallback(async () => {
+    if (!pendingPush) return;
+    const { paths } = pendingPush;
+    setPendingPush(null);
+    await pixel.pushPaths(paths);
+  }, [pendingPush, pixel]);
+
+  const pendingTitle =
+    pendingPush?.check.status === 'insufficient'
+      ? 'Not enough free space'
+      : 'Could not verify free space';
+
+  const pendingDescription = (() => {
+    if (!pendingPush) return '';
+    const { check } = pendingPush;
+    if (check.status === 'insufficient') {
+      return `This transfer is about ${formatBytes(check.needBytes)}, but the Pixel only has ${check.freeLabel} free (including a safety margin). Pushing may fail or fill the device. Split the folder smaller, free space on the device, or continue anyway.`;
+    }
+    if (check.status === 'unknown') {
+      const sizePart =
+        check.needBytes != null
+          ? ` Payload is about ${formatBytes(check.needBytes)}.`
+          : '';
+      return `${check.reason}${sizePart} You can still push, but the app could not confirm the transfer will fit.`;
+    }
+    return '';
+  })();
 
   return (
     <SplitColumn>
-      {/* Connection Status */}
+      <AlertDialog
+        open={pendingPush !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingPush(null);
+        }}
+      >
+        <AlertDialogContent size="default">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{pendingDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                void confirmPendingPush();
+              }}
+            >
+              Push anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex flex-col gap-6">
         <ConnectionStatus
           isConnected={pixel.isConnected}
@@ -62,9 +213,15 @@ function TransferPage() {
               size="sm"
               className="h-auto min-h-7 w-full items-start justify-start gap-2.5 px-3 py-2 whitespace-normal"
               disabled={isDisabled}
-              onClick={pixel.pushFolder}
+              onClick={() => {
+                void handlePushFolder();
+              }}
             >
-              <IconFolder className="size-3.5 shrink-0 text-primary" />
+              {isCheckingSpace ? (
+                <IconLoader2 className="size-3.5 shrink-0 animate-spin text-primary" />
+              ) : (
+                <IconFolder className="size-3.5 shrink-0 text-primary" />
+              )}
               <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                 <span className="font-medium leading-tight">Push Folder</span>
                 <span className="text-[11px] font-normal leading-snug text-muted-foreground">
@@ -78,7 +235,9 @@ function TransferPage() {
               size="sm"
               className="h-auto min-h-7 w-full items-start justify-start gap-2.5 px-3 py-2 whitespace-normal"
               disabled={isDisabled}
-              onClick={pixel.pushFiles}
+              onClick={() => {
+                void handlePushFiles();
+              }}
             >
               <IconFile className="size-3.5 shrink-0 text-primary" />
               <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
@@ -115,7 +274,6 @@ function TransferPage() {
               variant="ghost"
               size="xs"
               className="h-auto min-h-6 w-full items-start justify-start gap-2 px-2 py-1.5 whitespace-normal"
-              // this can be used even when transferring to the device
               disabled={!pixel.isConnected}
               onClick={pixel.openCameraShellInTerminal}
             >
@@ -138,7 +296,7 @@ function TransferPage() {
       <div className="flex flex-col min-h-0 gap-4">
         <AvailableStorageCard
           storage={pixel.availableStorage}
-          disabled={!pixel.isConnected || pixel.isRunning}
+          disabled={!pixel.isConnected || pixel.isRunning || isCheckingSpace}
           onRefresh={() => {
             void pixel.refreshAvailableStorage();
           }}
