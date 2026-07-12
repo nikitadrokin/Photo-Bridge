@@ -226,7 +226,16 @@ async function ensureUpdaterSigningKey(): Promise<void> {
     process.env.TAURI_SIGNING_PRIVATE_KEY = (
       await Bun.file(defaultUpdaterSigningKeyPath).text()
     ).trim();
-    process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ??= '';
+    // The key is password-encrypted (empty-password keys are broken in the
+    // current tauri CLI). Read the password from a sibling `.pass` file.
+    if (process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD === undefined) {
+      const passPath = `${defaultUpdaterSigningKeyPath}.pass`;
+      process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD = (await Bun.file(
+        passPath,
+      ).exists())
+        ? await Bun.file(passPath).text()
+        : '';
+    }
     return;
   }
 

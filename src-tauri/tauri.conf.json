@@ -32,14 +32,16 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -48,11 +50,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/pb"]
+    "externalBin": [
+      "binaries/pb"
+    ]
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA4RkNEMTMxRUU0QTY2NTUKUldSVlprcnVNZEg4Q0NHeVV3R09wbEtNb1I5MlIyWmhqOE1jUzNIN2c3UWJuSGhBYUQzTm1XeHoK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhDRTNBQzg3RjhEMkI5NUUKUldSZXVkTDRoNnpqakUrTmFnOGdEMjlXZXZqSFRhbWpiV1V5SUpRNDJlZDdDR3lLRzFSazBiS1gK",
       "endpoints": [
         "https://github.com/nikitadrokin/photo-bridge/releases/latest/download/latest.json"
       ]
