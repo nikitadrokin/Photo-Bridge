@@ -52,7 +52,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENDRTNGRDg3REYwQkQ3MzAKUldRdzF3dmZoLzNqekpGaUcyc2hac3VwaitramlxbWl5THlaSlZ4T3BIRUVlVnhRcyt5cHE3Q0kK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA4RkNEMTMxRUU0QTY2NTUKUldSVlprcnVNZEg4Q0NHeVV3R09wbEtNb1I5MlIyWmhqOE1jUzNIN2c3UWJuSGhBYUQzTm1XeHoK",
       "endpoints": [
         "https://github.com/nikitadrokin/photo-bridge/releases/latest/download/latest.json"
       ]
