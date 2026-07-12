@@ -308,6 +308,10 @@ async function deleteBunBuildArtifacts(root: string): Promise<void> {
 function runTauriBuild(): boolean {
   const r = Bun.spawnSync(['bun', 'run', 'tauri', 'build'], {
     cwd: projectRoot,
+    // Pass the current env explicitly: Bun.spawnSync does not forward
+    // runtime mutations to `process.env` (e.g. the TAURI_SIGNING_PRIVATE_KEY
+    // set in ensureUpdaterSigningKey) unless `env` is provided.
+    env: { ...process.env },
     stdin: 'inherit',
     stdout: 'inherit',
     stderr: 'inherit',
