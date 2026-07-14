@@ -1,6 +1,6 @@
 {
   "name": "photo-bridge",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Convert iOS media files for Pixel compatibility",
   "type": "module",
   "workspaces": [
