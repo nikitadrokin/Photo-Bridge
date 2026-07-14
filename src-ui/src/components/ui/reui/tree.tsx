@@ -4,7 +4,7 @@ import { useRender } from "@base-ui/react/use-render"
 import { ItemInstance } from "@headless-tree/core"
 
 import { cn } from "@/lib/utils"
-import { MinusIcon, PlusIcon, CaretDownIcon } from "@phosphor-icons/react"
+import { IconMinus, IconPlus, IconChevronDown } from "@tabler/icons-react"
 
 type ToggleIconType = "chevron" | "plus-minus"
 
@@ -173,12 +173,12 @@ function TreeItemLabel<T = any>({
       {item.isFolder() &&
         (toggleIconType === "plus-minus" ? (
           item.isExpanded() ? (
-            <MinusIcon className="text-muted-foreground size-3.5" stroke="currentColor" strokeWidth="1" />
+            <IconMinus className="text-muted-foreground size-3.5" stroke={1} />
           ) : (
-            <PlusIcon className="text-muted-foreground size-3.5" stroke="currentColor" strokeWidth="1" />
+            <IconPlus className="text-muted-foreground size-3.5" stroke={1} />
           )
         ) : (
-          <CaretDownIcon className="text-muted-foreground size-4 in-aria-[expanded=false]:-rotate-90" />
+          <IconChevronDown className="text-muted-foreground size-4 in-aria-[expanded=false]:-rotate-90" />
         ))}
       {children ||
         (typeof item.getItemName === "function" ? item.getItemName() : null)}
