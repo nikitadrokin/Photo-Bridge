@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "status": "draft",
     "created": "2026-07-09",
-    "updated": "2026-07-09",
+    "updated": "2026-07-14",
     "source": "UI/product audit of src-ui routes, CLI transfer/convert flows, and Pixel 1 + Google Photos use case"
   },
   "product": {
@@ -146,7 +146,7 @@
           "id": "safe-camera-roll-purge-ui",
           "title": "Expose safe camera-roll purge in UI",
           "priority": "P0",
-          "status": "planned",
+          "status": "done",
           "ralphLoopStep": "purge",
           "why": "CLI purge + purgePixelFiles exist; Manage Device description promises purge but UI does not expose it. Without purge, the Ralph loop cannot recycle Pixel disk.",
           "acceptanceCriteria": [
@@ -357,7 +357,7 @@
       "page": "Manage Device",
       "route": "/manage-device",
       "findings": [
-        "Description promises purge; UI does not expose it (P0 safe-camera-roll-purge-ui)",
+        "Purge camera roll now exposed with type-to-confirm dialog (P0 safe-camera-roll-purge-ui, done)",
         "No multi-select subset delete",
         "DEV-only local cache purge is not the user-facing need"
       ]
