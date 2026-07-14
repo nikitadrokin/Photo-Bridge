@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Command } from 'commander';
+import { mapConcurrent } from '../utils/concurrency.js';
 import { ALL_EXTENSIONS } from '../utils/constants.js';
 import {
   inspectMediaDates,
@@ -12,6 +13,8 @@ import { createCliOutput, type CliOutput } from '../utils/logger.js';
 const MEDIA_EXTENSIONS = new Set(
   ALL_EXTENSIONS.map((ext) => ext.toLowerCase()),
 );
+
+const SCAN_CONCURRENCY = 8;
 
 /** One media file included in a gallery scan. */
 export interface GalleryScanFile {
@@ -117,7 +120,6 @@ async function scanGalleryDirectory(
   jsonl: boolean,
 ): Promise<GalleryScanResult> {
   const paths = await collectMediaFilesRecursive(rootDir);
-  const scanned: GalleryScanFile[] = [];
 
   if (jsonl) {
     output.event({
@@ -131,36 +133,36 @@ async function scanGalleryDirectory(
     });
   }
 
-  for (let i = 0; i < paths.length; i += 1) {
-    const filePath = paths[i];
-    const basename = path.basename(filePath);
-    let mediaKind: GalleryScanFile['mediaKind'] = 'unknown';
-    let unixSeconds: number | null = null;
+  let done = 0;
+  const scanned = await mapConcurrent(
+    paths,
+    SCAN_CONCURRENCY,
+    async (filePath): Promise<GalleryScanFile> => {
+      const basename = path.basename(filePath);
+      let mediaKind: GalleryScanFile['mediaKind'] = 'unknown';
+      let unixSeconds: number | null = null;
 
-    try {
-      const inspected = await inspectMediaDates(filePath);
-      mediaKind = inspected.mediaKind;
-      unixSeconds = pickInspectUnixSeconds(inspected);
-    } catch {
-      unixSeconds = null;
-    }
+      try {
+        const inspected = await inspectMediaDates(filePath);
+        mediaKind = inspected.mediaKind;
+        unixSeconds = pickInspectUnixSeconds(inspected);
+      } catch {
+        unixSeconds = null;
+      }
 
-    scanned.push({
-      path: filePath,
-      basename,
-      mediaKind,
-      unixSeconds,
-    });
+      done += 1;
+      if (jsonl) {
+        output.event({
+          v: 1,
+          kind: 'progress',
+          done,
+          total: paths.length,
+        });
+      }
 
-    if (jsonl) {
-      output.event({
-        v: 1,
-        kind: 'progress',
-        done: i + 1,
-        total: paths.length,
-      });
-    }
-  }
+      return { path: filePath, basename, mediaKind, unixSeconds };
+    },
+  );
 
   const result: GalleryScanResult = {
     root: rootDir,
