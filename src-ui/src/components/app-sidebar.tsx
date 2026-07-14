@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
@@ -6,7 +6,7 @@ import { listen } from '@tauri-apps/api/event';
 import {
   IconBrandGithub,
   IconCalendar,
-  IconCircleArrowUp,
+  IconCircleArrowDown,
   IconDeviceMobile,
   IconDeviceMobileCog,
   IconFolders,
@@ -39,7 +39,7 @@ interface AppSidebarProps {
 }
 
 type AppUpdateResponse = {
-  status: 'prepared' | 'upToDate' | 'restarting';
+  status: 'available' | 'prepared' | 'upToDate' | 'restarting';
   version: string | null;
 };
 
@@ -51,11 +51,11 @@ type AppUpdateDownloadProgress = {
 const APP_UPDATE_DOWNLOAD_PROGRESS_EVENT = 'app-update://download-progress';
 
 type UpdateButtonState =
-  | 'unchecked'
-  | 'preparing'
+  | 'hidden'
+  | 'available'
+  | 'downloading'
   | 'ready'
-  | 'installing'
-  | 'upToDate';
+  | 'installing';
 
 const mediaRoutes = [
   {
@@ -115,14 +115,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 }) => {
   const [version, setVersion] = useState<string>('0');
   const [updateButtonState, setUpdateButtonState] =
-    useState<UpdateButtonState>('unchecked');
+    useState<UpdateButtonState>('hidden');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const hasCheckedForUpdate = useRef(false);
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
   const processRunningTooltip = 'Please wait for the current process to finish';
-  const isPreparingUpdate = updateButtonState === 'preparing';
+  const isDownloadingUpdate = updateButtonState === 'downloading';
   const isInstallingUpdate = updateButtonState === 'installing';
-  const isUpdateButtonLoading = isPreparingUpdate || isInstallingUpdate;
+  const isUpdateButtonLoading = isDownloadingUpdate || isInstallingUpdate;
   const updateButtonLabel = getUpdateButtonLabel(
     updateButtonState,
     updateVersion,
@@ -134,8 +135,36 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       .catch(() => setVersion('dev'));
   }, []);
 
+  useEffect(() => {
+    if (hasCheckedForUpdate.current) {
+      return;
+    }
+    hasCheckedForUpdate.current = true;
+
+    invoke<AppUpdateResponse>('check_app_update')
+      .then((response) => {
+        if (response.status !== 'available') {
+          return;
+        }
+        setUpdateVersion(response.version);
+        setUpdateButtonState('available');
+        toast.info(
+          response.version
+            ? `Photo Bridge v${response.version} is available.`
+            : 'A Photo Bridge update is available.',
+          {
+            description: 'Download it from the sidebar when you are ready.',
+          },
+        );
+      })
+      .catch((error) => {
+        // The startup check is silent by design; just log the failure.
+        console.warn('Update check failed:', error);
+      });
+  }, []);
+
   async function handleUpdateClick() {
-    if (isUpdateButtonLoading) {
+    if (isUpdateButtonLoading || isRunning) {
       return;
     }
 
@@ -144,13 +173,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       return;
     }
 
-    await prepareUpdate();
+    if (updateButtonState === 'available') {
+      await downloadUpdate();
+    }
   }
 
-  async function prepareUpdate() {
-    setUpdateButtonState('preparing');
+  async function downloadUpdate() {
+    setUpdateButtonState('downloading');
     const toastId = toast.loading(
-      'Checking for updates...',
+      'Downloading update...',
       dismissibleToastOptions(() => toastId),
     );
 
@@ -171,8 +202,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       const response = await invoke<AppUpdateResponse>('prepare_app_update');
 
       if (response.status === 'upToDate') {
+        // The release disappeared between the startup check and the download.
         setUpdateVersion(null);
-        setUpdateButtonState('upToDate');
+        setUpdateButtonState('hidden');
         toast.success('Photo Bridge is up to date.', { id: toastId });
         return;
       }
@@ -186,7 +218,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         { id: toastId },
       );
     } catch (error) {
-      setUpdateButtonState('unchecked');
+      setUpdateButtonState('available');
       toast.error(formatUpdateError(error), { id: toastId });
     } finally {
       unlisten();
@@ -215,9 +247,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       );
     } catch (error) {
       // The backend consumes the prepared update on any install attempt, so a
-      // failure means there is nothing left to install — force a re-check.
-      setUpdateVersion(null);
-      setUpdateButtonState('unchecked');
+      // failure means there is nothing left to install — offer the download
+      // again.
+      setUpdateButtonState('available');
       toast.error(formatUpdateError(error), { id: toastId });
     }
   }
@@ -398,23 +430,29 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
       <SidebarFooter className="p-4">
         <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-          <Button
-            type="button"
-            size="sm"
-            variant={updateButtonState === 'ready' ? 'default' : 'outline'}
-            className="w-full justify-start"
-            disabled={isUpdateButtonLoading}
-            onClick={handleUpdateClick}
-          >
-            {isUpdateButtonLoading ? (
-              <IconLoader2 className="size-3.5 animate-spin" />
-            ) : updateButtonState === 'ready' ? (
-              <IconRefresh className="size-3.5" />
-            ) : (
-              <IconCircleArrowUp className="size-3.5" />
-            )}
-            {updateButtonLabel}
-          </Button>
+          {updateButtonState !== 'hidden' ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={updateButtonState === 'ready' ? 'default' : 'outline'}
+              className={cn(
+                'w-full justify-start',
+                isRunning && 'cursor-not-allowed',
+              )}
+              disabled={isUpdateButtonLoading || isRunning}
+              title={isRunning ? processRunningTooltip : undefined}
+              onClick={handleUpdateClick}
+            >
+              {isUpdateButtonLoading ? (
+                <IconLoader2 className="size-3.5 animate-spin" />
+              ) : updateButtonState === 'ready' ? (
+                <IconRefresh className="size-3.5" />
+              ) : (
+                <IconCircleArrowDown className="size-3.5" />
+              )}
+              {updateButtonLabel}
+            </Button>
+          ) : null}
 
           <ThemeToggle />
 
@@ -456,8 +494,14 @@ function getUpdateButtonLabel(
   availableVersion: string | null,
 ) {
   switch (state) {
-    case 'preparing':
-      return 'Checking for updates...';
+    case 'available':
+      return availableVersion
+        ? `Download v${availableVersion}`
+        : 'Download update';
+    case 'downloading':
+      return availableVersion
+        ? `Downloading v${availableVersion}...`
+        : 'Downloading update...';
     case 'ready':
       return availableVersion
         ? `Install v${availableVersion}`
@@ -466,10 +510,8 @@ function getUpdateButtonLabel(
       return availableVersion
         ? `Installing v${availableVersion}...`
         : 'Installing update...';
-    case 'upToDate':
-      return 'Photo Bridge is up to date';
-    case 'unchecked':
-      return 'Check for updates';
+    case 'hidden':
+      return '';
     default: {
       const _exhaustive: never = state;
       return _exhaustive;

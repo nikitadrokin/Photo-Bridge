@@ -29,6 +29,7 @@ struct AppUpdateDownloadProgress {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 enum AppUpdateStatus {
+    Available,
     Prepared,
     UpToDate,
     Restarting,
@@ -50,6 +51,27 @@ fn path_is_directory(path: String) -> Result<bool, String> {
     std::fs::metadata(&path)
         .map(|meta| meta.is_dir())
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn check_app_update(app: AppHandle) -> Result<AppUpdateResponse, String> {
+    let update = app
+        .updater()
+        .map_err(|error| format!("Failed to initialize updater: {error}"))?
+        .check()
+        .await
+        .map_err(|error| format!("Failed to check for updates: {error}"))?;
+
+    match update {
+        Some(update) => Ok(AppUpdateResponse {
+            status: AppUpdateStatus::Available,
+            version: Some(update.version),
+        }),
+        None => Ok(AppUpdateResponse {
+            status: AppUpdateStatus::UpToDate,
+            version: None,
+        }),
+    }
 }
 
 #[tauri::command]
@@ -287,6 +309,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             path_is_directory,
+            check_app_update,
             prepare_app_update,
             install_prepared_app_update,
             tooling::resolve_cli_tools,
