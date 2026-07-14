@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Bridge — Design Review</title>
+<style>
+  :root{
+    --bg: oklch(0.145 0 0);
+    --card: oklch(0.205 0 0);
+    --card2: oklch(0.24 0 0);
+    --fg: oklch(0.985 0 0);
+    --muted: oklch(0.708 0 0);
+    --border: rgba(255,255,255,0.1);
+    --primary: oklch(0.7 0.15 162);
+    --primary-dim: oklch(0.7 0.15 162 / 0.15);
+    --on-primary: oklch(0.15 0.02 162);
+    --red: oklch(0.65 0.2 25);
+    --amber: oklch(0.78 0.15 80);
+    --r: 0.625rem;
+    --font: "Inter", "Inter Variable", -apple-system, system-ui, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:var(--font); font-size:14px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--primary-dim)}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:880px; margin:0 auto; padding:0 24px 96px}
+  header.site{
+    position:sticky; top:0; z-index:50;
+    background:oklch(0.145 0 0 / 0.82); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .site-inner{max-width:880px; margin:0 auto; padding:12px 24px; display:flex; align-items:center; gap:12px}
+  .logo-dot{width:10px;height:10px;border-radius:99px;background:var(--primary);box-shadow:0 0 12px var(--primary)}
+  .site h1{font-size:15px; font-weight:600; letter-spacing:-0.01em; margin:0}
+  .site .date{color:var(--muted); font-size:12px}
+  .counter{
+    margin-left:auto; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;
+    background:var(--primary-dim); color:var(--primary);
+    border:1px solid oklch(0.7 0.15 162 / 0.3); border-radius:99px; padding:4px 12px;
+  }
+  .intro{padding:40px 0 8px}
+  .intro h2{font-size:26px; font-weight:600; letter-spacing:-0.025em; margin:0 0 10px}
+  .intro p{color:var(--muted); max-width:64ch; margin:0 0 8px}
+  .intro b{color:var(--fg); font-weight:600}
+  .legend{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 8px}
+
+  /* ---------- chips ---------- */
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11px; font-weight:600; letter-spacing:0.02em;
+    padding:3px 10px; border-radius:99px; border:1px solid var(--border);
+    background:var(--card2); color:var(--muted); white-space:nowrap;
+  }
+  .chip.sev-high{background:oklch(0.65 0.2 25 / 0.14); color:oklch(0.75 0.16 25); border-color:oklch(0.65 0.2 25 / 0.35)}
+  .chip.sev-med{background:oklch(0.78 0.15 80 / 0.12); color:oklch(0.82 0.13 80); border-color:oklch(0.78 0.15 80 / 0.3)}
+  .chip.sev-low{background:oklch(0.7 0.05 240 / 0.12); color:oklch(0.78 0.06 240); border-color:oklch(0.7 0.05 240 / 0.3)}
+  .chip.src{background:transparent}
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:22px 22px 18px; margin:22px 0;
+  }
+  .card-head{display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:8px}
+  .card-num{
+    flex:none; width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+    background:var(--card2); border:1px solid var(--border);
+    font-size:12px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums;
+  }
+  .card h3{font-size:16px; font-weight:600; letter-spacing:-0.01em; margin:1px 0 0; flex:1 1 auto; min-width:200px}
+  .card .prob{color:var(--muted); margin:6px 0 12px}
+  .card .prob b{color:var(--fg); font-weight:600}
+  .files{font-family:var(--mono); font-size:11.5px; color:var(--primary); word-break:break-all}
+  code{
+    font-family:var(--mono); font-size:12px;
+    background:var(--card2); border:1px solid var(--border);
+    border-radius:5px; padding:1px 5px; color:oklch(0.85 0.05 162);
+  }
+  pre{
+    background:oklch(0.17 0 0); border:1px solid var(--border); border-radius:var(--r);
+    padding:12px 14px; overflow-x:auto; font-family:var(--mono); font-size:12px; line-height:1.6;
+    margin:8px 0; color:oklch(0.85 0 0);
+  }
+  pre .del{color:oklch(0.72 0.14 25)} pre .add{color:oklch(0.78 0.13 162)} pre .cm{color:var(--muted)}
+  .verdict{
+    margin:14px 0 12px; padding:10px 14px; border-radius:var(--r);
+    background:var(--primary-dim); border:1px solid oklch(0.7 0.15 162 / 0.25);
+    font-size:13px;
+  }
+  .verdict .vt{font-weight:700; color:var(--primary)}
+  .verdict.partial{background:oklch(0.78 0.15 80 / 0.08); border-color:oklch(0.78 0.15 80 / 0.25)}
+  .verdict.partial .vt{color:var(--amber)}
+
+  /* ---------- demo panes ---------- */
+  .demo-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0}
+  @media (max-width:640px){.demo-grid{grid-template-columns:1fr}}
+  .pane{
+    border:1px solid var(--border); border-radius:var(--r); background:oklch(0.175 0 0);
+    padding:12px; position:relative; overflow:hidden;
+  }
+  .pane-label{
+    display:inline-block; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+    padding:2px 8px; border-radius:99px; margin-bottom:10px;
+  }
+  .pane.cur .pane-label{background:oklch(0.65 0.2 25 / 0.15); color:oklch(0.75 0.14 25)}
+  .pane.pro .pane-label{background:var(--primary-dim); color:var(--primary)}
+  .pane .cap{font-size:11px; color:var(--muted); margin-top:10px}
+  .replay{
+    font:inherit; font-size:11px; font-weight:600; color:var(--fg);
+    background:var(--card2); border:1px solid var(--border); border-radius:8px;
+    padding:5px 12px; cursor:pointer; margin:2px 0 12px;
+  }
+  .replay:hover{background:oklch(0.28 0 0)}
+
+  /* generic buttons in demos */
+  .demo-btn{
+    font:inherit; font-size:13px; font-weight:500;
+    background:var(--primary); color:var(--on-primary);
+    border:none; border-radius:var(--r); padding:8px 18px; cursor:pointer;
+    transition:transform 160ms ease-out, background-color 150ms ease-out;
+  }
+  .demo-btn:hover{background:oklch(0.74 0.15 162)}
+  .demo-btn.pressy:active{transform:scale(0.97)}
+
+  /* focus visibility for everything interactive */
+  button:focus-visible, textarea:focus-visible, .tipwrap:focus-visible{
+    outline:2px solid var(--primary); outline-offset:2px; border-radius:var(--r);
+  }
+
+  /* --- 2. reduced motion illustration --- */
+  .rm-row{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); margin:6px 0}
+  .rm-swatch{width:26px;height:18px;border-radius:5px;border:1px solid var(--border);flex:none;display:grid;place-items:center;font-size:9px}
+
+  /* --- 3. ping dot --- */
+  .ping-wrap{display:flex; align-items:center; gap:10px; height:36px}
+  .dot{position:relative; width:9px; height:9px; flex:none}
+  .dot .core{position:absolute; inset:0; border-radius:99px; background:var(--primary)}
+  .dot .halo{position:absolute; inset:0; border-radius:99px; background:var(--primary); opacity:.6}
+  @keyframes ping{ 0%{transform:scale(1);opacity:.6} 80%,100%{transform:scale(2.6);opacity:0} }
+  .halo.forever{animation:ping 1s cubic-bezier(0,0,0.2,1) infinite}
+  .halo.thrice{animation:ping 1s cubic-bezier(0,0,0.2,1) 3; animation-fill-mode:forwards}
+  .ping-label{font-size:12px; color:var(--muted)}
+
+  /* --- 4. tooltip delay --- */
+  .tipwrap{position:relative; display:inline-flex; margin:6px 0}
+  .tip-target{
+    font:inherit; font-size:12px; color:var(--fg); background:var(--card2);
+    border:1px solid var(--border); border-radius:8px; padding:6px 12px; cursor:default;
+  }
+  .tip{
+    position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%);
+    background:oklch(0.95 0 0); color:oklch(0.2 0 0); font-size:11px; font-weight:500;
+    padding:3px 8px; border-radius:6px; white-space:nowrap; pointer-events:none;
+    opacity:0; transition:opacity 120ms ease-out 0ms;
+  }
+  .tipwrap:hover .tip, .tipwrap:focus-visible .tip{opacity:1}
+  .tipwrap.delayed:hover .tip, .tipwrap.delayed:focus-visible .tip{transition-delay:500ms}
+
+  /* --- 5. dialog timing --- */
+  .mini-vp{
+    height:130px; border-radius:8px; background:oklch(0.14 0 0); border:1px solid var(--border);
+    position:relative; display:grid; place-items:center; overflow:hidden;
+  }
+  .mini-dialog{
+    width:70%; background:var(--card2); border:1px solid var(--border); border-radius:8px;
+    padding:12px; font-size:11px; color:var(--muted); opacity:0;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .mini-dialog b{display:block; color:var(--fg); font-size:12px; margin-bottom:3px}
+  @keyframes dlgIn{from{opacity:0; transform:scale(0.95)} to{opacity:1; transform:scale(1)}}
+  .play .mini-dialog.fast{animation:dlgIn 100ms ease forwards}
+  .play .mini-dialog.slow{animation:dlgIn 200ms cubic-bezier(0.23,1,0.32,1) forwards}
+
+  /* --- 6. theme flash --- */
+  .theme-card{
+    border-radius:8px; border:1px solid var(--border); padding:12px; font-size:12px;
+  }
+  .theme-card b{display:block; font-size:13px; margin-bottom:2px}
+  .theme-card.hard{transition:none}
+  .theme-card.soft{transition:background-color 200ms ease, color 200ms ease, border-color 200ms ease}
+  .theme-card{background:oklch(0.205 0 0); color:oklch(0.708 0 0)}
+  .theme-card b{color:oklch(0.985 0 0); transition:inherit}
+  body.demo-light .theme-card{background:oklch(0.97 0 0); color:oklch(0.45 0 0); border-color:rgba(0,0,0,.12)}
+  body.demo-light .theme-card b{color:oklch(0.15 0 0)}
+
+  /* --- 7. fake blur header --- */
+  .scrollbox{height:150px; overflow-y:auto; border-radius:8px; border:1px solid var(--border); position:relative; background:oklch(0.14 0 0)}
+  .scrollbox .bar{
+    position:sticky; top:0; z-index:2; padding:8px 12px; font-size:12px; font-weight:600;
+    display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border);
+  }
+  .bar .traffic{display:flex; gap:4px}
+  .bar .traffic i{width:8px;height:8px;border-radius:99px;display:block}
+  .bar.opaque{background:oklch(0.205 0 0); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px)}
+  .bar.material{background:oklch(0.205 0 0 / 0.6); backdrop-filter:blur(12px) saturate(1.4); -webkit-backdrop-filter:blur(12px) saturate(1.4)}
+  .scroll-content{padding:10px 12px; display:grid; gap:8px}
+  .tile{height:34px; border-radius:6px}
+  .tile:nth-child(4n+1){background:linear-gradient(90deg, oklch(0.55 0.18 162), oklch(0.5 0.15 220))}
+  .tile:nth-child(4n+2){background:linear-gradient(90deg, oklch(0.6 0.2 300), oklch(0.65 0.18 25))}
+  .tile:nth-child(4n+3){background:linear-gradient(90deg, oklch(0.75 0.15 80), oklch(0.55 0.18 162))}
+  .tile:nth-child(4n){background:linear-gradient(90deg, oklch(0.5 0.15 220), oklch(0.6 0.2 300))}
+
+  /* --- 8. typography --- */
+  .type-demo{display:grid; gap:6px; padding:4px 0}
+  .t-cur-label{font-size:10px; color:oklch(0.708 0 0 / 0.8); font-weight:600; letter-spacing:.05em; text-transform:uppercase}
+  .t-cur-sub{font-size:10px; color:oklch(0.708 0 0 / 0.8)}
+  .t-cur-body{font-size:11px; color:oklch(0.708 0 0)}
+  .t-pro-label{font-size:12px; color:oklch(0.708 0 0); font-weight:600; letter-spacing:.05em; text-transform:uppercase}
+  .t-pro-sub{font-size:12px; color:oklch(0.708 0 0)}
+  .t-pro-body{font-size:12px; color:oklch(0.85 0 0)}
+
+  /* --- 9/10. mini sidebar --- */
+  .mini-sb{
+    width:100%; max-width:200px; border:1px solid var(--border); border-radius:8px;
+    background:oklch(0.17 0 0); padding:8px; font-size:12px; display:flex; flex-direction:column; gap:2px; min-height:170px;
+  }
+  .sb-item{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; color:oklch(0.9 0 0);
+  }
+  .sb-item .ic{width:13px;height:13px;border-radius:3px;background:var(--muted);opacity:.55;flex:none}
+  .sb-item.active{background:var(--primary-dim); color:var(--primary)}
+  .sb-item.active .ic{background:var(--primary); opacity:1}
+  .sb-item.faux-status{color:var(--muted)}
+  .sb-item.faux-status .ic{border-radius:99px; background:var(--primary); opacity:1; width:8px; height:8px; margin:0 2.5px}
+  .sb-spacer{flex:1}
+  .sb-footer-chip{
+    display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+    font-size:11px; color:var(--muted); border:1px solid var(--border); border-radius:99px;
+    padding:3px 10px; margin:6px 4px 2px; background:var(--card2);
+  }
+  .sb-footer-chip i{width:7px;height:7px;border-radius:99px;background:var(--primary);display:block}
+  .mini-sb.all-dim .sb-item{opacity:.5}
+  .sb-item.busy-legible{color:oklch(0.9 0 0); cursor:not-allowed}
+  .sb-item.busy-legible .ic{opacity:.3}
+  .sb-busy-note{font-size:10.5px; color:var(--amber); padding:4px 8px 2px; display:flex; align-items:center; gap:6px}
+  .sb-busy-note .spin-s{width:9px;height:9px;border:1.5px solid oklch(0.78 0.15 80 / .3);border-top-color:var(--amber);border-radius:99px;animation:spin .8s linear infinite;flex:none}
+
+  /* --- 11. segmented control --- */
+  .segctl{position:relative; display:inline-flex; gap:0; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:2px}
+  .segctl .hl{position:absolute; top:2px; left:2px; height:28px; width:32px; border-radius:6px; background:oklch(0.32 0 0); z-index:0}
+  .segctl.by-width .hl{transition:left 200ms ease, width 200ms ease}
+  .segctl.by-transform .hl{transition:transform 200ms cubic-bezier(0.23,1,0.32,1); will-change:transform}
+  .segctl button{
+    position:relative; z-index:1; width:32px; height:28px; border:none; background:transparent;
+    color:var(--muted); font-size:13px; cursor:pointer; border-radius:6px;
+  }
+  .segctl button[aria-pressed="true"]{color:var(--fg)}
+
+  /* --- 12. spinner --- */
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{width:18px; height:18px; border-radius:99px; border:2px solid rgba(255,255,255,.15); border-top-color:var(--primary)}
+  .spinner.s1{animation:spin 1s linear infinite}
+  .spinner.s06{animation:spin 0.6s linear infinite}
+  .spin-row{display:flex; align-items:center; gap:10px; height:36px; font-size:12px; color:var(--muted)}
+
+  /* --- 13. stagger --- */
+  .stag-list{display:grid; gap:5px}
+  .stag-item{
+    height:22px; border-radius:5px; background:var(--card2); border:1px solid var(--border);
+    opacity:0; display:flex; align-items:center; padding:0 8px; font-size:10.5px; color:var(--muted);
+  }
+  @keyframes rise{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:translateY(0)}}
+  .play .stag-item{animation:rise 200ms ease-out forwards}
+  .play .stag-list.staggered .stag-item:nth-child(1){animation-delay:0ms}
+  .play .stag-list.staggered .stag-item:nth-child(2){animation-delay:40ms}
+  .play .stag-list.staggered .stag-item:nth-child(3){animation-delay:80ms}
+  .play .stag-list.staggered .stag-item:nth-child(4){animation-delay:120ms}
+  .play .stag-list.staggered .stag-item:nth-child(5){animation-delay:160ms}
+
+  /* --- 14. resize grip static --- */
+  .grip-demo{border:1px solid var(--border); border-radius:8px; background:oklch(0.14 0 0); padding:0; overflow:hidden}
+  .grip-bar{height:8px; background:var(--card2); border-bottom:1px solid var(--border); display:grid; place-items:center; cursor:ns-resize}
+  .grip-bar::after{content:""; width:32px; height:3px; border-radius:99px; background:rgba(255,255,255,.25)}
+  .grip-body{padding:8px 10px; font-family:var(--mono); font-size:10px; color:var(--muted); line-height:1.7}
+  .escape-arrow{color:var(--red); font-weight:700}
+
+  /* ---------- decision controls ---------- */
+  .decision-slot{margin-top:14px; border-top:1px solid var(--border); padding-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start}
+  .seg{display:inline-flex; border:1px solid var(--border); border-radius:var(--r); overflow:hidden; flex:none}
+  .seg-btn{
+    font:inherit; font-size:12.5px; font-weight:600; padding:7px 14px; cursor:pointer;
+    background:var(--card2); color:var(--muted); border:none; border-right:1px solid var(--border);
+    transition:background-color 120ms ease, color 120ms ease;
+  }
+  .seg-btn:last-child{border-right:none}
+  .seg-btn:hover{color:var(--fg)}
+  .seg-btn:focus-visible{outline:2px solid var(--primary); outline-offset:-2px; border-radius:0}
+  .seg-btn.approve.on{background:oklch(0.7 0.15 162 / 0.2); color:oklch(0.8 0.14 162)}
+  .seg-btn.deny.on{background:oklch(0.65 0.2 25 / 0.18); color:oklch(0.78 0.15 25)}
+  .seg-btn.discuss.on{background:oklch(0.78 0.15 80 / 0.15); color:oklch(0.84 0.12 80)}
+  .note{
+    flex:1 1 220px; min-height:34px; resize:vertical;
+    font:inherit; font-size:12.5px; color:var(--fg);
+    background:oklch(0.17 0 0); border:1px solid var(--border); border-radius:var(--r); padding:7px 10px;
+  }
+  .note::placeholder{color:oklch(0.5 0 0)}
+
+  /* ---------- summary ---------- */
+  .summary{
+    margin-top:40px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px;
+  }
+  .summary h2{margin:0 0 6px; font-size:20px; letter-spacing:-0.02em}
+  .summary p{color:var(--muted); margin:0 0 16px}
+  .sum-actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px}
+  .big-copy{
+    font:inherit; font-size:14px; font-weight:600;
+    background:var(--primary); color:var(--on-primary); border:none; border-radius:var(--r);
+    padding:11px 22px; cursor:pointer; transition:transform 160ms ease-out, background-color 150ms ease;
+  }
+  .big-copy:hover{background:oklch(0.74 0.15 162)}
+  .big-copy:active{transform:scale(0.97)}
+  .util-btn{
+    font:inherit; font-size:12px; font-weight:600; color:var(--muted);
+    background:var(--card2); border:1px solid var(--border); border-radius:var(--r);
+    padding:8px 14px; cursor:pointer;
+  }
+  .util-btn:hover{color:var(--fg)}
+  #md-out{display:none; max-height:340px; overflow:auto; white-space:pre-wrap; word-break:break-word}
+  #md-out.show{display:block}
+  footer.colophon{margin-top:32px; color:oklch(0.45 0 0); font-size:11.5px; text-align:center}
+
+  /* ---------- reduced motion for this document ---------- */
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    .halo.forever, .halo.thrice{animation-iteration-count:1}
+    .spinner.s1, .spinner.s06, .sb-busy-note .spin-s{animation-duration:1.6s}
+    .play .mini-dialog.fast, .play .mini-dialog.slow{animation-duration:1ms; opacity:1}
+    .play .stag-item{animation-duration:1ms; animation-delay:0ms !important}
+    .theme-card.soft{transition:none}
+    .demo-btn.pressy:active{transform:none}
+    .segctl .hl{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <span class="logo-dot" aria-hidden="true"></span>
+    <h1>Photo Bridge — Design Review</h1>
+    <span class="date">2026-07-14</span>
+    <span class="counter" id="counter" aria-live="polite">0/14 decided</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h2>Collated design audit — 14 suggestions</h2>
+    <p>Two independent audits of the <b>src-ui</b> React + Tailwind v4 + Base UI front-end were run: one through the
+    <b>Emil design-engineering lens</b> (micro-interaction craft, animation discipline) and one through the
+    <b>Apple design lens</b> (fluid interfaces, materials, typography, wayfinding). Overlapping findings are merged,
+    everything is re-ordered by impact, and each item carries a senior verdict. Every card demonstrates
+    <b>Current vs Proposed</b> live — press, hover, and replay the demos. Mark each item
+    Approve / Deny / Discuss, add notes, then copy the decision summary at the bottom and paste it back to Claude.</p>
+    <div class="legend">
+      <span class="chip sev-high">High</span>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip sev-low">Low</span>
+      <span class="chip src">Source: Emil / Apple / Both</span>
+    </div>
+  </section>
+
+  <!-- ================= 1. PRESS FEEDBACK ================= -->
+  <section class="card" data-id="1" data-title="Press-down feedback on Button (+ replace transition-all)">
+    <div class="card-head">
+      <span class="card-num">1</span>
+      <h3>Press-down feedback on Button (+ replace <code>transition-all</code>)</h3>
+      <span class="chip sev-high">High</span>
+      <span class="chip src">Both</span>
+    </div>
+    <p class="prob">No control in the app responds on pointer-<b>down</b> — buttons only react on hover and release, so the UI feels like it isn't listening. Both audits flag this as the single highest-leverage polish fix since it flows through every pressable. Merged in: Emil's note that the same base classes use <code>transition-all</code>, which animates unintended (including layout) properties.</p>
+    <p class="files">src-ui/src/components/ui/button.tsx:8</p>
+<pre><span class="del">- "… transition-all …"</span>
+<span class="add">+ "… transition-[transform,background-color,border-color,color,box-shadow] duration-150 ease-out active:scale-[0.97] …"</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span><br>
+        <button type="button" class="demo-btn">Convert Media</button>
+        <p class="cap">Press and hold — nothing acknowledges the press until release.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span><br>
+        <button type="button" class="demo-btn pressy">Convert Media</button>
+        <p class="cap">Press and hold — <code>active:scale(0.97)</code> at 160ms ease-out confirms the press instantly.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Foundation-level fix; one line in the shared variant covers the whole app. Ship the explicit transition list in the same change — they touch the same string.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 2. REDUCED MOTION ================= -->
+  <section class="card" data-id="2" data-title="prefers-reduced-motion support (zero hits in src-ui)">
+    <div class="card-head">
+      <span class="card-num">2</span>
+      <h3>No <code>prefers-reduced-motion</code> handling anywhere</h3>
+      <span class="chip sev-high">High</span>
+      <span class="chip src">Both</span>
+    </div>
+    <p class="prob">A grep for reduced motion returns zero hits. Perpetual ping, spin decorations, and zoom/slide entrances all run for motion-sensitive users. Reduced motion means <b>gentler, not zero</b>: keep opacity fades and functional spinners, drop decorative loops and spatial entrances. One global CSS block covers the app.</p>
+    <p class="files">src-ui/src/index.css (global)</p>
+<pre><span class="add">@media (prefers-reduced-motion: reduce) {
+  .animate-ping { animation: none; }
+  [data-state] { /* entrances */ animation-duration: 1ms; }
+  /* keep functional spinners; swap zoom/slide for fade-only */
+}</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="rm-row"><span class="rm-swatch">〰️</span> Ping loops, zoom entrances, spins — always on.</div>
+        <div class="rm-row"><span class="rm-swatch">⚠️</span> Vestibular triggers ignored.</div>
+        <p class="cap">Static illustration — the OS setting is simply never read.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="rm-row"><span class="rm-swatch">✓</span> Opacity fades kept; loops and slides removed.</div>
+        <div class="rm-row"><span class="rm-swatch">✓</span> Functional spinners stay (slower is fine).</div>
+        <p class="cap">This review page itself honors the setting — its looping demos calm down under reduced motion.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Accessibility baseline, trivially cheap. Do it as one global media block plus a check on any JS-driven animation added later.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 3. PING DOT ================= -->
+  <section class="card" data-id="3" data-title="Connection dot pings forever — animate the state change, then rest">
+    <div class="card-head">
+      <span class="card-num">3</span>
+      <h3>Connection dot pings forever</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Both</span>
+    </div>
+    <p class="prob">The connected indicator runs <code>animate-ping</code> infinitely. Both audits independently flag it: a permanent status element looping forever is an attention leak (Emil) and a vestibular trigger Apple explicitly warns against (Apple). Animate the <b>transition</b> to connected — 2–3 pings — then settle to a static dot.</p>
+    <p class="files">src-ui/src/components/connection-status.tsx:50</p>
+<pre><span class="del">- &lt;span className="animate-ping …" /&gt;</span>
+<span class="add">+ &lt;span className="animate-ping [animation-iteration-count:3] [animation-fill-mode:forwards] …" /&gt;</span>
+<span class="cm">  (re-key the element on connect so the 3 pings replay per event)</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="ping-wrap">
+          <span class="dot"><span class="halo forever"></span><span class="core"></span></span>
+          <span class="ping-label">Connected — pings forever</span>
+        </div>
+        <p class="cap">Your eye keeps getting pulled here, indefinitely.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <button type="button" class="replay" data-replay="ping3">Replay connect event</button>
+        <div class="ping-wrap">
+          <span class="dot"><span class="halo thrice" id="ping3"></span><span class="core"></span></span>
+          <span class="ping-label">Connected — pings 3×, then rests</span>
+        </div>
+        <p class="cap"><code>animation-iteration-count: 3</code> — celebrates the change, then gets out of the way.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Textbook "animate state changes, not steady state". Trigger on the connect event, not on mount.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 4. TOOLTIP DELAY ================= -->
+  <section class="card" data-id="4" data-title="Tooltip delay 0 → 500ms first-hover (instant for neighbors)">
+    <div class="card-head">
+      <span class="card-num">4</span>
+      <h3>Tooltips open with zero delay</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Emil</span>
+    </div>
+    <p class="prob"><code>TooltipProvider</code> sets <code>delay = 0</code>, so every incidental hover fires a tooltip — the sidebar becomes noisy. Correct behavior is the inverse of what ships: delay the <b>first</b> hover (~500ms), then open instantly for adjacent targets (Base UI grouping handles the warm-up).</p>
+    <p class="files">src-ui/src/components/ui/tooltip.tsx:6</p>
+<pre><span class="del">- function TooltipProvider({ delay = 0, … })</span>
+<span class="add">+ function TooltipProvider({ delay = 500, … })</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <span class="tipwrap" tabindex="0"><span class="tip-target">Hover me</span><span class="tip" role="tooltip">Fires instantly</span></span>
+        <p class="cap">Just passing the pointer across triggers it.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <span class="tipwrap delayed" tabindex="0"><span class="tip-target">Hover me</span><span class="tip" role="tooltip">Appears after 500ms</span></span>
+        <p class="cap">500ms of intent required; neighbors would then open instantly.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> One-token change; verify Base UI's provider grouping keeps the instant-for-neighbors behavior after the delay bump.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 5. DIALOG TIMING ================= -->
+  <section class="card" data-id="5" data-title="Dialog entrance: 100ms weak ease → 200ms strong ease-out">
+    <div class="card-head">
+      <span class="card-num">5</span>
+      <h3>Dialog entrance pops instead of entering</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Emil</span>
+    </div>
+    <p class="prob">Dialog and AlertDialog animate in at <code>duration-100</code> with the weak default easing — it reads as a "pop", not an entrance. Modals belong in the 200–500ms band with a strong custom ease-out; exits should stay faster (~150ms). The existing <code>zoom-in-95</code> + fade start values are correct and should be kept.</p>
+    <p class="files">src-ui/src/components/ui/dialog.tsx:32,54 (and alert-dialog)</p>
+<pre><span class="del">- "… duration-100 …"</span>
+<span class="add">+ "… duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] data-[state=closed]:duration-150 …"</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <button type="button" class="replay" data-replay-parent="dlg-cur">Replay open</button>
+        <div class="mini-vp" id="dlg-cur"><div class="mini-dialog fast"><b>Push anyway?</b>Not enough free space on Pixel.</div></div>
+        <p class="cap">100ms, default ease — blinks into place.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <button type="button" class="replay" data-replay-parent="dlg-pro">Replay open</button>
+        <div class="mini-vp" id="dlg-pro"><div class="mini-dialog slow"><b>Push anyway?</b>Not enough free space on Pixel.</div></div>
+        <p class="cap">200ms, cubic-bezier(0.23, 1, 0.32, 1) — decelerates into place.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Cheap and correct; keep exit faster than enter, and do not touch the (already right) scale-from-0.95 start.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 6. FAKE BLUR HEADER ================= -->
+  <section class="card" data-id="6" data-title="Header material honesty: opaque bg with dead backdrop-blur">
+    <div class="card-head">
+      <span class="card-num">6</span>
+      <h3>Fake material on the title bar</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Apple</span>
+    </div>
+    <p class="prob"><code>PageHeader</code> applies <code>backdrop-blur-lg</code> over a fully opaque <code>bg-sidebar</code> — the blur is dead code and the chrome reads as a flat strip. On macOS, translucent chrome is the native expectation. Either make it a real material (<code>bg-sidebar/75</code> + blur with content scrolling underneath) or delete the blur. If translucency is adopted, pair with a <code>prefers-reduced-transparency</code> solid fallback and a scroll-edge border/fade.</p>
+    <p class="files">src-ui/src/components/header.tsx:18 · src-ui/src/components/app-page-chrome.tsx:60</p>
+<pre><span class="del">- className="… bg-sidebar backdrop-blur-lg …"</span>
+<span class="add">+ className="… bg-sidebar/75 backdrop-blur-lg supports-[backdrop-filter]:bg-sidebar/75 …"</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="scrollbox" tabindex="0">
+          <div class="bar opaque"><span class="traffic"><i style="background:#f66"></i><i style="background:#fb5"></i><i style="background:#5c5"></i></span>Photo Bridge</div>
+          <div class="scroll-content"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+        </div>
+        <p class="cap">Scroll the content — the bar is opaque; the blur does nothing.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="scrollbox" tabindex="0">
+          <div class="bar material"><span class="traffic"><i style="background:#f66"></i><i style="background:#fb5"></i><i style="background:#5c5"></i></span>Photo Bridge</div>
+          <div class="scroll-content"><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div><div class="tile"></div></div>
+        </div>
+        <p class="cap">Scroll — 60% background + real backdrop blur; content glows through the chrome.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree with caveat.</span> Material honesty is right, but verify Tauri/WKWebView renders backdrop-filter over the scrolled content correctly before committing; otherwise take the "remove the blur" branch.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 7. TYPOGRAPHY ================= -->
+  <section class="card" data-id="7" data-title="Consolidate micro type scale; stop stacking small size + low opacity">
+    <div class="card-head">
+      <span class="card-num">7</span>
+      <h3>Ad-hoc micro type scale &amp; stacked contrast reductions</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Apple</span>
+    </div>
+    <p class="prob">Five near-identical sizes coexist: <code>text-[10px]</code>, <code>text-[11px]</code>, <code>text-[0.8rem]</code>, <code>text-xs</code>, <code>text-sm</code>. 10px is below comfortable desktop legibility, and the smallest text also gets <code>text-muted-foreground/80</code> — two contrast reductions stacked on the smallest type. Consolidate with 12px as the floor; build hierarchy with weight and color, not 1px deltas.</p>
+    <p class="files">src-ui/src/routes/transfer-media.tsx:227,269,285 · src-ui/src/components/ui/button.tsx:27 · src-ui/src/components/app-sidebar.tsx:273</p>
+<pre><span class="del">- &lt;p className="text-[10px] text-muted-foreground/80"&gt;Advanced&lt;/p&gt;</span>
+<span class="add">+ &lt;p className="text-xs font-medium text-muted-foreground"&gt;Advanced&lt;/p&gt;</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="type-demo">
+          <span class="t-cur-label">Advanced</span>
+          <span class="t-cur-body">Skips HEIC files already converted in a previous run.</span>
+          <span class="t-cur-sub">Recommended for repeat transfers</span>
+        </div>
+        <p class="cap">Actual rendering: 10–11px at 80% muted opacity.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="type-demo">
+          <span class="t-pro-label">Advanced</span>
+          <span class="t-pro-body">Skips HEIC files already converted in a previous run.</span>
+          <span class="t-pro-sub">Recommended for repeat transfers</span>
+        </div>
+        <p class="cap">12px floor; hierarchy via weight + one muted step, never both size and opacity.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> "Muted color OR small size, not both" is the rule to encode; sweep the listed call sites and add a lint-note to the design system.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 8. STATUS IN NAV ================= -->
+  <section class="card" data-id="8" data-title="Connection status disguised as a nav item — move to footer chip">
+    <div class="card-head">
+      <span class="card-num">8</span>
+      <h3>Status lamp wearing a button costume</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Apple</span>
+    </div>
+    <p class="prob">The "Connected / Not connected" row is a disabled <code>SidebarMenuButton</code> inside the Device <b>menu</b>. Proximity implies function — everything else in that list navigates, so a status readout mixed in violates the mapping. Move it to the sidebar footer (or a status strip), styled as a read-only chip.</p>
+    <p class="files">src-ui/src/components/app-sidebar.tsx:324-349</p>
+<pre><span class="del">- &lt;SidebarMenuButton disabled&gt;&lt;Dot /&gt; Connected&lt;/SidebarMenuButton&gt;  <span class="cm">// inside Device menu</span></span>
+<span class="add">+ &lt;SidebarFooter&gt;&lt;StatusChip state={pixel.state} /&gt;&lt;/SidebarFooter&gt;</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="mini-sb">
+          <div class="sb-item active"><span class="ic"></span>Convert Media</div>
+          <div class="sb-item"><span class="ic"></span>Transfer Media</div>
+          <div class="sb-item"><span class="ic"></span>Manage Device</div>
+          <div class="sb-item faux-status"><span class="ic"></span>Connected</div>
+          <div class="sb-spacer"></div>
+        </div>
+        <p class="cap">"Connected" sits among nav items — looks pressable, isn't.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="mini-sb">
+          <div class="sb-item active"><span class="ic"></span>Convert Media</div>
+          <div class="sb-item"><span class="ic"></span>Transfer Media</div>
+          <div class="sb-item"><span class="ic"></span>Manage Device</div>
+          <div class="sb-spacer"></div>
+          <span class="sb-footer-chip"><i></i>Pixel connected</span>
+        </div>
+        <p class="cap">Read-only chip in the footer — status looks like status.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Clear mapping fix; footer chip also frees a menu row and gives the status a stable home for future device info.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 9. NAV LOCKOUT ================= -->
+  <section class="card" data-id="9" data-title="Soften whole-app nav lockout + 50%-opacity dimming during jobs">
+    <div class="card-head">
+      <span class="card-num">9</span>
+      <h3>Whole-app lockout &amp; "dead" 50% sidebar during jobs</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Both</span>
+    </div>
+    <p class="prob">Every nav item disables while any operation runs, and the default <code>disabled:opacity-50</code> dims the whole sidebar — it reads as "app is broken" (Emil) and traps the user entirely (Apple). Since Pixel/job context lives above the routes, navigation can likely stay open while the job persists; at minimum keep Settings reachable and style busy items with <code>aria-disabled</code> that keeps labels legible.</p>
+    <p class="files">src-ui/src/components/app-sidebar.tsx:246-262</p>
+<pre><span class="del">- &lt;SidebarMenuButton disabled={isRunning} …&gt;   <span class="cm">// → opacity-50 everywhere</span></span>
+<span class="add">+ &lt;SidebarMenuButton aria-disabled={isRunning} className="aria-disabled:cursor-not-allowed aria-disabled:[&amp;_svg]:opacity-40" …&gt;</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="mini-sb all-dim">
+          <div class="sb-item"><span class="ic"></span>Convert Media</div>
+          <div class="sb-item"><span class="ic"></span>Transfer Media</div>
+          <div class="sb-item"><span class="ic"></span>Fix Dates</div>
+          <div class="sb-item"><span class="ic"></span>Settings</div>
+        </div>
+        <p class="cap">Everything at opacity 50% — busy is indistinguishable from broken.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="mini-sb">
+          <div class="sb-busy-note"><span class="spin-s"></span>Transfer in progress</div>
+          <div class="sb-item busy-legible"><span class="ic"></span>Convert Media</div>
+          <div class="sb-item busy-legible"><span class="ic"></span>Transfer Media</div>
+          <div class="sb-item busy-legible"><span class="ic"></span>Fix Dates</div>
+          <div class="sb-item"><span class="ic"></span>Settings</div>
+        </div>
+        <p class="cap">Labels stay legible, icons dim, a busy note explains why — Settings stays live.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree with caveat.</span> Do the legibility/aria-disabled fix now; treat "allow full navigation mid-job" as a follow-up that needs a quick audit of route-local state before unlocking.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 10. RESIZE GRIP ================= -->
+  <section class="card" data-id="10" data-title="Resize grip: Pointer Events + setPointerCapture instead of mouse events">
+    <div class="card-head">
+      <span class="card-num">10</span>
+      <h3>Resize grip loses fast drags (mouse events, no capture)</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Both</span>
+    </div>
+    <p class="prob">The activity-panel resize uses <code>mousemove</code>/<code>mouseup</code> on <code>document</code>: fast drags that exit the window drop the handle, and touch/pen do nothing. Pointer Events with <code>setPointerCapture</code> keep the drag glued to the grip regardless of pointer speed or input type. Direct 1:1 height tracking during drag is correct — keep it; just clamp min/max and persist on release.</p>
+    <p class="files">src-ui/src/components/activity-feed.tsx:35-59</p>
+<pre><span class="del">- document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);</span>
+<span class="add">+ onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); … }}
++ onPointerMove / onPointerUp on the grip itself — no document listeners needed</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="grip-demo">
+          <div class="grip-bar"></div>
+          <div class="grip-body">mousemove on document<br>pointer leaves window <span class="escape-arrow">→ drag lost ✗</span><br>touch / pen: no response</div>
+        </div>
+        <p class="cap">Static illustration — the failure needs a fast off-window drag to reproduce.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="grip-demo">
+          <div class="grip-bar"></div>
+          <div class="grip-body">setPointerCapture(pointerId)<br>pointer leaves window <span style="color:var(--primary);font-weight:700">→ drag continues ✓</span><br>touch / pen: works</div>
+        </div>
+        <p class="cap">Capture pins all pointer events to the grip until release.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Strictly better API for the same code shape; also removes the document-listener cleanup footgun.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 11. THEME TOGGLE ================= -->
+  <section class="card" data-id="11" data-title="ThemeToggle: animate transform not width; add focus-visible + radio semantics">
+    <div class="card-head">
+      <span class="card-num">11</span>
+      <h3>ThemeToggle segmented control: layout animation + invisible to a11y</h3>
+      <span class="chip sev-med">Medium</span>
+      <span class="chip src">Both</span>
+    </div>
+    <p class="prob">The highlight animates <code>width</code>/<code>left</code> via inline style (layout + paint every frame), measured in a <code>useEffect</code> keyed on theme — a window resize or font load desyncs it. All three segments are equal <code>size-8</code>, so a pure <code>translateX</code> is cheaper and can't desync. Merged in (Apple craft note): the buttons are raw <code>&lt;button&gt;</code>s with no focus-visible style and no <code>aria-pressed</code>/radio semantics.</p>
+    <p class="files">src-ui/src/components/theme-toggle.tsx:40-45,84,89-105</p>
+<pre><span class="del">- style={{ left: rect.left, width: rect.width }}   <span class="cm">// measured per theme change</span></span>
+<span class="add">+ style={{ transform: `translateX(${index * 32}px)` }}  <span class="cm">// index-derived, no measurement</span>
++ role="radiogroup" on the wrapper, role="radio" + aria-checked per button, visible focus ring</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="segctl by-width" data-mode="width" role="radiogroup" aria-label="Theme (width-animated demo)">
+          <span class="hl"></span>
+          <button type="button" role="radio" aria-pressed="true">☀︎</button>
+          <button type="button" role="radio" aria-pressed="false">◐</button>
+          <button type="button" role="radio" aria-pressed="false">☾</button>
+        </div>
+        <p class="cap">Click segments — highlight animates <code>left</code>/<code>width</code> (layout thrash; desyncs on resize in the app).</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="segctl by-transform" data-mode="transform" role="radiogroup" aria-label="Theme (transform-animated demo)">
+          <span class="hl"></span>
+          <button type="button" role="radio" aria-pressed="true">☀︎</button>
+          <button type="button" role="radio" aria-pressed="false">◐</button>
+          <button type="button" role="radio" aria-pressed="false">☾</button>
+        </div>
+        <p class="cap">Same look via <code>translateX(index × 32px)</code> — composited, index-derived, tab to see the focus ring.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree.</span> Two audits hit the same component from different angles — fix performance and semantics in one pass.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 12. SPINNER ================= -->
+  <section class="card" data-id="12" data-title="Speed up loading spinners: 1s/rev → 600ms/rev">
+    <div class="card-head">
+      <span class="card-num">12</span>
+      <h3>Spinners read as lethargic at 1s/rev</h3>
+      <span class="chip sev-low">Low</span>
+      <span class="chip src">Emil</span>
+    </div>
+    <p class="prob">Every spinner uses Tailwind's default <code>animate-spin</code> (1s per revolution). A faster spin makes the same wait feel shorter — ~600ms reads as "working hard" rather than idling.</p>
+    <p class="files">all IconLoader2 usages (shared Spinner wrapper recommended)</p>
+<pre><span class="del">- &lt;IconLoader2 className="animate-spin" /&gt;</span>
+<span class="add">+ &lt;IconLoader2 className="animate-spin [animation-duration:600ms]" /&gt;</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <div class="spin-row"><span class="spinner s1"></span>Converting… (1s / revolution)</div>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <div class="spin-row"><span class="spinner s06"></span>Converting… (600ms / revolution)</div>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree with caveat.</span> Perception win is real but subtle; centralize in one <code>&lt;Spinner /&gt;</code> component rather than sprinkling the arbitrary-value class at every call site.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 13. THEME FLASH ================= -->
+  <section class="card" data-id="13" data-title="Theme switch is an abrupt brightness jump — 200ms color cross-fade">
+    <div class="card-head">
+      <span class="card-num">13</span>
+      <h3>Theme switch is an abrupt brightness jump</h3>
+      <span class="chip sev-low">Low</span>
+      <span class="chip src">Apple</span>
+    </div>
+    <p class="prob">The theme provider swaps the <code>.dark</code> class instantly — a hard full-screen brightness cut. A ~200ms color-only transition on root tokens softens the flash. Must be <b>guarded</b>: apply a temporary class only during the swap so colors aren't transitioning on every hover forever.</p>
+    <p class="files">src-ui/src/components/theme-provider.tsx</p>
+<pre><span class="add">root.classList.add("theme-transition");        <span class="cm">// .theme-transition * { transition: background-color 200ms, color 200ms, border-color 200ms }</span>
+root.classList.toggle("dark", isDark);
+setTimeout(() => root.classList.remove("theme-transition"), 250);</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <button type="button" class="replay" data-theme-flip>Toggle theme</button>
+        <div class="theme-card hard"><b>Convert Media</b>Drop HEIC files here to convert.</div>
+        <p class="cap">Hard cut — the whole surface flashes.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <button type="button" class="replay" data-theme-flip>Toggle theme</button>
+        <div class="theme-card soft"><b>Convert Media</b>Drop HEIC files here to convert.</div>
+        <p class="cap">200ms color cross-fade — same destination, no flashbulb.</p>
+      </div>
+    </div>
+    <div class="verdict"><span class="vt">Agree with caveat.</span> Nice-to-have; the guard class is mandatory — an unguarded global color transition would poison every hover/state change in the app.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= 14. STAGGER ================= -->
+  <section class="card" data-id="14" data-title="Optional 40ms stagger on first render of day groups after scan">
+    <div class="card-head">
+      <span class="card-num">14</span>
+      <h3>Day groups appear all at once after scan</h3>
+      <span class="chip sev-low">Low</span>
+      <span class="chip src">Emil</span>
+    </div>
+    <p class="prob">After a scan completes, the file-list day groups blink in simultaneously. A 30–50ms CSS <code>animation-delay</code> stagger on <b>first render only</b>, capped at ~6 items, is the one cheap delight moment in the app. Never on re-renders, never blocking interaction.</p>
+    <p class="files">src-ui/src/routes/browse.tsx</p>
+<pre><span class="add">.day-group { animation: rise 200ms ease-out backwards; }
+.day-group:nth-child(-n+6) { animation-delay: calc(var(--i) * 40ms); }</span></pre>
+    <div class="demo-grid">
+      <div class="pane cur">
+        <span class="pane-label">Current</span>
+        <button type="button" class="replay" data-replay-parent="stag-cur">Replay scan finish</button>
+        <div id="stag-cur"><div class="stag-list">
+          <div class="stag-item">July 12 — 34 photos</div><div class="stag-item">July 11 — 12 photos</div><div class="stag-item">July 9 — 51 photos</div><div class="stag-item">July 8 — 8 photos</div><div class="stag-item">July 5 — 27 photos</div>
+        </div></div>
+        <p class="cap">Everything lands in the same frame.</p>
+      </div>
+      <div class="pane pro">
+        <span class="pane-label">Proposed</span>
+        <button type="button" class="replay" data-replay-parent="stag-pro">Replay scan finish</button>
+        <div id="stag-pro"><div class="stag-list staggered">
+          <div class="stag-item">July 12 — 34 photos</div><div class="stag-item">July 11 — 12 photos</div><div class="stag-item">July 9 — 51 photos</div><div class="stag-item">July 8 — 8 photos</div><div class="stag-item">July 5 — 27 photos</div>
+        </div></div>
+        <p class="cap">40ms per row, capped — reads as arrival, costs 160ms total.</p>
+      </div>
+    </div>
+    <div class="verdict partial"><span class="vt">Partial.</span> Approve only with the audit's own guardrails hard-coded: first render only, cap at 6, disabled under reduced motion — otherwise it becomes the exact perpetual-decoration problem items 2–3 remove.</div>
+    <div class="decision-slot"></div>
+  </section>
+
+  <!-- ================= SUMMARY ================= -->
+  <section class="summary" id="summary">
+    <h2>Decision summary</h2>
+    <p>Copy the markdown below and paste it back to Claude to implement approved items or open the discuss items.</p>
+    <div class="sum-actions">
+      <button type="button" class="big-copy" id="copy-btn">Copy decisions</button>
+      <button type="button" class="util-btn" id="approve-rest">Approve all remaining</button>
+      <button type="button" class="util-btn" id="reset-all">Reset all</button>
+      <span class="counter" id="counter2">0/14 decided</span>
+    </div>
+    <pre id="md-out" aria-label="Generated markdown summary"></pre>
+  </section>
+
+  <footer class="colophon">Generated 2026-07-14 · Sources: audit-emil-design-eng.md &amp; audit-apple-design.md · Decisions persist in localStorage</footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "pb-design-review-v1";
+  var DATE = "2026-07-14";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { state = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".card"));
+
+  var DECISIONS = [
+    { d: "approve", cls: "approve", label: "✓ Approve" },
+    { d: "deny", cls: "deny", label: "✗ Deny" },
+    { d: "discuss", cls: "discuss", label: "💬 Discuss" }
+  ];
+
+  function updateCounters() {
+    var n = cards.filter(function (c) {
+      var s = state[c.dataset.id];
+      return s && s.decision;
+    }).length;
+    var txt = n + "/" + cards.length + " decided";
+    document.getElementById("counter").textContent = txt;
+    document.getElementById("counter2").textContent = txt;
+  }
+
+  cards.forEach(function (card) {
+    var id = card.dataset.id;
+    var slot = card.querySelector(".decision-slot");
+    if (!slot) return;
+
+    var seg = document.createElement("div");
+    seg.className = "seg";
+    seg.setAttribute("role", "group");
+    seg.setAttribute("aria-label", "Decision for item " + id);
+
+    var btns = DECISIONS.map(function (def) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "seg-btn " + def.cls;
+      b.dataset.d = def.d;
+      b.textContent = def.label;
+      b.setAttribute("aria-pressed", "false");
+      seg.appendChild(b);
+      return b;
+    });
+
+    var note = document.createElement("textarea");
+    note.className = "note";
+    note.rows = 1;
+    note.placeholder = "notes / what to discuss";
+    note.setAttribute("aria-label", "Notes for item " + id);
+
+    slot.appendChild(seg);
+    slot.appendChild(note);
+
+    var s = state[id] || {};
+    if (s.note) note.value = s.note;
+
+    function paint() {
+      var cur = state[id] && state[id].decision;
+      btns.forEach(function (b) {
+        var on = cur === b.dataset.d;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var cur = state[id] && state[id].decision;
+        var next = cur === b.dataset.d ? null : b.dataset.d;
+        state[id] = state[id] || {};
+        state[id].decision = next;
+        save();
+        paint();
+        updateCounters();
+      });
+    });
+
+    note.addEventListener("input", function () {
+      state[id] = state[id] || {};
+      state[id].note = note.value;
+      save();
+    });
+
+    card._paint = paint;
+    card._note = note;
+    paint();
+  });
+
+  updateCounters();
+
+  /* ---------- markdown + copy ---------- */
+  function decisionText(d) {
+    if (d === "approve") return "✅ APPROVED";
+    if (d === "deny") return "❌ DENIED";
+    if (d === "discuss") return "💬 DISCUSS";
+    return "undecided";
+  }
+  function buildMd() {
+    var md = "# Photo Bridge design review — decisions (" + DATE + ")\n\n";
+    cards.forEach(function (c) {
+      var id = c.dataset.id;
+      var s = state[id] || {};
+      md += id + ". **" + c.dataset.title + "** — " + decisionText(s.decision) + "\n";
+      if (s.note && s.note.trim()) md += "   - Note: " + s.note.trim() + "\n";
+    });
+    md += "\nPlease implement the approved items and walk through the discuss items with me.\n";
+    return md;
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  var copyBtn = document.getElementById("copy-btn");
+  var mdOut = document.getElementById("md-out");
+  copyBtn.addEventListener("click", function () {
+    var md = buildMd();
+    mdOut.textContent = md;
+    mdOut.classList.add("show");
+    function done(ok) {
+      copyBtn.textContent = ok ? "Copied!" : "Copy failed — select the text below";
+      setTimeout(function () { copyBtn.textContent = "Copy decisions"; }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(md).then(function () { done(true); }, function () { done(fallbackCopy(md)); });
+    } else {
+      done(fallbackCopy(md));
+    }
+  });
+
+  document.getElementById("approve-rest").addEventListener("click", function () {
+    cards.forEach(function (c) {
+      var id = c.dataset.id;
+      state[id] = state[id] || {};
+      if (!state[id].decision) state[id].decision = "approve";
+      c._paint();
+    });
+    save();
+    updateCounters();
+  });
+
+  document.getElementById("reset-all").addEventListener("click", function () {
+    if (!window.confirm("Clear all decisions and notes?")) return;
+    state = {};
+    save();
+    cards.forEach(function (c) {
+      c._note.value = "";
+      c._paint();
+    });
+    updateCounters();
+    mdOut.classList.remove("show");
+  });
+
+  /* ---------- demo helpers ---------- */
+  function restartAnim(el) {
+    el.classList.remove("play");
+    void el.offsetWidth; // reflow
+    el.classList.add("play");
+  }
+
+  // dialog + stagger replays (parent gets .play)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-replay-parent]"), function (btn) {
+    var target = document.getElementById(btn.getAttribute("data-replay-parent"));
+    btn.addEventListener("click", function () { restartAnim(target); });
+    // auto-play once so panes aren't empty on load
+    restartAnim(target);
+  });
+
+  // ping replay (restart the halo element's animation)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-replay='ping3']"), function (btn) {
+    var halo = document.getElementById("ping3");
+    btn.addEventListener("click", function () {
+      halo.style.animation = "none";
+      void halo.offsetWidth;
+      halo.style.animation = "";
+    });
+  });
+
+  // theme flip demo — both buttons flip the same class so panes stay in sync
+  Array.prototype.forEach.call(document.querySelectorAll("[data-theme-flip]"), function (btn) {
+    btn.addEventListener("click", function () {
+      document.body.classList.toggle("demo-light");
+    });
+  });
+
+  // segmented control demos
+  Array.prototype.forEach.call(document.querySelectorAll(".segctl"), function (ctl) {
+    var hl = ctl.querySelector(".hl");
+    var btns = Array.prototype.slice.call(ctl.querySelectorAll("button"));
+    var mode = ctl.dataset.mode;
+    function select(i) {
+      btns.forEach(function (b, j) { b.setAttribute("aria-pressed", i === j ? "true" : "false"); });
+      if (mode === "width") {
+        hl.style.left = (2 + i * 32) + "px";
+        hl.style.width = "32px";
+      } else {
+        hl.style.transform = "translateX(" + (i * 32) + "px)";
+      }
+    }
+    btns.forEach(function (b, i) {
+      b.addEventListener("click", function () { select(i); });
+    });
+    select(0);
+  });
+})();
+</script>
+</body>
+</html>

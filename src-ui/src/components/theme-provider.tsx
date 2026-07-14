@@ -51,6 +51,13 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
+      // Cross-fade the swap (see .theme-transition in styles.css) instead of
+      // hard-cutting brightness. Guarded to user-initiated changes only.
+      const root = window.document.documentElement;
+      root.classList.add('theme-transition');
+      window.setTimeout(() => {
+        root.classList.remove('theme-transition');
+      }, 250);
       localStorage.setItem(storageKey, theme);
       setTheme(theme);
     },

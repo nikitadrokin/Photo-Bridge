@@ -224,7 +224,7 @@ function TransferPage() {
               )}
               <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                 <span className="font-medium leading-tight">Push Folder</span>
-                <span className="text-[11px] font-normal leading-snug text-muted-foreground">
+                <span className="text-xs font-normal leading-snug text-muted-foreground">
                   Upload a folder to {PIXEL_CAMERA_DIR}
                 </span>
               </span>
@@ -242,7 +242,7 @@ function TransferPage() {
               <IconFile className="size-3.5 shrink-0 text-primary" />
               <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                 <span className="font-medium leading-tight">Push Files</span>
-                <span className="text-[11px] font-normal leading-snug text-muted-foreground">
+                <span className="text-xs font-normal leading-snug text-muted-foreground">
                   Upload specific files to your device
                 </span>
               </span>
@@ -258,7 +258,7 @@ function TransferPage() {
               <IconDownload className="size-3.5 shrink-0 text-primary" />
               <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
                 <span className="font-medium leading-tight">Pull Camera</span>
-                <span className="text-[11px] font-normal leading-snug text-muted-foreground">
+                <span className="text-xs font-normal leading-snug text-muted-foreground">
                   Download all media from Camera folder
                 </span>
               </span>
@@ -266,7 +266,7 @@ function TransferPage() {
           </div>
 
           <div className="space-y-2 border-t border-border/60 pt-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Advanced
             </p>
             <Button
@@ -282,7 +282,7 @@ function TransferPage() {
                 <span className="font-medium leading-tight">
                   Open Camera Shell
                 </span>
-                <span className="text-[10px] font-normal leading-snug text-muted-foreground/80">
+                <span className="text-xs font-normal leading-snug text-muted-foreground">
                   Launch an ADB shell in {PIXEL_CAMERA_DIR}
                 </span>
               </span>

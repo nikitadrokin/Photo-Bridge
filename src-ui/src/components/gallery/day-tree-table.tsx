@@ -52,6 +52,18 @@ function FileThumb({ file }: { readonly file: GalleryScanFilePayload }) {
   );
 }
 
+// Entrance stagger is capped so the first few rows cascade (15ms apart) and
+// everything after appears together — folders with hundreds of files still
+// read as instant (max added latency: 90ms delay + 150ms fade).
+const MAX_STAGGER_STEPS = 6;
+const STAGGER_STEP_MS = 15;
+
+function rowEnterStyle(index: number): React.CSSProperties {
+  return {
+    animationDelay: `${Math.min(index, MAX_STAGGER_STEPS) * STAGGER_STEP_MS}ms`,
+  };
+}
+
 const DayTreeTable: React.FC<DayTreeTableProps> = ({ days, onSelectFile }) => {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
@@ -79,13 +91,14 @@ const DayTreeTable: React.FC<DayTreeTableProps> = ({ days, onSelectFile }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {days.map((day) => {
+          {days.map((day, dayIndex) => {
             const isExpanded = !collapsed.has(day.dayKey);
             return (
               <Fragment key={day.dayKey}>
                 <TableRow
                   aria-expanded={isExpanded}
-                  className="cursor-pointer bg-muted/30"
+                  className="cursor-pointer bg-muted/30 gallery-row-enter"
+                  style={rowEnterStyle(dayIndex)}
                   onClick={() => {
                     toggle(day.dayKey);
                   }}
@@ -111,14 +124,15 @@ const DayTreeTable: React.FC<DayTreeTableProps> = ({ days, onSelectFile }) => {
                 </TableRow>
 
                 {isExpanded
-                  ? day.files.map((file) => {
+                  ? day.files.map((file, fileIndex) => {
                       const timeLabel = formatGalleryCaptureTime(
                         file.unixSeconds,
                       );
                       return (
                         <TableRow
                           key={file.path}
-                          className="cursor-pointer"
+                          className="cursor-pointer gallery-row-enter"
+                          style={rowEnterStyle(dayIndex + 1 + fileIndex)}
                           onClick={() => {
                             onSelectFile(file);
                           }}

@@ -76,6 +76,8 @@
 
 @theme inline {
   --font-sans: 'Inter Variable', sans-serif;
+  /* Faster spinner reads as faster loading (default is 1s/rev). */
+  --animate-spin: spin 0.6s linear infinite;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -131,5 +133,36 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Applied briefly by ThemeProvider.setTheme so dark<->light swaps cross-fade
+     instead of hard-cutting. !important intentionally overrides per-component
+     transitions for the duration of the swap only. */
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      color 200ms ease,
+      fill 200ms ease,
+      stroke 200ms ease !important;
+  }
+}
+
+@layer components {
+  /* One-time row entrance for the gallery table. Delay is capped by the
+     caller so large folders still feel instant; `backwards` keeps rows
+     hidden during their delay. Opacity-only: table rows + transforms are
+     flaky across engines. */
+  .gallery-row-enter {
+    animation: gallery-row-in 150ms ease-out backwards;
+  }
+}
+
+@keyframes gallery-row-in {
+  from {
+    opacity: 0;
   }
 }
