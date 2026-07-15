@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconLoader2, IconTrash, IconFolderOpen } from '@tabler/icons-react';
+import { IconFolderOpen, IconLoader2, IconTrash } from '@tabler/icons-react';
 import { appCacheDir } from '@tauri-apps/api/path';
 import { Command } from '@tauri-apps/plugin-shell';
 import { toast } from 'sonner';
@@ -14,6 +14,16 @@ import PixelFolderTree from '@/components/gallery/pixel-folder-tree';
 import PixelMediaPreview, {
   type PixelPreviewStatus,
 } from '@/components/gallery/pixel-media-preview';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,7 +32,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import SplitColumn from '@/components/ui/split-column';
+
+/** The word the user must type before a purge is allowed to run. */
+const PURGE_CONFIRM_WORD = 'purge';
 
 export const Route = createFileRoute('/manage-device')({
   staticData: {
@@ -46,12 +61,13 @@ function PixelPage() {
     listPixelFiles,
     pullPixelFileToCache,
     savePixelFiles,
+    purgePixelFiles,
     refreshDeviceInfo,
   } = pixel;
 
   const isLargeScreen = useIsLargeScreen();
 
-  const [files, setFiles] = useState<PixelFilePayload[] | null>(null);
+  const [files, setFiles] = useState<Array<PixelFilePayload> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [selectedFile, setSelectedFile] = useState<PixelFilePayload | null>(
@@ -59,6 +75,9 @@ function PixelPage() {
   );
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);
+  const [purgeConfirmText, setPurgeConfirmText] = useState('');
+  const [isPurging, setIsPurging] = useState(false);
   // Guards against an earlier pull resolving after a newer selection.
   const previewRequestRef = useRef(0);
 
@@ -86,6 +105,8 @@ function PixelPage() {
       setSelectedFile(null);
       setPreview(null);
       setDialogOpen(false);
+      setPurgeDialogOpen(false);
+      setPurgeConfirmText('');
     }
   }, [isConnected, loadFiles, refreshDeviceInfo]);
 
@@ -143,6 +164,39 @@ function PixelPage() {
   }, []);
 
   const fileCount = files?.length ?? 0;
+  const purgeConfirmed =
+    purgeConfirmText.trim().toLowerCase() === PURGE_CONFIRM_WORD;
+  // Purging mid-transfer could delete files adb is still writing.
+  const canPurge =
+    isConnected && !pixel.isRunning && !isPurging && fileCount > 0;
+
+  const handleConfirmPurge = useCallback(async () => {
+    if (!isConnected || pixel.isRunning || isPurging) return;
+    setIsPurging(true);
+    const result = await purgePixelFiles();
+    setIsPurging(false);
+    setPurgeDialogOpen(false);
+    setPurgeConfirmText('');
+    if (result.ok) {
+      toast.success(
+        `Purged ${result.deleted} file${result.deleted === 1 ? '' : 's'} from the camera roll`,
+      );
+      setSelectedFile(null);
+      setPreview(null);
+      void loadFiles();
+      void refreshDeviceInfo();
+    } else {
+      toast.error('Purge failed', { description: result.detail });
+      void loadFiles();
+    }
+  }, [
+    isConnected,
+    pixel.isRunning,
+    isPurging,
+    purgePixelFiles,
+    loadFiles,
+    refreshDeviceInfo,
+  ]);
 
   return (
     <SplitColumn>
@@ -171,6 +225,60 @@ function PixelPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={purgeDialogOpen}
+        onOpenChange={(open) => {
+          if (isPurging) return;
+          setPurgeDialogOpen(open);
+          if (!open) setPurgeConfirmText('');
+        }}
+      >
+        <AlertDialogContent size="default">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Purge camera roll?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes approximately {fileCount} file
+              {fileCount === 1 ? '' : 's'} in{' '}
+              <span className="font-mono">{PIXEL_CAMERA_DIR}</span> on the
+              device. Only purge after Google Photos shows the backup is
+              complete — deleted files cannot be recovered.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="purge-confirm">
+              Type &ldquo;{PURGE_CONFIRM_WORD}&rdquo; to confirm
+            </Label>
+            <Input
+              id="purge-confirm"
+              autoComplete="off"
+              value={purgeConfirmText}
+              disabled={isPurging}
+              onChange={(event) => setPurgeConfirmText(event.target.value)}
+              placeholder={PURGE_CONFIRM_WORD}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPurging}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={!purgeConfirmed || !canPurge}
+              onClick={() => {
+                void handleConfirmPurge();
+              }}
+            >
+              {isPurging ? (
+                <>
+                  <IconLoader2 size={16} className="animate-spin" />
+                  Purging…
+                </>
+              ) : (
+                'Purge camera roll'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex min-h-0 min-w-0 flex-col gap-6">
         <ConnectionStatus
@@ -208,34 +316,50 @@ function PixelPage() {
                   : ''}
               </p>
             </div>
-            {import.meta.env.DEV && (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    void openCacheInFinder();
-                  }}
-                >
-                  <IconFolderOpen size={16} />
-                  Cache
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    void purgeLocalCache();
-                  }}
-                >
-                  <IconTrash size={16} />
-                  Purge Cache
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {import.meta.env.DEV && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      void openCacheInFinder();
+                    }}
+                  >
+                    <IconFolderOpen size={16} />
+                    Cache
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      void purgeLocalCache();
+                    }}
+                  >
+                    <IconTrash size={16} />
+                    Purge Cache
+                  </Button>
+                </>
+              )}
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="gap-1.5"
+                disabled={!canPurge}
+                onClick={() => {
+                  setPurgeConfirmText('');
+                  setPurgeDialogOpen(true);
+                }}
+              >
+                <IconTrash size={16} />
+                Purge camera roll
+              </Button>
+            </div>
           </div>
 
           {!isConnected ? (
