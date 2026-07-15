@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 /**
  * Build a Tauri release, optionally bump patch version, update the Homebrew cask,
- * and optionally publish to GitHub (--auto).
+ * and publish to GitHub by default. Pass `--dry-run` to skip publishing and
+ * print the manual steps instead.
  */
 
 import { Glob } from 'bun';
@@ -44,8 +45,8 @@ const defaultUpdaterSigningKeyPath = join(
 );
 const caskFilePath = join(projectRoot, '../homebrew-tap/Casks/photo-bridge.rb');
 
-function parseArgs(argv: string[]): { autoPublish: boolean } {
-  return { autoPublish: argv.includes('--auto') };
+function parseArgs(argv: string[]): { dryRun: boolean } {
+  return { dryRun: argv.includes('--dry-run') };
 }
 
 async function readTauriVersion(path: string): Promise<string> {
@@ -386,7 +387,7 @@ function spawnGhInherit(args: string[]): void {
 }
 
 async function main(): Promise<void> {
-  const { autoPublish } = parseArgs(process.argv.slice(2));
+  const { dryRun } = parseArgs(process.argv.slice(2));
 
   const currentVersion = await readTauriVersion(tauriConfPath);
   const nextVersion = nextPatchVersion(currentVersion);
@@ -508,7 +509,7 @@ async function main(): Promise<void> {
   console.log(`SHA256:   ${CYAN}${sha256}${NC}`);
   console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
 
-  if (autoPublish) {
+  if (!dryRun) {
     console.log('');
     console.log(`${CYAN}Publishing release...${NC}`);
 
@@ -602,7 +603,7 @@ async function main(): Promise<void> {
       `     gh release create v${versionToBuild} "${dmgPath}" "${updaterArchivePath}" "${updaterSignaturePath}" "${latestUpdaterPath}" --title "v${versionToBuild}" --generate-notes`,
     );
     console.log('');
-    console.log(`${YELLOW}Tip: Run with --auto to publish automatically.${NC}`);
+    console.log(`${YELLOW}Tip: Omit --dry-run to publish automatically.${NC}`);
     console.log('');
   }
 }
