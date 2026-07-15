@@ -1,6 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconFolderOpen, IconLoader2, IconTrash } from '@tabler/icons-react';
+import {
+  IconArrowRight,
+  IconFolderOpen,
+  IconLoader2,
+  IconTerminal2,
+  IconTrash,
+} from '@tabler/icons-react';
 import { appCacheDir } from '@tauri-apps/api/path';
 import { Command } from '@tauri-apps/plugin-shell';
 import { toast } from 'sonner';
@@ -199,7 +205,7 @@ function PixelPage() {
   ]);
 
   return (
-    <SplitColumn>
+    <SplitColumn fillHeight>
       {/* Mobile / small screens: preview opens in a dialog. */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
@@ -281,15 +287,17 @@ function PixelPage() {
       </AlertDialog>
 
       <div className="flex min-h-0 min-w-0 flex-col gap-6">
-        <ConnectionStatus
-          className="shrink-0"
-          isConnected={pixel.isConnected}
-          isConnectionCheckPending={pixel.isConnectionCheckPending}
-          disableRefresh={pixel.isRunning}
-          onRefresh={() => {
-            void pixel.checkConnection({ interactive: true });
-          }}
-        />
+        {!isConnected ? (
+          <ConnectionStatus
+            className="shrink-0"
+            isConnected={pixel.isConnected}
+            isConnectionCheckPending={pixel.isConnectionCheckPending}
+            disableRefresh={pixel.isRunning}
+            onRefresh={() => {
+              void pixel.checkConnection({ interactive: true });
+            }}
+          />
+        ) : null}
 
         <DeviceInfoCard
           className="shrink-0"
@@ -376,14 +384,47 @@ function PixelPage() {
               files={files}
               selectedPath={selectedFile?.path ?? null}
               onSelectFile={handleSelectFile}
-              className="min-h-0 flex-1"
+              // min-h-40 keeps the tree usable on short windows: the page
+              // scrolls the overflow instead of collapsing the tree to zero.
+              className="min-h-40 flex-1"
             />
           ) : (
-            <p className="shrink-0 rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-              No files in the camera roll.
-            </p>
+            <div className="flex shrink-0 flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
+              <p>No files in the camera roll.</p>
+              <Link
+                to="/transfer-media"
+                className="inline-flex items-center gap-1.5 text-primary hover:underline"
+              >
+                Transfer media
+                <IconArrowRight className="size-3.5" />
+              </Link>
+            </div>
           )}
         </section>
+
+        <div className="shrink-0 space-y-2 border-t border-border/60 pt-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Advanced
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="h-auto min-h-6 w-full items-start justify-start gap-2 px-2 py-1.5 whitespace-normal"
+            disabled={!isConnected}
+            onClick={pixel.openCameraShellInTerminal}
+          >
+            <IconTerminal2 className="size-3 shrink-0 text-muted-foreground" />
+            <span className="flex min-w-0 flex-col items-start gap-px text-left">
+              <span className="font-medium leading-tight">
+                Open Camera Shell
+              </span>
+              <span className="text-xs font-normal leading-snug text-muted-foreground">
+                Launch an ADB shell in {PIXEL_CAMERA_DIR}
+              </span>
+            </span>
+          </Button>
+        </div>
       </div>
 
       {/* Inline preview — fills the second column on large screens. */}

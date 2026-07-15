@@ -9,15 +9,12 @@ import {
 import { listen } from '@tauri-apps/api/event';
 import { appCacheDir, join } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
+import { toast } from 'sonner';
 import { parseLineFromCLI } from '@cli-protocol';
-import type { PixelFilePayload, ShellStorageEvent } from '@cli-protocol';
+import type { PixelFilePayload } from '@cli-protocol';
 import { useCommand } from '@/hooks/use-command';
 import { useTerminal } from '@/hooks/use-terminal';
-import {
-  IMAGE_EXTENSIONS,
-  PIXEL_CAMERA_DIR,
-  VIDEO_EXTENSIONS,
-} from '@/lib/constants';
+import { PIXEL_CAMERA_DIR } from '@/lib/constants';
 import { measureLocalBytes } from '@/lib/local-bytes';
 import {
   type MediaDateInspectResult,
@@ -29,11 +26,7 @@ import {
   parseHumanSizeToBytes,
   pushFitsInFreeSpace,
 } from '@/lib/storage-size';
-import type {
-  AvailableStorageState,
-  DeviceInfoState,
-  PushSpaceCheckResult,
-} from '@/lib/types';
+import type { DeviceInfoState, PushSpaceCheckResult } from '@/lib/types';
 
 export interface TransferPaths {
   source: string;
@@ -135,6 +128,8 @@ export interface CheckConnectionOptions {
   interactive?: boolean;
 }
 
+const TRANSFER_INTERRUPTED_TOAST_ID = 'transfer-interrupted';
+
 function usePixelProviderValue() {
   const [isConnected, setIsConnected] = useState(false);
   const [activeOperation, setActiveOperation] = useState<ActiveOperation>(null);
@@ -143,8 +138,6 @@ function usePixelProviderValue() {
   );
   const [isConnectionCheckPending, setIsConnectionCheckPending] =
     useState(false);
-  const [availableStorage, setAvailableStorage] =
-    useState<AvailableStorageState>({ status: 'idle' });
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfoState>({ status: 'idle' });
   const [transferInterrupted, setTransferInterrupted] = useState(false);
   const activeOperationRef = useRef<ActiveOperation>(null);
@@ -193,68 +186,6 @@ function usePixelProviderValue() {
   useEffect(() => {
     checkConnection();
   }, [checkConnection]);
-
-  const refreshAvailableStorage = useCallback(async () => {
-    if (!isConnected) {
-      setAvailableStorage({ status: 'idle' });
-      return;
-    }
-    setAvailableStorage((prev) => ({
-      ...prev,
-      status: 'loading',
-    }));
-    const { stdout } = await captureStdout([
-      'shell',
-      '--jsonl',
-      '--',
-      'df',
-      '-h',
-      PIXEL_CAMERA_DIR,
-    ]);
-
-    const lines = stdout
-      .split('\n')
-      .map((line) => line.replace(/\r$/, '').trim())
-      .filter((line) => line.length > 0);
-
-    let storage: ShellStorageEvent | null = null;
-    let errorDetail: string | null = null;
-
-    for (const line of lines) {
-      const parsed = parseLineFromCLI(line);
-      if (parsed.tag !== 'ui') {
-        continue;
-      }
-      if (parsed.event.kind === 'shell_storage') {
-        storage = parsed.event;
-      }
-      if (parsed.event.kind === 'error') {
-        errorDetail = parsed.event.detail ?? parsed.event.code;
-      }
-    }
-
-    if (storage !== null) {
-      const availBytes = parseHumanSizeToBytes(storage.availHuman) ?? undefined;
-      setAvailableStorage({
-        status: 'ok',
-        availLabel: storage.availHuman,
-        availBytes,
-      });
-      return;
-    }
-
-    setAvailableStorage({
-      status: 'error',
-      errorMessage: errorDetail ?? 'Unknown error',
-    });
-    return;
-  }, [isConnected, captureStdout]);
-
-  useEffect(() => {
-    if (!isConnected) {
-      setAvailableStorage({ status: 'idle' });
-    }
-  }, [isConnected]);
 
   const refreshDeviceInfo = useCallback(async () => {
     if (!isConnected) {
@@ -315,6 +246,18 @@ function usePixelProviderValue() {
         (operation === 'push' || operation === 'pull')
       ) {
         setTransferInterrupted(true);
+        // Persistent toast so the interruption is visible on every page, not
+        // just the transfer page.
+        toast.error('Transfer interrupted', {
+          id: TRANSFER_INTERRUPTED_TOAST_ID,
+          duration: Infinity,
+          description:
+            'The Pixel disconnected while files were transferring. The last file may be incomplete on the device.',
+          action: {
+            label: 'Dismiss',
+            onClick: () => toast.dismiss(TRANSFER_INTERRUPTED_TOAST_ID),
+          },
+        });
       }
       setIsConnected(e.payload.connected);
     }).then((fn) => {
@@ -347,8 +290,6 @@ function usePixelProviderValue() {
         };
       }
 
-      setAvailableStorage((prev) => ({ ...prev, status: 'loading' }));
-
       const [needBytes, storageProbe] = await Promise.all([
         measureLocalBytes(paths),
         captureStdout([
@@ -363,7 +304,6 @@ function usePixelProviderValue() {
 
       let freeLabel: string | undefined;
       let freeBytes: number | undefined;
-      let probeError: string | undefined;
       for (const line of storageProbe.stdout.split('\n')) {
         const trimmed = line.replace(/\r$/, '').trim();
         if (trimmed.length === 0) continue;
@@ -373,22 +313,6 @@ function usePixelProviderValue() {
           freeLabel = parsed.event.availHuman;
           freeBytes = parseHumanSizeToBytes(parsed.event.availHuman) ?? undefined;
         }
-        if (parsed.event.kind === 'error') {
-          probeError = parsed.event.detail ?? parsed.event.code;
-        }
-      }
-
-      if (freeLabel !== undefined) {
-        setAvailableStorage({
-          status: 'ok',
-          availLabel: freeLabel,
-          availBytes: freeBytes,
-        });
-      } else {
-        setAvailableStorage({
-          status: 'error',
-          errorMessage: probeError ?? 'Unknown error',
-        });
       }
 
       if (needBytes === null) {
@@ -428,11 +352,17 @@ function usePixelProviderValue() {
     [isConnected, captureStdout],
   );
 
+  /** Reset the interruption flag (and its toast) when a new transfer starts. */
+  const clearTransferInterrupted = useCallback(() => {
+    setTransferInterrupted(false);
+    toast.dismiss(TRANSFER_INTERRUPTED_TOAST_ID);
+  }, []);
+
   /** Push already-chosen local paths to the Pixel camera folder. */
   const pushPaths = useCallback(
     async (paths: readonly string[]) => {
       if (!isConnected || paths.length === 0) return;
-      setTransferInterrupted(false);
+      clearTransferInterrupted();
       setActiveOperation('push');
       setTransferPaths({
         source: paths[0],
@@ -441,43 +371,12 @@ function usePixelProviderValue() {
       await execute(['push-to-pixel', '--jsonl', ...paths], {
         onFinish: () => {
           setActiveOperation(null);
-          void refreshAvailableStorage();
+          void refreshDeviceInfo();
         },
       });
     },
-    [isConnected, execute, refreshAvailableStorage],
+    [isConnected, execute, refreshDeviceInfo, clearTransferInterrupted],
   );
-
-  const pushFiles = useCallback(async () => {
-    if (!isConnected) return;
-    const selected = await open({
-      directory: false,
-      multiple: true,
-      filters: [
-        {
-          name: 'Media',
-          extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS],
-        },
-      ],
-      title: 'Select Files to Push to Pixel',
-    });
-    if (selected) {
-      const paths = Array.isArray(selected) ? selected : [selected];
-      await pushPaths(paths);
-    }
-  }, [isConnected, pushPaths]);
-
-  const pushFolder = useCallback(async () => {
-    if (!isConnected) return;
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: 'Select Folder to Push to Pixel',
-    });
-    if (selected && typeof selected === 'string') {
-      await pushPaths([selected]);
-    }
-  }, [isConnected, pushPaths]);
 
   const pull = useCallback(async () => {
     if (!isConnected) return;
@@ -487,14 +386,14 @@ function usePixelProviderValue() {
       title: 'Select Destination for Camera Files',
     });
     if (destination && typeof destination === 'string') {
-      setTransferInterrupted(false);
+      clearTransferInterrupted();
       setActiveOperation('pull');
       setTransferPaths({ source: PIXEL_CAMERA_DIR, destination });
       await execute(['pull-from-pixel', '--jsonl', destination], {
         onFinish: () => setActiveOperation(null),
       });
     }
-  }, [isConnected, execute]);
+  }, [isConnected, execute, clearTransferInterrupted]);
 
   /** Pulls specific device files/folders to a user-chosen destination. */
   const savePixelFiles = useCallback(
@@ -506,7 +405,7 @@ function usePixelProviderValue() {
         title: 'Save to Folder',
       });
       if (destination && typeof destination === 'string') {
-        setTransferInterrupted(false);
+        clearTransferInterrupted();
         setActiveOperation('pull');
         setTransferPaths({ source: devicePaths[0], destination });
         await execute(
@@ -515,7 +414,7 @@ function usePixelProviderValue() {
         );
       }
     },
-    [isConnected, execute],
+    [isConnected, execute, clearTransferInterrupted],
   );
 
   const listPixelFiles = useCallback(async (): Promise<{
@@ -852,14 +751,12 @@ function usePixelProviderValue() {
   const clearAll = useCallback(() => {
     clearLogs();
     setTransferPaths(null);
-    setTransferInterrupted(false);
-  }, [clearLogs]);
+    clearTransferInterrupted();
+  }, [clearLogs, clearTransferInterrupted]);
 
   return {
     isConnected,
     isConnectionCheckPending,
-    availableStorage,
-    refreshAvailableStorage,
     deviceInfo,
     refreshDeviceInfo,
     listPixelFiles,
@@ -873,8 +770,6 @@ function usePixelProviderValue() {
     checkConnection,
     checkPushSpace,
     pushPaths,
-    pushFiles,
-    pushFolder,
     pull,
     openCameraShellInTerminal,
     convert,

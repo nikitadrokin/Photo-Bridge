@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  IconAlertTriangle,
+  IconArrowRight,
   IconDownload,
   IconFile,
   IconFolder,
-  IconAlertTriangle,
-  IconTerminal2,
   IconLoader2,
 } from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -19,8 +19,8 @@ import {
 } from '@/lib/constants';
 import { formatBytes } from '@/lib/storage-size';
 import type { PushSpaceCheckResult } from '@/lib/types';
-import { AvailableStorageCard } from '@/components/available-storage-card';
 import { ConnectionStatus } from '@/components/connection-status';
+import { DeviceInfoCard } from '@/components/device-info-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -36,7 +36,11 @@ import { Button } from '@/components/ui/button';
 import SplitColumn from '@/components/ui/split-column';
 
 export const Route = createFileRoute('/transfer-media')({
-  staticData: { pageTitle: 'Transfer Media' },
+  staticData: {
+    pageTitle: 'Transfer Media',
+    pageDescription:
+      'Push media to your Pixel camera roll or pull the camera roll to your Mac.',
+  },
   component: TransferPage,
 });
 
@@ -44,6 +48,41 @@ type PendingPush = {
   paths: string[];
   check: PushSpaceCheckResult;
 };
+
+interface TransferActionButtonProps {
+  readonly icon: React.ReactNode;
+  readonly title: string;
+  readonly description: string;
+  readonly disabled: boolean;
+  readonly onClick: () => void;
+}
+
+function TransferActionButton({
+  icon,
+  title,
+  description,
+  disabled,
+  onClick,
+}: TransferActionButtonProps) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-auto min-h-7 w-full items-start justify-start gap-2.5 px-3 py-2 whitespace-normal"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
+        <span className="font-medium leading-tight">{title}</span>
+        <span className="text-xs font-normal leading-snug text-muted-foreground">
+          {description}
+        </span>
+      </span>
+    </Button>
+  );
+}
 
 function TransferPage() {
   const pixel = usePixel();
@@ -55,7 +94,7 @@ function TransferPage() {
 
   useEffect(() => {
     if (pixel.isConnected && !pixel.isRunning) {
-      void pixel.refreshAvailableStorage();
+      void pixel.refreshDeviceInfo();
     }
     // Only re-probe when connection flips on.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: connect edge
@@ -152,6 +191,12 @@ function TransferPage() {
     return '';
   })();
 
+  // The last finished transfer was a push when its destination was the device.
+  const lastTransferWasPush =
+    !pixel.isRunning &&
+    pixel.activeOperation === null &&
+    pixel.transferPaths?.destination === PIXEL_CAMERA_DIR;
+
   return (
     <SplitColumn>
       <AlertDialog
@@ -180,14 +225,16 @@ function TransferPage() {
       </AlertDialog>
 
       <div className="flex flex-col gap-6">
-        <ConnectionStatus
-          isConnected={pixel.isConnected}
-          isConnectionCheckPending={pixel.isConnectionCheckPending}
-          disableRefresh={pixel.isRunning}
-          onRefresh={() => {
-            void pixel.checkConnection({ interactive: true });
-          }}
-        />
+        {!pixel.isConnected ? (
+          <ConnectionStatus
+            isConnected={pixel.isConnected}
+            isConnectionCheckPending={pixel.isConnectionCheckPending}
+            disableRefresh={pixel.isRunning}
+            onRefresh={() => {
+              void pixel.checkConnection({ interactive: true });
+            }}
+          />
+        ) : null}
 
         {pixel.transferInterrupted ? (
           <Alert variant="destructive">
@@ -207,98 +254,61 @@ function TransferPage() {
             Transfer
           </h2>
           <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-auto min-h-7 w-full items-start justify-start gap-2.5 px-3 py-2 whitespace-normal"
+            <TransferActionButton
+              icon={
+                isCheckingSpace ? (
+                  <IconLoader2 className="size-3.5 shrink-0 animate-spin text-primary" />
+                ) : (
+                  <IconFolder className="size-3.5 shrink-0 text-primary" />
+                )
+              }
+              title="Push Folder"
+              description={`Upload a folder to ${PIXEL_CAMERA_DIR}`}
               disabled={isDisabled}
               onClick={() => {
                 void handlePushFolder();
               }}
-            >
-              {isCheckingSpace ? (
-                <IconLoader2 className="size-3.5 shrink-0 animate-spin text-primary" />
-              ) : (
-                <IconFolder className="size-3.5 shrink-0 text-primary" />
-              )}
-              <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
-                <span className="font-medium leading-tight">Push Folder</span>
-                <span className="text-xs font-normal leading-snug text-muted-foreground">
-                  Upload a folder to {PIXEL_CAMERA_DIR}
-                </span>
-              </span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-auto min-h-7 w-full items-start justify-start gap-2.5 px-3 py-2 whitespace-normal"
+            />
+            <TransferActionButton
+              icon={<IconFile className="size-3.5 shrink-0 text-primary" />}
+              title="Push Files"
+              description="Upload specific files to your device"
               disabled={isDisabled}
               onClick={() => {
                 void handlePushFiles();
               }}
-            >
-              <IconFile className="size-3.5 shrink-0 text-primary" />
-              <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
-                <span className="font-medium leading-tight">Push Files</span>
-                <span className="text-xs font-normal leading-snug text-muted-foreground">
-                  Upload specific files to your device
-                </span>
-              </span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-auto min-h-7 w-full items-start justify-start gap-2.5 px-3 py-2 whitespace-normal"
+            />
+            <TransferActionButton
+              icon={
+                <IconDownload className="size-3.5 shrink-0 text-primary" />
+              }
+              title="Pull Camera"
+              description="Download all media from Camera folder"
               disabled={isDisabled}
               onClick={pixel.pull}
-            >
-              <IconDownload className="size-3.5 shrink-0 text-primary" />
-              <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
-                <span className="font-medium leading-tight">Pull Camera</span>
-                <span className="text-xs font-normal leading-snug text-muted-foreground">
-                  Download all media from Camera folder
-                </span>
-              </span>
-            </Button>
-          </div>
-
-          <div className="space-y-2 border-t border-border/60 pt-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Advanced
-            </p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="h-auto min-h-6 w-full items-start justify-start gap-2 px-2 py-1.5 whitespace-normal"
-              disabled={!pixel.isConnected}
-              onClick={pixel.openCameraShellInTerminal}
-            >
-              <IconTerminal2 className="size-3 shrink-0 text-muted-foreground" />
-              <span className="flex min-w-0 flex-col items-start gap-px text-left">
-                <span className="font-medium leading-tight">
-                  Open Camera Shell
-                </span>
-                <span className="text-xs font-normal leading-snug text-muted-foreground">
-                  Launch an ADB shell in {PIXEL_CAMERA_DIR}
-                </span>
-              </span>
-            </Button>
+            />
           </div>
         </section>
 
         <TransferStatsPanel />
+
+        {lastTransferWasPush ? (
+          <Link
+            to="/manage-device"
+            className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline"
+          >
+            Browse files on device
+            <IconArrowRight className="size-3.5" />
+          </Link>
+        ) : null}
       </div>
 
       <div className="flex flex-col min-h-0 gap-4">
-        <AvailableStorageCard
-          storage={pixel.availableStorage}
+        <DeviceInfoCard
+          info={pixel.deviceInfo}
           disabled={!pixel.isConnected || pixel.isRunning || isCheckingSpace}
           onRefresh={() => {
-            void pixel.refreshAvailableStorage();
+            void pixel.refreshDeviceInfo();
           }}
         />
       </div>

@@ -5,19 +5,6 @@ export interface LogMessage {
   message: string;
 }
 
-/** UI state for Pixel free-space probe via `pb shell --jsonl -- df -h …`. */
-export interface AvailableStorageState {
-  readonly status: 'idle' | 'loading' | 'ok' | 'error';
-  /** Parsed **Avail** column when {@link status} is `ok` */
-  readonly availLabel?: string;
-  /**
-   * Approximate free bytes from {@link availLabel} when parseable.
-   * Used for push preflight; not a kernel-level exact value.
-   */
-  readonly availBytes?: number;
-  readonly errorMessage?: string;
-}
-
 /** Result of comparing local push payload size to device free space. */
 export type PushSpaceCheckResult =
   | {

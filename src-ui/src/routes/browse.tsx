@@ -171,7 +171,7 @@ function BrowsePage() {
   }
 
   return (
-    <SplitColumn>
+    <SplitColumn fillHeight>
       <Lightbox
         file={previewFile}
         open={lightboxOpen}

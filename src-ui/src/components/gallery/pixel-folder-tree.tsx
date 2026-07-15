@@ -214,7 +214,7 @@ const PixelFolderTree: React.FC<PixelFolderTreeProps> = ({
   return (
     <div
       className={cn(
-        'overflow-y-auto overflow-x-hidden rounded-lg border text-sm',
+        'overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-lg border text-sm',
         className,
       )}
     >
