@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { IconFolder, IconClock, IconLoader2, IconX } from '@tabler/icons-react';
+import { IconClock, IconFolder, IconLoader2, IconX } from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import ActivityFeed from '@/components/activity-feed';
 import { Button } from '@/components/ui/button';
 import {
   Field,
@@ -171,7 +172,9 @@ function FixDatesPage() {
         </>
       </div>
 
-      <div className="flex flex-col min-h-0"></div>
+      <div className="flex min-h-0 flex-col gap-4">
+        <ActivityFeed emptyMessage="Fix activity will appear here…" />
+      </div>
     </SplitColumn>
   );
 }

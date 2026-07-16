@@ -8,7 +8,6 @@ import { useMediaStore } from '@/stores/media-store';
 import { usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
-import ConversionStatsPanel from './activity-stats/conversion-panel';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';
@@ -81,39 +80,35 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         name="media-job"
       />
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          type="button"
-          title={
-            mediaJob === 'convert'
-              ? 'Make compatible with Pixel'
-              : 'Copy/rename for Pixel upload'
+      <Button
+        type="button"
+        title={
+          mediaJob === 'convert'
+            ? 'Make compatible with Pixel'
+            : 'Copy/rename for Pixel upload'
+        }
+        onClick={() => {
+          if (mediaJob === 'convert') {
+            return pixel.convert(selectedPaths);
           }
-          onClick={() => {
-            if (mediaJob === 'convert') {
-              return pixel.convert(selectedPaths);
-            }
-            return pixel.copy(selectedPaths);
-          }}
-          disabled={pixel.isRunning}
-          className="gap-2"
-        >
-          {pixel.isRunning ? (
-            <IconLoader2 size={18} className="animate-spin" />
-          ) : (
-            <IconPlayerPlay size={18} />
-          )}
-          {pixel.isRunning
-            ? mediaJob === 'convert'
-              ? 'Converting…'
-              : 'Copying…'
-            : mediaJob === 'convert'
-              ? 'Convert Media'
-              : 'Copy Media'}
-        </Button>
-      </div>
-
-      <ConversionStatsPanel />
+          return pixel.copy(selectedPaths);
+        }}
+        disabled={pixel.isRunning}
+        className="w-fit gap-2"
+      >
+        {pixel.isRunning ? (
+          <IconLoader2 size={18} className="animate-spin" />
+        ) : (
+          <IconPlayerPlay size={18} />
+        )}
+        {pixel.isRunning
+          ? mediaJob === 'convert'
+            ? 'Converting…'
+            : 'Copying…'
+          : mediaJob === 'convert'
+            ? 'Convert Media'
+            : 'Copy Media'}
+      </Button>
     </>
   );
 };

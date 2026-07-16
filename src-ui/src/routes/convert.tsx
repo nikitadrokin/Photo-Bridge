@@ -1,18 +1,15 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { IconPhoto } from '@tabler/icons-react';
+import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback } from 'react';
+import ConversionStatsPanel from '@/components/activity-stats/conversion-panel';
 import ConvertFiles, { type MediaJobMode } from '@/components/convert-files';
 import SelectFiles from '@/components/select-files';
+import SplitColumn from '@/components/ui/split-column';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePixel } from '@/hooks/use-pixel';
-import {
-  ALL_EXTENSIONS,
-  IMAGE_EXTENSIONS,
-  VIDEO_EXTENSIONS,
-} from '@/lib/constants';
+import { ALL_EXTENSIONS } from '@/lib/constants';
 import { useMediaStore } from '@/stores/media-store';
-import SplitColumn from '@/components/ui/split-column';
-import { open } from '@tauri-apps/plugin-dialog';
-import { IconPhoto } from '@tabler/icons-react';
 
 /** Search params for `/convert` — `mode=convert` selects the remux pipeline; copy is the default. */
 export type ConvertSearch = {
@@ -49,25 +46,6 @@ function ConvertPage() {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars - I'll add this back later
-  const selectFiles = useCallback(async () => {
-    const selected = await open({
-      directory: false,
-      multiple: true,
-      filters: [
-        {
-          name: 'Media',
-          extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS],
-        },
-      ],
-      title: 'Select Photos/Videos',
-    });
-    if (selected) {
-      setSelectedPaths(Array.isArray(selected) ? selected : [selected]);
-      pixel.clearLogs();
-    }
-  }, [pixel, setSelectedPaths]);
-
   const selectFolder = useCallback(async () => {
     const selected = await open({
       directory: true,
@@ -103,8 +81,10 @@ function ConvertPage() {
         <ConvertFiles mediaJob={mediaJob} setMediaJob={setMediaJob} />
       </div>
 
-      {/* RIGHT PANEL: Log Viewer / Terminal Message */}
-      <div className="flex flex-col min-h-0"></div>
+      {/* RIGHT PANEL: Progress and output handoff */}
+      <div className="flex min-h-0 flex-col gap-4">
+        <ConversionStatsPanel />
+      </div>
     </SplitColumn>
   );
 }
