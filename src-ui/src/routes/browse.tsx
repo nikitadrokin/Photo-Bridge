@@ -2,9 +2,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
   IconFolder,
+  IconLoader2,
   IconPhoto,
   IconSearch,
-  IconLoader2,
   IconX,
 } from '@tabler/icons-react';
 import { useCallback, useMemo, useState } from 'react';
@@ -15,7 +15,7 @@ import Lightbox from '@/components/gallery/lightbox';
 import MediaPreview from '@/components/gallery/media-preview';
 import { Button } from '@/components/ui/button';
 import { useRegisterPageHeaderActions } from '@/hooks/use-register-page-header-actions';
-import { useIsLargeScreen } from '@/hooks/use-is-large-screen';
+import { useIsSplitView } from '@/hooks/use-is-split-view';
 import { formatGalleryCaptureTime } from '@/lib/gallery-scan';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useGalleryScan } from '@/hooks/use-gallery-scan';
@@ -47,20 +47,20 @@ function BrowsePage() {
   const [removedPaths, setRemovedPaths] = useState<ReadonlySet<string>>(
     new Set(),
   );
-  const isLargeScreen = useIsLargeScreen();
+  const { containerRef, isSplitView } = useIsSplitView();
   const { result, progress, isScanning, error, scanDirectory, reset } =
     useGalleryScan();
 
-  // On wide screens the second column previews inline; otherwise open the
-  // Lightbox dialog. Either way the row click just selects the file.
+  // When the page container has room, the second column previews inline;
+  // otherwise open the Lightbox dialog. Either way the row click selects it.
   const handleSelectFile = useCallback(
     (file: GalleryScanFilePayload) => {
       setPreviewFile(file);
-      if (!isLargeScreen) {
+      if (!isSplitView) {
         setLightboxOpen(true);
       }
     },
-    [isLargeScreen],
+    [isSplitView],
   );
 
   const handleTrashed = useCallback((path: string) => {
@@ -171,7 +171,7 @@ function BrowsePage() {
   }
 
   return (
-    <SplitColumn fillHeight>
+    <SplitColumn containerRef={containerRef} fillHeight>
       <Lightbox
         file={previewFile}
         open={lightboxOpen}
@@ -232,8 +232,8 @@ function BrowsePage() {
         </div>
       </div>
 
-      {/* Inline preview — fills the second column on large screens. */}
-      <aside className="hidden min-h-0 min-w-0 flex-col gap-3 lg:flex">
+      {/* Inline preview — fills the second column when its container has room. */}
+      <aside className="hidden min-h-0 min-w-0 flex-col gap-3 @min-[64rem]/split:flex">
         {previewFile ? (
           <>
             <div className="min-w-0">
@@ -254,7 +254,7 @@ function BrowsePage() {
               onExpand={() => {
                 setLightboxOpen(true);
               }}
-              mediaClassName="flex-1 lg:max-h-[calc(100vh-16rem)]"
+              mediaClassName="flex-1 @min-[64rem]/split:max-h-[calc(100vh-16rem)]"
             />
           </>
         ) : (

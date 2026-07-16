@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 interface SplitColumnProps {
   children: React.ReactNode;
   className?: string;
+  containerRef?: React.Ref<HTMLElement>;
   /**
    * Lock the grid to the viewport height so inner panes handle their own
    * scrolling (file tree / gallery pages). Without it the page grows with its
@@ -14,17 +15,26 @@ interface SplitColumnProps {
 const SplitColumn: React.FC<SplitColumnProps> = ({
   children,
   className,
+  containerRef,
   fillHeight = false,
 }) => {
   return (
     <main
+      ref={containerRef}
       className={cn(
-        'flex-1 p-4 mx-auto w-full grid grid-cols-1 lg:grid-cols-2 max-w-6xl gap-8',
+        '@container/split flex-1 p-4 mx-auto w-full max-w-6xl',
         fillHeight && 'h-full',
         className,
       )}
     >
-      {children}
+      <div
+        className={cn(
+          'grid h-full w-full grid-cols-1 gap-8 @min-[64rem]/split:grid-cols-2',
+          fillHeight && 'min-h-0',
+        )}
+      >
+        {children}
+      </div>
     </main>
   );
 };

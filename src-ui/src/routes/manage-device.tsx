@@ -12,7 +12,7 @@ import { Command } from '@tauri-apps/plugin-shell';
 import { toast } from 'sonner';
 import type { PixelFilePayload } from '@cli-protocol';
 import { usePixel } from '@/hooks/use-pixel';
-import { useIsLargeScreen } from '@/hooks/use-is-large-screen';
+import { useIsSplitView } from '@/hooks/use-is-split-view';
 import { PIXEL_CAMERA_DIR } from '@/lib/constants';
 import { DeviceInfoCard } from '@/components/device-info-card';
 import { ConnectionStatus } from '@/components/connection-status';
@@ -71,7 +71,7 @@ function PixelPage() {
     refreshDeviceInfo,
   } = pixel;
 
-  const isLargeScreen = useIsLargeScreen();
+  const { containerRef, isSplitView } = useIsSplitView();
 
   const [files, setFiles] = useState<Array<PixelFilePayload> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -119,7 +119,7 @@ function PixelPage() {
   const handleSelectFile = useCallback(
     (file: PixelFilePayload) => {
       setSelectedFile(file);
-      if (!isLargeScreen) {
+      if (!isSplitView) {
         setDialogOpen(true);
       }
 
@@ -146,7 +146,7 @@ function PixelPage() {
         }
       })();
     },
-    [isLargeScreen, pullPixelFileToCache],
+    [isSplitView, pullPixelFileToCache],
   );
 
   const handleSave = useCallback(() => {
@@ -205,7 +205,7 @@ function PixelPage() {
   ]);
 
   return (
-    <SplitColumn fillHeight>
+    <SplitColumn containerRef={containerRef} fillHeight>
       {/* Mobile / small screens: preview opens in a dialog. */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl">
@@ -427,8 +427,8 @@ function PixelPage() {
         </div>
       </div>
 
-      {/* Inline preview — fills the second column on large screens. */}
-      <aside className="hidden min-h-0 min-w-0 flex-col gap-3 self-start lg:flex lg:sticky lg:top-0">
+      {/* Inline preview — fills the second column when its container has room. */}
+      <aside className="hidden min-h-0 min-w-0 flex-col gap-3 self-start @min-[64rem]/split:flex @min-[64rem]/split:sticky @min-[64rem]/split:top-0">
         {selectedFile && preview ? (
           <>
             <div className="min-w-0">
@@ -446,7 +446,7 @@ function PixelPage() {
               localPath={preview.localPath}
               errorDetail={preview.detail}
               onSave={handleSave}
-              mediaClassName="flex-1 lg:max-h-[calc(100vh-12rem)]"
+              mediaClassName="flex-1 @min-[64rem]/split:max-h-[calc(100vh-12rem)]"
             />
           </>
         ) : (
