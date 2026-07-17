@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import {
   IconBrandGithub,
   IconCalendar,
@@ -40,6 +41,13 @@ type AppUpdateResponse = {
   status: 'available' | 'prepared' | 'upToDate' | 'restarting';
   version: string | null;
 };
+
+type AppUpdateDownloadProgress = {
+  downloaded: number;
+  total: number | null;
+};
+
+const APP_UPDATE_DOWNLOAD_PROGRESS_EVENT = 'app-update://download-progress';
 
 type UpdateButtonState =
   | 'hidden'
@@ -108,6 +116,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   const [updateButtonState, setUpdateButtonState] =
     useState<UpdateButtonState>('hidden');
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [downloadProgressLabel, setDownloadProgressLabel] = useState<
+    string | null
+  >(null);
   const hasCheckedForUpdate = useRef(false);
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
@@ -115,10 +126,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   const isDownloadingUpdate = updateButtonState === 'downloading';
   const isInstallingUpdate = updateButtonState === 'installing';
   const isUpdateButtonLoading = isDownloadingUpdate || isInstallingUpdate;
-  const updateButtonLabel = getUpdateButtonLabel(
-    updateButtonState,
-    updateVersion,
-  );
+  const updateButtonLabel =
+    isDownloadingUpdate && downloadProgressLabel
+      ? downloadProgressLabel
+      : getUpdateButtonLabel(updateButtonState, updateVersion);
 
   useEffect(() => {
     getVersion()
@@ -163,6 +174,23 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   async function downloadUpdate() {
     setUpdateButtonState('downloading');
+    setDownloadProgressLabel(
+      updateVersion
+        ? `Downloading v${updateVersion}...`
+        : 'Downloading update...',
+    );
+
+    const unlisten = await listen<AppUpdateDownloadProgress>(
+      APP_UPDATE_DOWNLOAD_PROGRESS_EVENT,
+      (event) => {
+        setDownloadProgressLabel(
+          formatDownloadProgress(
+            event.payload.downloaded,
+            event.payload.total,
+          ),
+        );
+      },
+    );
 
     try {
       const response = await invoke<AppUpdateResponse>('prepare_app_update');
@@ -179,6 +207,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
     } catch (error) {
       console.error('Update download failed:', error);
       setUpdateButtonState('available');
+    } finally {
+      unlisten();
+      setDownloadProgressLabel(null);
     }
   }
 
@@ -459,6 +490,20 @@ function getUpdateButtonLabel(
       return _exhaustive;
     }
   }
+}
+
+function formatDownloadProgress(downloaded: number, total: number | null) {
+  if (typeof total === 'number' && total > 0) {
+    const pct = Math.min(100, Math.round((downloaded / total) * 100));
+    return `Downloading update... ${pct}%`;
+  }
+
+  return `Downloading update... ${formatBytes(downloaded)}`;
+}
+
+function formatBytes(bytes: number) {
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(1)} MB`;
 }
 
 export default AppSidebar;
