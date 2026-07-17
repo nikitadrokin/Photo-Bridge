@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useMatchRoute, useNavigate } from '@tanstack/react-router';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import {
   IconBrandGithub,
   IconCalendar,
@@ -16,7 +15,6 @@ import {
   IconRefresh,
   IconSettings,
 } from '@tabler/icons-react';
-import { toast } from 'sonner';
 import {
   Sidebar,
   SidebarContent,
@@ -42,13 +40,6 @@ type AppUpdateResponse = {
   status: 'available' | 'prepared' | 'upToDate' | 'restarting';
   version: string | null;
 };
-
-type AppUpdateDownloadProgress = {
-  downloaded: number;
-  total: number | null;
-};
-
-const APP_UPDATE_DOWNLOAD_PROGRESS_EVENT = 'app-update://download-progress';
 
 type UpdateButtonState =
   | 'hidden'
@@ -148,14 +139,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         }
         setUpdateVersion(response.version);
         setUpdateButtonState('available');
-        toast.info(
-          response.version
-            ? `Photo Bridge v${response.version} is available.`
-            : 'A Photo Bridge update is available.',
-          {
-            description: 'Download it from the sidebar when you are ready.',
-          },
-        );
       })
       .catch((error) => {
         // The startup check is silent by design; just log the failure.
@@ -180,23 +163,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   async function downloadUpdate() {
     setUpdateButtonState('downloading');
-    const toastId = toast.loading(
-      'Downloading update...',
-      dismissibleToastOptions(() => toastId),
-    );
-
-    const unlisten = await listen<AppUpdateDownloadProgress>(
-      APP_UPDATE_DOWNLOAD_PROGRESS_EVENT,
-      (event) => {
-        toast.loading(
-          formatDownloadProgress(
-            event.payload.downloaded,
-            event.payload.total,
-          ),
-          { id: toastId, ...dismissibleToastOptions(() => toastId) },
-        );
-      },
-    );
 
     try {
       const response = await invoke<AppUpdateResponse>('prepare_app_update');
@@ -205,52 +171,28 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         // The release disappeared between the startup check and the download.
         setUpdateVersion(null);
         setUpdateButtonState('hidden');
-        toast.success('Photo Bridge is up to date.', { id: toastId });
         return;
       }
 
       setUpdateVersion(response.version);
       setUpdateButtonState('ready');
-      toast.success(
-        response.version
-          ? `Photo Bridge v${response.version} is downloaded and ready to install.`
-          : 'A Photo Bridge update is downloaded and ready to install.',
-        { id: toastId },
-      );
     } catch (error) {
+      console.error('Update download failed:', error);
       setUpdateButtonState('available');
-      toast.error(formatUpdateError(error), { id: toastId });
-    } finally {
-      unlisten();
     }
   }
 
   async function installPreparedUpdate() {
     setUpdateButtonState('installing');
-    const toastId = toast.loading(
-      updateVersion
-        ? `Installing v${updateVersion} and restarting...`
-        : 'Installing update and restarting...',
-      dismissibleToastOptions(() => toastId),
-    );
 
     try {
-      const response = await invoke<AppUpdateResponse>(
-        'install_prepared_app_update',
-      );
-
-      toast.success(
-        response.version
-          ? `Installed v${response.version}. Restarting...`
-          : 'Installed update. Restarting...',
-        { id: toastId, duration: 1500 },
-      );
+      await invoke<AppUpdateResponse>('install_prepared_app_update');
     } catch (error) {
       // The backend consumes the prepared update on any install attempt, so a
       // failure means there is nothing left to install — offer the download
       // again.
+      console.error('Update install failed:', error);
       setUpdateButtonState('available');
-      toast.error(formatUpdateError(error), { id: toastId });
     }
   }
 
@@ -517,41 +459,6 @@ function getUpdateButtonLabel(
       return _exhaustive;
     }
   }
-}
-
-function formatDownloadProgress(downloaded: number, total: number | null) {
-  if (typeof total === 'number' && total > 0) {
-    const pct = Math.min(100, Math.round((downloaded / total) * 100));
-    return `Downloading update... ${pct}%`;
-  }
-
-  return `Downloading update... ${formatBytes(downloaded)}`;
-}
-
-function formatBytes(bytes: number) {
-  const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(1)} MB`;
-}
-
-function formatUpdateError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (typeof error === 'string') {
-    return error;
-  }
-
-  return 'Update failed.';
-}
-
-function dismissibleToastOptions(getToastId: () => string | number) {
-  return {
-    action: {
-      label: 'Dismiss',
-      onClick: () => toast.dismiss(getToastId()),
-    },
-  };
 }
 
 export default AppSidebar;
