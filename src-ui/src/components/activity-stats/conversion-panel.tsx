@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   IconCircleCheck,
   IconCircleMinus,
@@ -6,7 +6,6 @@ import {
   IconCircleX,
   IconFolderOpen,
 } from '@tabler/icons-react';
-import { toast } from 'sonner';
 import { buildAlertRows, deriveActivityStats } from '@/lib/activity-format';
 import { getLastConvertOutput } from '@/lib/job-output';
 import { revealInFinder } from '@/lib/reveal-in-finder';
@@ -27,7 +26,7 @@ function basenameOf(p: string): string {
  */
 const ConversionStatsPanel: React.FC = () => {
   const { activityEvents, isRunning } = usePixel();
-  const lastToastedKeyRef = useRef<string | null>(null);
+  const [openFolderError, setOpenFolderError] = useState<string | null>(null);
 
   const stats = useMemo(
     () => deriveActivityStats(activityEvents),
@@ -52,39 +51,16 @@ const ConversionStatsPanel: React.FC = () => {
     [activityEvents],
   );
 
+  // Clear Finder open errors when a new job starts or the output changes.
+  useEffect(() => {
+    setOpenFolderError(null);
+  }, [isRunning, jobOutput?.outputDir]);
+
   const hasSession = activityEvents.some(
     (e) => e.kind === 'session' && e.phase === 'start',
   );
   const showStats =
     hasSession || stats.added + stats.skipped + stats.failed > 0;
-
-  // After a successful directory convert/copy, toast with Reveal in Finder.
-  useEffect(() => {
-    if (isRunning) return;
-    if (!jobOutput) return;
-    // Prefer sessions that actually wrote something new.
-    if (jobOutput.processed <= 0 && jobOutput.skipped <= 0) return;
-
-    const key = `${jobOutput.command}:${jobOutput.outputDir}:${jobOutput.processed}:${jobOutput.failed}`;
-    if (lastToastedKeyRef.current === key) return;
-    lastToastedKeyRef.current = key;
-
-    const label = basenameOf(jobOutput.outputDir);
-    const verb = jobOutput.command === 'copy' ? 'Copy' : 'Convert';
-
-    toast.success(`${verb} finished`, {
-      description: label,
-      action: {
-        label: 'Open folder',
-        onClick: () => {
-          void revealInFinder(jobOutput.outputDir).catch(() => {
-            toast.error('Could not open the output folder in Finder.');
-          });
-        },
-      },
-      duration: 12_000,
-    });
-  }, [isRunning, jobOutput]);
 
   if (
     !showStats &&
@@ -103,6 +79,9 @@ const ConversionStatsPanel: React.FC = () => {
     !isRunning &&
     jobOutput != null &&
     (jobOutput.processed > 0 || jobOutput.skipped > 0);
+
+  const finishedLabel =
+    jobOutput?.command === 'copy' ? 'Copy finished' : 'Convert finished';
 
   return (
     <div className="flex flex-col gap-3">
@@ -151,36 +130,48 @@ const ConversionStatsPanel: React.FC = () => {
         ) : null}
       </StatsPanel>
 
-      {showOpenFolder ? (
-        <div className="flex flex-col gap-2 rounded-xl border bg-card px-3 py-3">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">
-              Output folder
-            </p>
-            <p className="truncate text-sm font-medium" title={jobOutput.outputDir}>
-              {basenameOf(jobOutput.outputDir)}
-            </p>
-            <p
-              className="truncate text-[11px] text-muted-foreground"
-              title={jobOutput.outputDir}
+      {showOpenFolder && jobOutput ? (
+        <div className="flex flex-col gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                <IconCircleCheck size={14} />
+                {finishedLabel}
+              </p>
+              <p
+                className="mt-1 truncate text-sm font-medium"
+                title={jobOutput.outputDir}
+              >
+                {basenameOf(jobOutput.outputDir)}
+              </p>
+              <p
+                className="truncate text-[11px] text-muted-foreground"
+                title={jobOutput.outputDir}
+              >
+                {jobOutput.outputDir}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 bg-background"
+              onClick={() => {
+                setOpenFolderError(null);
+                void revealInFinder(jobOutput.outputDir).catch(() => {
+                  setOpenFolderError(
+                    'Could not open the output folder in Finder.',
+                  );
+                });
+              }}
             >
-              {jobOutput.outputDir}
-            </p>
+              <IconFolderOpen size={16} />
+              Open in Finder
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit gap-1.5"
-            onClick={() => {
-              void revealInFinder(jobOutput.outputDir).catch(() => {
-                toast.error('Could not open the output folder in Finder.');
-              });
-            }}
-          >
-            <IconFolderOpen size={16} />
-            Open in Finder
-          </Button>
+          {openFolderError ? (
+            <p className="text-xs text-destructive">{openFolderError}</p>
+          ) : null}
         </div>
       ) : null}
     </div>
