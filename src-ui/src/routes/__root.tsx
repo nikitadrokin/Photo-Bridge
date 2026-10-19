@@ -21,7 +21,7 @@ function RootComponent() {
             <AppSidebarWithContext />
             <SidebarInset className="select-none [-webkit-user-select:none] [-webkit-touch-callout:none] z-10">
               <Outlet />
-              <Toaster position="bottom-center" richColors />
+              <Toaster position="bottom-right" richColors />
             </SidebarInset>
           </div>
         </SidebarProvider>
