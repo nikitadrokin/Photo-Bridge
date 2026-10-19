@@ -9,7 +9,6 @@ import {
   IconLoader2,
 } from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { toast } from 'sonner';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
 import { usePixel } from '@/hooks/use-pixel';
 import {
@@ -105,26 +104,18 @@ function TransferPage() {
       if (paths.length === 0 || !pixel.isConnected) return;
 
       setIsCheckingSpace(true);
-      const toastId = toast.loading('Checking free space on Pixel…');
       try {
         const check = await pixel.checkPushSpace(paths);
-        toast.dismiss(toastId);
 
         if (check.status === 'ok') {
-          toast.message(
-            `Pushing ${formatBytes(check.needBytes)} · ${check.freeLabel} free`,
-          );
           await pixel.pushPaths(paths);
           return;
         }
 
         // Insufficient or unknown: require an explicit decision.
         setPendingPush({ paths, check });
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Space check failed.',
-          { id: toastId },
-        );
+      } catch {
+        return;
       } finally {
         setIsCheckingSpace(false);
       }
