@@ -93,6 +93,7 @@ function emitFileProgress(
 async function runCopyJobs(
   jobs: CopyJob[],
   output: CliOutput,
+  overwriteOriginal: boolean,
 ): Promise<{ copied: number; failed: number; skipped: number }> {
   let copied = 0;
   let skipped = 0;
@@ -146,10 +147,16 @@ async function runCopyJobs(
     }
 
     try {
-      await fs.copyFile(job.inputPath, job.outputPath);
-      await preserveFilesystemDatesFromSource(job.inputPath, job.outputPath);
+      if (overwriteOriginal) {
+        // Same bytes, new name. Rename does not write the file again.
+        await fs.rename(job.inputPath, job.outputPath);
+        output.muted(`Renamed · ${job.name}`);
+      } else {
+        await fs.copyFile(job.inputPath, job.outputPath);
+        await preserveFilesystemDatesFromSource(job.inputPath, job.outputPath);
+        output.muted(`Copied · ${job.name}`);
+      }
       copied++;
-      output.muted(`Copied · ${job.name}`);
       emitFileProgress(output, job, 'done', done, jobs.length);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
@@ -191,8 +198,15 @@ export const copy = new Command()
     process.cwd(),
   )
   .option('--jsonl', 'emit JSONL UI events on stdout')
+  .option(
+    '--overwrite-original',
+    'rename videos to .mp4 inside the source folder instead of copying to a sibling _Copied folder',
+  )
   .action(
-    async (paths: string[], options: { cwd: string; jsonl?: boolean }) => {
+    async (
+      paths: string[],
+      options: { cwd: string; jsonl?: boolean; overwriteOriginal?: boolean },
+    ) => {
       const output = createCliOutput(Boolean(options.jsonl));
 
       try {
@@ -206,10 +220,19 @@ export const copy = new Command()
           process.exit(1);
         }
 
+        const overwriteOriginal = Boolean(options.overwriteOriginal);
         if (resolved.plan.mode === 'directory') {
-          await processDirectory(resolved.plan.directoryPath, output);
+          await processDirectory(
+            resolved.plan.directoryPath,
+            output,
+            overwriteOriginal,
+          );
         } else {
-          await processIndividualFiles(resolved.plan.filePaths, output);
+          await processIndividualFiles(
+            resolved.plan.filePaths,
+            output,
+            overwriteOriginal,
+          );
         }
       } catch (error) {
         output.error(error instanceof Error ? error.message : String(error));
@@ -218,14 +241,25 @@ export const copy = new Command()
     },
   );
 
+function summarizeCopyResult(
+  result: { copied: number; skipped: number; failed: number },
+  overwriteOriginal: boolean,
+): string {
+  const acted = overwriteOriginal ? 'updated' : 'copied';
+  return `Done · ${result.copied} ${acted}, ${result.skipped} skipped, ${result.failed} failed`;
+}
+
 async function processDirectory(
   sourceDir: string,
   output: CliOutput,
+  overwriteOriginal: boolean,
 ): Promise<void> {
-  const outputDir = await prepareSiblingDirectory(sourceDir, SUFFIX, {
-    create: true,
-    conflictMode: 'next-available',
-  });
+  const outputDir = overwriteOriginal
+    ? sourceDir
+    : await prepareSiblingDirectory(sourceDir, SUFFIX, {
+        create: true,
+        conflictMode: 'next-available',
+      });
   const jobs = await collectCopyJobs(sourceDir, outputDir);
 
   output.event({
@@ -243,9 +277,15 @@ async function processDirectory(
     output.info('Source');
     output.indentedMuted(sourceDir);
     output.info('Destination');
-    output.indentedMuted(outputDir);
+    output.indentedMuted(
+      overwriteOriginal ? 'In-place (selected folder)' : outputDir,
+    );
     output.info('Mode');
-    output.indentedMuted('Copy images as-is; videos as .mp4');
+    output.indentedMuted(
+      overwriteOriginal
+        ? 'Rename videos to .mp4; leave images unchanged'
+        : 'Copy images as-is; videos as .mp4',
+    );
     output.blankLine();
     output.info('Files');
     output.indentedMuted(`${jobs.length} supported file(s)`);
@@ -254,7 +294,7 @@ async function processDirectory(
 
   let result = { copied: 0, skipped: 0, failed: 0 };
   try {
-    result = await runCopyJobs(jobs, output);
+    result = await runCopyJobs(jobs, output, overwriteOriginal);
   } finally {
     output.event({
       v: 1,
@@ -271,15 +311,14 @@ async function processDirectory(
   }
 
   output.blankLine();
-  output.success(
-    `Done · ${result.copied} copied, ${result.skipped} skipped, ${result.failed} failed`,
-  );
+  output.success(summarizeCopyResult(result, overwriteOriginal));
   if (!output.jsonl) output.indentedMuted(outputDir);
 }
 
 async function processIndividualFiles(
   filePaths: string[],
   output: CliOutput,
+  overwriteOriginal: boolean,
 ): Promise<void> {
   const jobs = filePaths.flatMap((filePath) => {
     const job = copyJobForFile(filePath, path.dirname(filePath));
@@ -305,15 +344,23 @@ async function processIndividualFiles(
     output.info('Source');
     output.indentedMuted(`${jobs.length} file(s)`);
     output.info('Destination');
-    output.indentedMuted('In-place (next to each input)');
+    output.indentedMuted(
+      overwriteOriginal
+        ? 'In-place (rename videos; leave images)'
+        : 'In-place (next to each input)',
+    );
     output.info('Mode');
-    output.indentedMuted('Copy images as-is; videos as .mp4');
+    output.indentedMuted(
+      overwriteOriginal
+        ? 'Rename videos to .mp4; leave images unchanged'
+        : 'Copy images as-is; videos as .mp4',
+    );
     output.blankLine();
   }
 
   let result = { copied: 0, skipped: 0, failed: 0 };
   try {
-    result = await runCopyJobs(jobs, output);
+    result = await runCopyJobs(jobs, output, overwriteOriginal);
   } finally {
     output.event({
       v: 1,
@@ -329,7 +376,5 @@ async function processIndividualFiles(
   }
 
   output.blankLine();
-  output.success(
-    `Done · ${result.copied} copied, ${result.skipped} skipped, ${result.failed} failed`,
-  );
+  output.success(summarizeCopyResult(result, overwriteOriginal));
 }

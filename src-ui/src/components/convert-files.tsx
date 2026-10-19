@@ -4,10 +4,21 @@ import {
   IconPlayerPlay,
   IconX,
 } from '@tabler/icons-react';
+import { useState } from 'react';
 import { useMediaStore } from '@/stores/media-store';
-import { usePixel } from '@/hooks/use-pixel';
+import { type CopyWriteMode, usePixel } from '@/hooks/use-pixel';
 import { Button } from '@/components/ui/button';
 import { ChoiceCardRadioGroup } from '@/components/ui/choice-card';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';
@@ -38,6 +49,8 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
 }) => {
   const { selectedPaths, clearSelection } = useMediaStore();
   const pixel = usePixel();
+  const [writeMode, setWriteMode] = useState<CopyWriteMode>('copy-directory');
+  const editInPlace = writeMode === 'overwrite';
 
   return (
     <>
@@ -80,6 +93,34 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
         name="media-job"
       />
 
+      {mediaJob === 'copy' && (
+        <FieldSet className="rounded-lg border bg-card p-3 gap-3">
+          <FieldLegend variant="label">Write mode</FieldLegend>
+          <FieldLabel htmlFor="copy-overwrite-original" className="w-full">
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldTitle className="text-sm">
+                  Edit inside the selected folder
+                </FieldTitle>
+                <FieldDescription className="text-xs">
+                  {editInPlace
+                    ? 'Renames videos to .mp4 in this folder. Photos stay as they are. No second copy is written.'
+                    : 'Copies into a sibling _Copied folder and leaves the selected files untouched.'}
+                </FieldDescription>
+              </FieldContent>
+              <Switch
+                id="copy-overwrite-original"
+                checked={editInPlace}
+                onCheckedChange={(checked) =>
+                  setWriteMode(checked ? 'overwrite' : 'copy-directory')
+                }
+                disabled={pixel.isRunning}
+              />
+            </Field>
+          </FieldLabel>
+        </FieldSet>
+      )}
+
       <Button
         type="button"
         title={
@@ -91,7 +132,7 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
           if (mediaJob === 'convert') {
             return pixel.convert(selectedPaths);
           }
-          return pixel.copy(selectedPaths);
+          return pixel.copy(selectedPaths, { writeMode });
         }}
         disabled={pixel.isRunning}
         className="w-fit gap-2"

@@ -34,6 +34,7 @@ export interface TransferPaths {
 }
 
 export type FixDatesWriteMode = 'overwrite' | 'copy-directory';
+export type CopyWriteMode = 'overwrite' | 'copy-directory';
 
 interface ApplyMediaDateSuccess {
   readonly ok: true;
@@ -618,10 +619,17 @@ function usePixelProviderValue() {
   );
 
   const copy = useCallback(
-    async (paths: Array<string>) => {
+    async (
+      paths: Array<string>,
+      options: { writeMode?: CopyWriteMode } = {},
+    ) => {
       if (paths.length === 0) return;
       setActiveOperation('copy');
-      await execute(['copy', ...paths, '--jsonl'], {
+      const args = ['copy', ...paths, '--jsonl'];
+      if (options.writeMode === 'overwrite') {
+        args.push('--overwrite-original');
+      }
+      await execute(args, {
         onFinish: () => setActiveOperation(null),
       });
     },
@@ -629,9 +637,16 @@ function usePixelProviderValue() {
   );
 
   const copyInTerminal = useCallback(
-    async (paths: Array<string>) => {
+    async (
+      paths: Array<string>,
+      options: { writeMode?: CopyWriteMode } = {},
+    ) => {
       if (paths.length === 0) return;
-      await openSidecarInTerminal(['copy', ...paths]);
+      const args = ['copy', ...paths];
+      if (options.writeMode === 'overwrite') {
+        args.push('--overwrite-original');
+      }
+      await openSidecarInTerminal(args);
     },
     [openSidecarInTerminal],
   );
