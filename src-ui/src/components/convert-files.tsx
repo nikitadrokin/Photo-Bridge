@@ -94,15 +94,13 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
       />
 
       {mediaJob === 'copy' && (
-        <FieldSet className="rounded-lg border bg-card p-3 gap-3">
+        <FieldSet className="max-w-full gap-3">
           <FieldLegend variant="label">Write mode</FieldLegend>
           <FieldLabel htmlFor="copy-overwrite-original" className="w-full">
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldTitle className="text-sm">
-                  Edit inside the selected folder
-                </FieldTitle>
-                <FieldDescription className="text-xs">
+                <FieldTitle>Edit inside the selected folder</FieldTitle>
+                <FieldDescription>
                   {editInPlace
                     ? 'Renames videos to .mp4 in this folder. Photos stay as they are. No second copy is written.'
                     : 'Copies into a sibling _Copied folder and leaves the selected files untouched.'}
