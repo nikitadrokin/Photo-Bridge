@@ -19,6 +19,7 @@ import {
   FieldTitle,
 } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
+import Code from './ui/inline-code';
 
 /** Primary pipeline: transcode for Pixel vs copy/rename for upload. */
 export type MediaJobMode = 'convert' | 'copy';
@@ -99,11 +100,16 @@ const ConvertFiles: React.FC<ConvertFilesProps> = ({
           <FieldLabel htmlFor="copy-overwrite-original" className="w-full">
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldTitle>Edit inside the selected folder</FieldTitle>
+                <FieldTitle>Overwrite converted files</FieldTitle>
                 <FieldDescription>
-                  {editInPlace
-                    ? 'Renames videos to .mp4 in this folder. Photos stay as they are. No second copy is written.'
-                    : 'Copies into a sibling _Copied folder and leaves the selected files untouched.'}
+                  {editInPlace ? (
+                    'Overwrite files such as .MOV files to .MP4.'
+                  ) : (
+                    <>
+                      Preserve files by writing to a{' '}
+                      <Code variant="muted">_Copied</Code> folder.
+                    </>
+                  )}
                 </FieldDescription>
               </FieldContent>
               <Switch
