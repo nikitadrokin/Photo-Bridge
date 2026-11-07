@@ -78,6 +78,8 @@ export interface PushBytesProgressEvent {
   readonly bytesTransferred: number;
   readonly completedFiles: number;
   readonly totalFiles: number;
+  /** Local size of the file in flight; UI uses this to fill the bar mid-file. */
+  readonly fileTotalBytes?: number;
 }
 
 /** Byte-level ADB sync progress for `pull-from-pixel` (same shape as `push_bytes`). */
@@ -88,6 +90,7 @@ export interface PullBytesProgressEvent {
   readonly bytesTransferred: number;
   readonly completedFiles: number;
   readonly totalFiles: number;
+  readonly fileTotalBytes?: number;
 }
 
 export interface BlockedEvent {
@@ -245,7 +248,9 @@ function isCliUiEventV1(parsed: unknown): parsed is EventV1 {
         typeof parsed.file === 'string' &&
         typeof parsed.bytesTransferred === 'number' &&
         typeof parsed.completedFiles === 'number' &&
-        typeof parsed.totalFiles === 'number'
+        typeof parsed.totalFiles === 'number' &&
+        (parsed.fileTotalBytes === undefined ||
+          typeof parsed.fileTotalBytes === 'number')
       );
     case 'blocked':
       return typeof parsed.code === 'string';

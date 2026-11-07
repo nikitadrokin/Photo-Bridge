@@ -84,6 +84,19 @@ const TransferStatsPanel: React.FC = () => {
       ? (lastTransferBytes?.totalFiles ?? 0)
       : 0;
 
+  const fileTotalBytes = lastTransferBytes?.fileTotalBytes;
+  const inFlightFraction =
+    lastTransferBytes != null &&
+    fileTotalBytes != null &&
+    fileTotalBytes > 0 &&
+    lastTransferBytes.completedFiles === progressDone
+      ? Math.min(1, lastTransferBytes.bytesTransferred / fileTotalBytes)
+      : 0;
+  const progressRatio =
+    progressTotal > 0
+      ? Math.min(1, (progressDone + inFlightFraction) / progressTotal)
+      : 0;
+
   const subtitle =
     activeOperation === 'push'
       ? 'Pushing to Pixel'
@@ -102,7 +115,13 @@ const TransferStatsPanel: React.FC = () => {
     <StatsPanel
       subtitle={subtitle}
       progress={
-        progressTotal > 0 ? { done: progressDone, total: progressTotal } : null
+        progressTotal > 0
+          ? {
+              done: progressDone,
+              total: progressTotal,
+              ratio: progressRatio,
+            }
+          : null
       }
       alertRows={alertRows}
     >

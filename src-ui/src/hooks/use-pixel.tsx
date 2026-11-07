@@ -31,6 +31,8 @@ import type { DeviceInfoState, PushSpaceCheckResult } from '@/lib/types';
 export interface TransferPaths {
   source: string;
   destination: string;
+  /** Local files or folders passed to a push; omitted for pull. */
+  readonly pushSources?: readonly string[];
 }
 
 export type FixDatesWriteMode = 'overwrite' | 'copy-directory';
@@ -363,11 +365,15 @@ function usePixelProviderValue() {
   const pushPaths = useCallback(
     async (paths: readonly string[]) => {
       if (!isConnected || paths.length === 0) return;
+      clearLogs();
       clearTransferInterrupted();
       setActiveOperation('push');
+      const firstPath = paths[0];
+      if (firstPath === undefined) return;
       setTransferPaths({
-        source: paths[0],
+        source: firstPath,
         destination: PIXEL_CAMERA_DIR,
+        pushSources: [...paths],
       });
       await execute(['push-to-pixel', '--jsonl', ...paths], {
         onFinish: () => {
@@ -376,7 +382,7 @@ function usePixelProviderValue() {
         },
       });
     },
-    [isConnected, execute, refreshDeviceInfo, clearTransferInterrupted],
+    [isConnected, execute, refreshDeviceInfo, clearLogs, clearTransferInterrupted],
   );
 
   const pull = useCallback(async () => {

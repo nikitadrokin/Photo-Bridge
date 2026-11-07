@@ -4,7 +4,12 @@ import type { ActivityRow } from '@/lib/activity-format';
 
 interface StatsPanelProps {
   subtitle?: string | null;
-  progress?: { done: number; total: number } | null;
+  progress?: {
+    done: number;
+    total: number;
+    /** 0–1 fill for the bar; defaults to done/total when omitted. */
+    ratio?: number;
+  } | null;
   alertRows?: ActivityRow[];
   children?: ReactNode;
 }
@@ -41,7 +46,12 @@ const StatsPanel: React.FC<StatsPanelProps> = ({
           <div
             className="h-full bg-primary transition-[width] duration-300 ease-out"
             style={{
-              width: `${Math.min(100, Math.round((progress.done / progress.total) * 100))}%`,
+              width: `${Math.min(
+                100,
+                Math.round(
+                  (progress.ratio ?? progress.done / progress.total) * 100,
+                ),
+              )}%`,
             }}
           />
         </div>

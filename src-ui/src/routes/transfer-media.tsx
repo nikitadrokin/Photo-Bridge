@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   IconAlertTriangle,
   IconArrowRight,
@@ -9,7 +9,9 @@ import {
   IconLoader2,
 } from '@tabler/icons-react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { AdbPushCommandBar } from '@/components/adb-push-command-bar';
 import TransferStatsPanel from '@/components/activity-stats/transfer-panel';
+import { formatAdbPushCommand } from '@/lib/adb-push-command';
 import { usePixel } from '@/hooks/use-pixel';
 import {
   IMAGE_EXTENSIONS,
@@ -182,6 +184,26 @@ function TransferPage() {
     return '';
   })();
 
+  const pushFailedCommand = useMemo(() => {
+    const sources = pixel.transferPaths?.pushSources;
+    if (
+      sources === undefined ||
+      sources.length === 0 ||
+      pixel.transferPaths?.destination !== PIXEL_CAMERA_DIR
+    ) {
+      return null;
+    }
+
+    const pushFailed = pixel.activityEvents.some(
+      (event) =>
+        event.kind === 'error' &&
+        (event.code === 'push_transfer_failed' || event.code === 'push_failed'),
+    );
+    if (!pushFailed) return null;
+
+    return formatAdbPushCommand(sources);
+  }, [pixel.activityEvents, pixel.transferPaths]);
+
   // The last finished transfer was a push when its destination was the device.
   const lastTransferWasPush =
     !pixel.isRunning &&
@@ -281,7 +303,12 @@ function TransferPage() {
           </div>
         </section>
 
-        <TransferStatsPanel />
+        <div className="flex flex-col gap-2">
+          {pushFailedCommand !== null ? (
+            <AdbPushCommandBar command={pushFailedCommand} />
+          ) : null}
+          <TransferStatsPanel />
+        </div>
 
         {lastTransferWasPush ? (
           <Link

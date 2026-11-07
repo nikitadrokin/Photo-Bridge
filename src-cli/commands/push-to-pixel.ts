@@ -2,13 +2,10 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { Adb } from '@devicefarmer/adbkit';
-import type DeviceClient from '@devicefarmer/adbkit/dist/src/adb/DeviceClient';
+import { adbPushFileWithPtyProgress } from '../utils/adb-pty-push.js';
 import { resolveTool } from '../utils/tool-paths';
 import { createCliOutput } from '../utils/logger.js';
 import type { EventV1 } from '../../types/protocol.js';
-
-/** Resolved ADB sync service (Bluebird-promise–based API). */
-type AdbSyncSession = Awaited<ReturnType<DeviceClient['syncService']>>;
 
 const TARGET_DIR = '/sdcard/DCIM/Camera';
 
@@ -59,7 +56,7 @@ async function collectFilesRecursively(dir: string): Promise<Array<string>> {
 }
 
 async function pushJobs(
-  sync: AdbSyncSession,
+  serial: string,
   jobs: Array<PushJob>,
   isJsonl: boolean,
   onEvent: (event: EventV1) => void,
@@ -74,30 +71,29 @@ async function pushJobs(
     );
 
     try {
-      const transfer = sync.pushFile(absolutePath, targetPath);
+      const st = await fs.stat(absolutePath);
+      await adbPushFileWithPtyProgress({
+        serial,
+        localPath: absolutePath,
+        remotePath: targetPath,
+        relativePath,
+        fileSizeBytes: st.size,
+        completedFiles,
+        totalFiles,
+        onEvent: (event) => {
+          if (isJsonl) onEvent(event);
+        },
+      });
 
-      transfer.on('progress', (stats: { bytesTransferred: number }) => {
-        if (!isJsonl) return;
+      completedFiles++;
+      if (isJsonl) {
         onEvent({
           v: 1,
-          kind: 'push_bytes',
-          file: relativePath,
-          bytesTransferred: stats.bytesTransferred,
-          completedFiles,
-          totalFiles,
+          kind: 'progress',
+          done: completedFiles,
+          total: totalFiles,
         });
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        transfer.on('end', () => {
-          completedFiles++;
-          if (isJsonl) {
-            onEvent({ v: 1, kind: 'progress', done: completedFiles, total: totalFiles });
-          }
-          resolve();
-        });
-        transfer.on('error', reject);
-      });
+      }
     } catch (err) {
       const detail = `${relativePath}: ${err instanceof Error ? err.message : String(err)}`;
       onEvent({ v: 1, kind: 'error', code: 'push_transfer_failed', detail });
@@ -137,16 +133,10 @@ export const pushToPixel = new Command()
         process.exit(1);
       }
 
-      const sync: AdbSyncSession = await client.getDevice(device.id).syncService();
-
-      try {
-        await pushJobs(sync, jobs, Boolean(opts.jsonl), (event) =>
-          output.event(event),
-        );
-        output.success('Push completed');
-      } finally {
-        sync.end();
-      }
+      await pushJobs(device.id, jobs, Boolean(opts.jsonl), (event) =>
+        output.event(event),
+      );
+      output.success('Push completed');
     } catch (err) {
       output.error(
         `Push failed: ${err instanceof Error ? err.message : String(err)}`,
